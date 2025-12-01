@@ -11,8 +11,9 @@
 * SPDX-License-Identifier: Apache-2.0
 ********************************************************************************/
 
-#include "score/lcm/saf/daemon/PhmDaemonCmdLineParser.hpp"
-
+#ifndef HEALTH_MONITOR_HPP_INCLUDED
+#define HEALTH_MONITOR_HPP_INCLUDED
+#include "score/lcm/saf/daemon/PhmDaemon.hpp"
 namespace score
 {
 namespace lcm
@@ -22,9 +23,13 @@ namespace saf
 namespace daemon
 {
 
-// PhmDaemonCmdLineParser is a template class, this source file is intentionally left empty
-
+/// @brief Entry point for HM daemon thread
+/// @param recovery_client Shared pointer to recovery client
+/// @param init_status Initialization status to be updated
+/// @param cancel_thread Termination signal predicate
+void run(std::shared_ptr<score::lcm::RecoveryClient> recovery_client, std::atomic<EInitCode>& init_status, std::atomic_bool& cancel_thread);
 }  // namespace daemon
 }  // namespace saf
 }  // namespace lcm
 }  // namespace score
+#endif

@@ -17,41 +17,35 @@
 #include <iostream>
 
 #include "score/lcm/saf/common/PhmSignalHandler.hpp"
-#include "score/lcm/saf/daemon/PhmDaemon.hpp"
 #include "score/lcm/saf/logging/PhmLogger.hpp"
 #include "score/lcm/saf/watchdog/WatchdogImpl.hpp"
+#include "health_monitor.hpp"
 
 #ifdef BINARY_TEST_ENABLE_PHM_DAEMON_HEAP_MEASUREMENT
 #    include "tracer.hpp"
 #endif
 
-/// @file rb-phmd.cpp
-/// @brief Main function and thus entry point of the PHM daemon
-/// @param[in] argc Number of command line arguments (first argument is the executable name itself)
-/// @param[in] argv Array pointing to the command line arguments (first argument is the executable name itself)
-/// @return execution status of PHM daemon to the operating system
-/// - 0 on successful execution
-/// - EXIT_FAILURE (1) if initialization could not be performed due to an error
+/// @file health_monitor.cpp
+/// @brief Entry point for HM daemon thread
+/// @param[in] recovery_client Shared pointer to recovery client
+/// @param[inout] init_status Atomic variable to communicate result of initialization
+/// @param[in] cancel_thread Atomic variable to check whether the loop should be exited
 /// @details
-/// 1. Register signal handling
-/// 2. Set up the logger and a PhmDaemon object
-/// 3. Initialize the PhmDaemon object
-/// 4. Enters the cyclic loop if initialization was successful (cyclic loop can be terminated by a signal received)
-#ifdef UNITTEST_MAIN_TO_FUNCTION
-int rb_phmd_main(int argc, char** argv)
-#else
-int main(int argc, char** argv)
-#endif
+/// 1. Set up the logger and a PhmDaemon object
+/// 2. Initialize the PhmDaemon object
+/// 3. Enters the cyclic loop if initialization was successful (cyclic loop can be terminated by a signal received)
+namespace score
 {
-    int returnValue{EXIT_SUCCESS};
-
-    // Overall try-catch block for exception handling
+namespace lcm
+{
+namespace saf
+{
+namespace daemon
+{
+void run(std::shared_ptr<score::lcm::RecoveryClient> recovery_client, std::atomic<EInitCode>& init_status, std::atomic_bool& cancel_thread)
+{
     try
     {
-        if (!score::lcm::saf::common::PhmSignalHandler::ignoreTerminationSignals())
-        {
-            return EXIT_FAILURE;
-        }
 
         score::lcm::saf::timers::OsClockInterface osClock{};
         osClock.startMeasurement();
@@ -64,47 +58,44 @@ int main(int argc, char** argv)
         score::lcm::saf::daemon::PhmDaemon daemon{osClock, logger_r, std::move(watchdog)};
 
         // coverity[autosar_cpp14_a15_5_2_violation] This warning comes from pipc-sa(external library)
-        const score::lcm::saf::daemon::PhmDaemon::EInitCode initResult{daemon.init(argc, argv)};
+        const score::lcm::saf::daemon::EInitCode initResult{daemon.init(recovery_client)};
 
-        if (score::lcm::saf::daemon::PhmDaemon::EInitCode::kNoError == initResult)
+        if (score::lcm::saf::daemon::EInitCode::kNoError == initResult)
         {
             const long ms{osClock.endMeasurement()};
             logger_r.LogDebug() << "Phm Daemon: Initialization took " << ms << " ms";
-            score::lcm::LifecycleClient client{};
 
 #ifdef BINARY_TEST_ENABLE_PHM_DAEMON_HEAP_MEASUREMENT
             score::lcm::heap::Tracer::Enable();
 #endif
 
             const bool isRunning{
-                daemon.startCyclicExec(client, score::lcm::saf::common::PhmSignalHandler::receivedTerminationSignal)};
+                daemon.startCyclicExec(cancel_thread, init_status)};
 
             if (!isRunning)
             {
                 logger_r.LogError() << "Phm Daemon: Start of cyclic execution failed.";
-                returnValue = EXIT_FAILURE;
+                init_status.store(EInitCode::kGeneralError);
             }
-        }
-        else if (score::lcm::saf::daemon::PhmDaemon::EInitCode::kPrintHelpOrVersion == initResult)
-        {
-            logger_r.LogInfo() << "Phm Daemon: will exit.";
         }
         else
         {
             logger_r.LogError() << "Phm Daemon: Initialization failed!";
-            returnValue = EXIT_FAILURE;
+            init_status.store(initResult);
         }
     }
     catch (const std::exception& e)
     {
         std::cerr << "Phm Daemon: Initialization failed due to standard exception: " << e.what() << ".\n";
-        returnValue = EXIT_FAILURE;
+        init_status.store(EInitCode::kGeneralError);
     }
     catch (...)
     {
         std::cerr << "Phm Daemon: Initialization failed due to exception!\n";
-        returnValue = EXIT_FAILURE;
+        init_status.store(EInitCode::kGeneralError);
     }
-
-    return returnValue;
 }
+}  // namespace daemon
+}  // namespace saf
+}  // namespace lcm
+}  // namespace score

@@ -16,6 +16,7 @@
 
 #include <score/lcm/internal/processgroupmanager.hpp>
 #include <score/lcm/internal/log.hpp>
+#include <score/lcm/saf/daemon/health_monitor.hpp>
 #include <csignal>
 #include <sys/wait.h>
 
@@ -90,6 +91,8 @@ bool ProcessGroupManager::initialize() {
         createProcessComponentsObjects();
         initializeGraphNodes();
         //success = ucm_polling_thread_.startPolling();
+        recovery_client_ = std::make_shared<score::lcm::RecoveryClient>();
+        success = health_monitor_thread_.start(recovery_client_);
     }
 
     if (success && launch_manager_config_ &&
@@ -102,6 +105,7 @@ bool ProcessGroupManager::initialize() {
 
 void ProcessGroupManager::deinitialize() {
     //ucm_polling_thread_.stopPolling();
+    health_monitor_thread_.stop();
     configuration_manager_.deinitialize();
     process_groups_.clear();
 
@@ -232,6 +236,7 @@ bool ProcessGroupManager::run() {
                 controlClientHandler(*pg);
                 processGroupHandler(*pg);
             }
+            recoveryActionHandler();
         }
 
     allProcessGroupsOff();
@@ -429,6 +434,57 @@ inline void ProcessGroupManager::controlClientRequests(Graph& pg) {
                     ControlClientChannel::nudgeControlClientHandler();  // will need to try again
                 }
             }
+        }
+    }
+}
+
+inline void ProcessGroupManager::recoveryActionHandler() {
+    if (!recovery_client_) {
+        return;
+    }
+
+    for(auto* recovery_request = recovery_client_->getNextRequest(); recovery_request != nullptr; recovery_request = recovery_client_->getNextRequest()) {
+        auto pg = getProcessGroup(recovery_request->pg_name_);
+        
+        if (nullptr == pg) {
+            LM_LOG_ERROR() << "recoveryActionHandler: Unknown process group " 
+                        << recovery_request->pg_name_.data();
+            recovery_client_->setResponseError(recovery_request->promise_id_, 
+                                            score::lcm::ExecErrc::kInvalidArguments);
+            continue;
+        }
+
+        IdentifierHash old_state = pg->getProcessGroupState();
+        GraphState graph_state = pg->getState();
+        
+        LM_LOG_DEBUG() << "recoveryActionHandler: Processing recovery request for PG " 
+                    << recovery_request->pg_name_.data() 
+                    << " to state " << recovery_request->pg_state_name_.data();
+
+        if (GraphState::kInTransition == graph_state) {
+            if (old_state != recovery_request->pg_state_name_) {
+                // Cancel current transition and start new one
+                (void)pg->setPendingState(recovery_request->pg_state_name_);
+                pg->setRequestStartTime();
+                pg->cancel();
+                recovery_client_->setResponseSuccess(recovery_request->promise_id_);
+            } else {
+                // Already in transition to the requested state
+                LM_LOG_DEBUG() << "recoveryActionHandler: Already transitioning to same state";
+                recovery_client_->setResponseError(recovery_request->promise_id_, 
+                                                score::lcm::ExecErrc::kInTransitionToSameState);
+            }
+        } else if (GraphState::kSuccess == graph_state &&
+                old_state == recovery_request->pg_state_name_) {
+            // Already in the requested state
+            LM_LOG_DEBUG() << "recoveryActionHandler: Already in requested state";
+            recovery_client_->setResponseError(recovery_request->promise_id_, 
+                                            score::lcm::ExecErrc::kAlreadyInState);
+        } else {
+            // Start new state transition
+            (void)pg->setPendingState(recovery_request->pg_state_name_);
+            pg->setRequestStartTime();
+            recovery_client_->setResponseSuccess(recovery_request->promise_id_);
         }
     }
 }

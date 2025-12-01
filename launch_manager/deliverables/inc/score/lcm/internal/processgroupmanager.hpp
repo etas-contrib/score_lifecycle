@@ -26,6 +26,7 @@
 #include <score/lcm/internal/safeprocessmap.hpp>
 #include <score/lcm/internal/controlclientchannel.hpp>
 #include <score/lcm/internal/workerthread.hpp>
+#include <score/lcm/internal/health_monitor_thread.hpp>
 #include <cstdint>
 #include <memory>
 #include <ctime>
@@ -165,6 +166,9 @@ class ProcessGroupManager final {
     /// @param pg Reference of the process group (Graph) to check for pending responses
     void controlClientResponses(Graph& pg);
 
+    /// @brief Handle recovery actions requested by the Health Monitor
+    void recoveryActionHandler();
+
     /// @brief Manage the process group by starting any pending transitions that were requested
     /// @details If the Graph is in the correct state to start a transition (i.e. `kSuccess` or `kUndefined`)
     /// and the pending state is valid and not equal to the last requested state, attempt to start
@@ -291,6 +295,10 @@ class ProcessGroupManager final {
 
     /// @brief pointer to the configuration for Launch Manager
     const OsProcess* launch_manager_config_{nullptr};
+
+    HealthMonitorThread health_monitor_thread_;
+
+    std::shared_ptr<score::lcm::RecoveryClient> recovery_client_{};
 };
 
 }  // namespace lcm

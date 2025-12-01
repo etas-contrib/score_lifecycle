@@ -113,7 +113,7 @@ cc_library_with_common_opts(
         "source/config/gen/hmcore_model",
     ],
     deps = [
-        "//launch_manager:control_client",
+        "//launch_manager:recovery_client",
         "@score-baselibs//score/mw/log",
     ],
 )
@@ -234,7 +234,6 @@ cc_library_with_common_opts(
     name = "daemon",
     srcs = [
         "source/score/lcm/saf/daemon/PhmDaemon.cpp",
-        "source/score/lcm/saf/daemon/PhmDaemonCmdLineParser.cpp",
         "source/score/lcm/saf/daemon/SwClusterHandler.cpp",
     ],
     cxxopts = [
@@ -253,7 +252,7 @@ cc_library_with_common_opts(
     ],
 )
 
-cc_binary_with_common_opts(
+cc_library_with_common_opts(
     name = "health_monitor",
     srcs = [
         "source/score/lcm/saf/daemon/health_monitor.cpp",

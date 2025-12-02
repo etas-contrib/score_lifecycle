@@ -77,7 +77,7 @@ cc_binary_with_common_opts(
     deps = [
         ":deliverables_includes",
         "//external/ipc_dropin",
-        "//health_monitor:health_monitor",
+        "//health_monitor",
         "@flatbuffers",
         "@score-baselibs//score/mw/log",
         "@score-baselibs//score/result",
@@ -145,21 +145,20 @@ cc_library(
 
 cc_library(
     name = "recovery_client",
-    deps = [
-        "@score-baselibs//score/concurrency/future",
-        "//external/ipc_dropin:ipc_dropin",
-        ":deliverables_includes",
-    ],
     srcs = [
-        "deliverables/libraries/score/recovery_client/src/recovery_client.cpp",
-        "deliverables/libraries/score/recovery_client/src/recovery_client_impl.cpp",
         "deliverables/common/identifier_hash/identifier_hash.cpp",
         "deliverables/daemon/process_group_manager/src/config.cpp",
+        "deliverables/libraries/score/recovery_client/src/recovery_client.cpp",
     ],
     hdrs = [
-        "deliverables/inc/score/lcm/recovery_client.h",
-        ],
+        "deliverables/inc/score/lcm/irecovery_client.h",
+    ],
     visibility = ["//visibility:public"],
+    deps = [
+        ":deliverables_includes",
+        "//external/ipc_dropin",
+        "@score-baselibs//score/concurrency/future",
+    ],
 )
 
 cc_library(

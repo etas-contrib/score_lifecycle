@@ -12,22 +12,19 @@
 ********************************************************************************/
 
 
-#ifndef SCORE_LCM_RECOVERYCLIENTIMPL_H_
-#define SCORE_LCM_RECOVERYCLIENTIMPL_H_
+#ifndef SCORE_LCM_RECOVERYCLIENT_H_
+#define SCORE_LCM_RECOVERYCLIENT_H_
 
-#include "score/concurrency/future/interruptible_future.h"
-#include "score/concurrency/future/interruptible_promise.h"
 #include "ipc_dropin/ringbuffer.hpp"
 #include <score/lcm/exec_error_domain.h>
-#include <score/lcm/recovery_client.h>
+#include <score/lcm/irecovery_client.h>
 
 #include <iterator>
 #include <cstddef>
-
 namespace score {
 namespace lcm {
-namespace internal {
-    struct RecoveryClientRequestInfo {
+
+struct RecoveryClientRequestInfo {
     score::concurrency::InterruptiblePromise<void>
         promise_;  ///< promise that should be fulfilled, i.e. set_value(), when answer from LCM is available.
     std::atomic_bool
@@ -37,30 +34,31 @@ namespace internal {
     }
 };
 
-constexpr std::size_t capacity = 1024;
-constexpr std::size_t elementSize = sizeof(RecoveryRequest);
 
-class RecoveryClientImpl {
+class RecoveryClient final : public IRecoveryClient {
 public:
-    RecoveryClientImpl() noexcept;
-    RecoveryClientImpl(const RecoveryClientImpl&) = delete;
-    RecoveryClientImpl& operator=(const RecoveryClientImpl&) = delete;
-    RecoveryClientImpl(RecoveryClientImpl&&) = delete;
-    RecoveryClientImpl& operator=(RecoveryClientImpl&&) = delete;
+    RecoveryClient() noexcept;
+    ~RecoveryClient() noexcept = default;
+    RecoveryClient(const RecoveryClient&) = delete;
+    RecoveryClient& operator=(const RecoveryClient&) = delete;
+    RecoveryClient(RecoveryClient&&) = delete;
+    RecoveryClient& operator=(RecoveryClient&&) = delete;
 
     score::concurrency::InterruptibleFuture<void> sendRecoveryRequest(
-            const score::lcm::IdentifierHash& pg_name, const score::lcm::IdentifierHash& pg_state) noexcept;
+        const score::lcm::IdentifierHash& pg_name, const score::lcm::IdentifierHash& pg_state) noexcept;
 
     void setResponseSuccess(std::size_t promise_id) noexcept;
     void setResponseError(std::size_t promise_id, score::lcm::ExecErrc errType) noexcept;
     RecoveryRequest* getNextRequest() noexcept;
+
 private:
-    ipc_dropin::RingBuffer<capacity, elementSize> ringBuffer_;  ///< Ring buffer to store recovery requests
-    std::array<RecoveryClientRequestInfo, capacity> requests_;
+    static const std::size_t capacity_ = 128;
+    static const std::size_t element_size_ = sizeof(RecoveryRequest);
+    ipc_dropin::RingBuffer<RecoveryClient::capacity_, RecoveryClient::element_size_> ringBuffer_;  ///< Ring buffer to store recovery requests
+    std::array<RecoveryClientRequestInfo, RecoveryClient::capacity_> requests_;
     RecoveryRequest temp_request_;
 }; 
 } // namespace lcm
-}
-}
+} // namespace score
 
 #endif

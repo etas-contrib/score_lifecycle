@@ -12,38 +12,70 @@
 ********************************************************************************/
 
 
-#include <score/lcm/recovery_client.h>
-#include <score/lcm/internal/recovery_client_impl.hpp>
+#include <score/lcm/internal/recovery_client.hpp>
 
 namespace score {
 namespace lcm {
-RecoveryClient::RecoveryClient() noexcept{
-    try {
-        recovery_client_impl_ = std::make_unique<internal::RecoveryClientImpl>();
-    } catch (...) {
-        recovery_client_impl_ = nullptr;
-    }
+
+inline score::concurrency::InterruptibleFuture<void> GetErrorFuture(score::lcm::ExecErrc errType) noexcept
+{
+    score::concurrency::InterruptiblePromise<void> tmp_ {};
+    tmp_.SetError( errType );
+    return tmp_.GetInterruptibleFuture().value();
 }
 
-RecoveryClient::~RecoveryClient() noexcept {
-    recovery_client_impl_.reset();
+RecoveryClient::RecoveryClient() noexcept  : ringBuffer_{}, requests_{} {
+    ringBuffer_.initialize();
 }
 
 score::concurrency::InterruptibleFuture<void> RecoveryClient::sendRecoveryRequest(
             const score::lcm::IdentifierHash& pg_name, const score::lcm::IdentifierHash& pg_state) noexcept {
-    return recovery_client_impl_->sendRecoveryRequest(pg_name, pg_state);
+    std::size_t i = 0u;
+    score::concurrency::InterruptibleFuture<void> retVal;
+    for (; i < requests_.size(); ++i) {
+        bool expected = false;
+        if (requests_[i].in_use_.compare_exchange_strong(expected, true)) {
+            break;
+        }
+    }
+
+    if (i < requests_.size()) {
+        requests_[i].promise_ = score::concurrency::InterruptiblePromise<void>{};
+        auto futureResult = requests_[i].promise_.GetInterruptibleFuture();
+        if (futureResult.has_value()) {
+            retVal = std::move(futureResult.value());
+        } else {
+            requests_[i].in_use_ = false;
+            return GetErrorFuture(ExecErrc::kFailed);
+        }
+
+        RecoveryRequest req{pg_name, pg_state, i};
+        if(!ringBuffer_.tryEnqueue(req)) {
+            requests_[i].promise_.SetError(score::lcm::ExecErrc::kFailed);
+            requests_[i].in_use_ = false;
+        }
+    } else {
+        retVal = GetErrorFuture(ExecErrc::kFailed);
+    }
+    return retVal;
 }
 
 void RecoveryClient::setResponseSuccess(std::size_t promise_id) noexcept {
-    recovery_client_impl_->setResponseSuccess(promise_id);
+    requests_[promise_id].promise_.SetValue();
+    requests_[promise_id].in_use_ = false;
 }
 
 void RecoveryClient::setResponseError(std::size_t promise_id, score::lcm::ExecErrc errType) noexcept {
-    recovery_client_impl_->setResponseError(promise_id, errType);
+    requests_[promise_id].promise_.SetError(errType);
+    requests_[promise_id].in_use_ = false;
 }
 
 RecoveryRequest* RecoveryClient::getNextRequest() noexcept {
-    return recovery_client_impl_->getNextRequest();
+    if(ringBuffer_.tryDequeue(temp_request_)) {
+        return &temp_request_;
+    } else {
+        return nullptr;
+    }
 }
 }
 }

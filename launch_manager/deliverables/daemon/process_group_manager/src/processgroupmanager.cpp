@@ -38,7 +38,7 @@ void ProcessGroupManager::cancel() {
     my_signal_handler(SIGTERM);
 }
 
-ProcessGroupManager::ProcessGroupManager()
+ProcessGroupManager::ProcessGroupManager(std::unique_ptr<IHealthMonitor> health_monitor, std::shared_ptr<IRecoveryClient> recovery_client)
     : configuration_manager_(),
       process_interface_(),
       process_map_(nullptr),
@@ -47,7 +47,9 @@ ProcessGroupManager::ProcessGroupManager()
       total_processes_(0U),
       num_process_groups_(0U),
       process_groups_(),
-      process_state_notifier_() //,
+      process_state_notifier_(),
+      health_monitor_thread_(std::move(health_monitor)),
+      recovery_client_(recovery_client) //,
                                  //ucm_polling_thread_(
 //  [this](const Message::Action act, const Message::UpdateContext updateCtx, const lib::fun::string& swc) -> bool
 //                      { return reloadConfiguration(act, updateCtx, IdentifierHash(swc.c_str())); })
@@ -91,8 +93,7 @@ bool ProcessGroupManager::initialize() {
         createProcessComponentsObjects();
         initializeGraphNodes();
         //success = ucm_polling_thread_.startPolling();
-        recovery_client_ = std::make_shared<score::lcm::RecoveryClient>();
-        success = health_monitor_thread_.start(recovery_client_);
+        success = health_monitor_thread_->start(recovery_client_);
     }
 
     if (success && launch_manager_config_ &&
@@ -105,7 +106,7 @@ bool ProcessGroupManager::initialize() {
 
 void ProcessGroupManager::deinitialize() {
     //ucm_polling_thread_.stopPolling();
-    health_monitor_thread_.stop();
+    health_monitor_thread_->stop();
     configuration_manager_.deinitialize();
     process_groups_.clear();
 
@@ -467,6 +468,7 @@ inline void ProcessGroupManager::recoveryActionHandler() {
                 (void)pg->setPendingState(recovery_request->pg_state_name_);
                 pg->setRequestStartTime();
                 pg->cancel();
+                controlClientResponses(*pg);
                 recovery_client_->setResponseSuccess(recovery_request->promise_id_);
             } else {
                 // Already in transition to the requested state

@@ -29,7 +29,7 @@ namespace {
     }
 }
 
-Notification::Notification(std::shared_ptr<score::lcm::RecoveryClient> f_recoveryClient_r) :
+Notification::Notification(std::shared_ptr<score::lcm::IRecoveryClient> f_recoveryClient_r) :
     currentState(State::kIdle),
     messageHeader("Notification ( / )"),
     isNotificationConfigAvailable(false),
@@ -38,7 +38,7 @@ Notification::Notification(std::shared_ptr<score::lcm::RecoveryClient> f_recover
 {
 }
 
-Notification::Notification(const NotificationConfig& f_notificationConfig_r, std::shared_ptr<score::lcm::RecoveryClient> f_recoveryClient_r) :
+Notification::Notification(const NotificationConfig& f_notificationConfig_r, std::shared_ptr<score::lcm::IRecoveryClient> f_recoveryClient_r) :
     currentState(State::kIdle),
     k_notificationConfig(f_notificationConfig_r),
     messageHeader("Notification (" + k_notificationConfig.configName + ")"),

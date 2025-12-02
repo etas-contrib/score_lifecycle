@@ -11,8 +11,8 @@
 * SPDX-License-Identifier: Apache-2.0
 ********************************************************************************/
 
-#ifndef HEALTH_MONITOR_HPP_INCLUDED
-#define HEALTH_MONITOR_HPP_INCLUDED
+#ifndef SAF_DAEMON_HEALTH_MONITOR_HPP_INCLUDED
+#define SAF_DAEMON_HEALTH_MONITOR_HPP_INCLUDED
 #include "score/lcm/saf/daemon/PhmDaemon.hpp"
 namespace score
 {
@@ -27,7 +27,7 @@ namespace daemon
 /// @param recovery_client Shared pointer to recovery client
 /// @param init_status Initialization status to be updated
 /// @param cancel_thread Termination signal predicate
-void run(std::shared_ptr<score::lcm::RecoveryClient> recovery_client, std::atomic<EInitCode>& init_status, std::atomic_bool& cancel_thread);
+void run(std::shared_ptr<score::lcm::IRecoveryClient> recovery_client, std::atomic<EInitCode>& init_status, std::atomic_bool& cancel_thread);
 }  // namespace daemon
 }  // namespace saf
 }  // namespace lcm

@@ -16,6 +16,8 @@
 
 #include <score/lcm/internal/processgroupmanager.hpp>
 #include <score/lcm/internal/log.hpp>
+#include <score/lcm/internal/health_monitor.hpp>
+#include <score/lcm/internal/recovery_client.hpp>
 
 using namespace std;
 using namespace score::lcm::internal;
@@ -84,7 +86,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char const* argv[]) {
 
         LM_LOG_DEBUG() << "Launch Manager Started !!!!";
 
-        std::unique_ptr<ProcessGroupManager> process_group_manager = std::make_unique<ProcessGroupManager>();
+        std::unique_ptr<ProcessGroupManager> process_group_manager = std::make_unique<ProcessGroupManager>(std::make_unique<HealthMonitor>(), std::make_shared<score::lcm::RecoveryClient>());
 
         if (initializeLCMDaemon(*process_group_manager)) {
             if (runLCMDaemon(*process_group_manager)) {

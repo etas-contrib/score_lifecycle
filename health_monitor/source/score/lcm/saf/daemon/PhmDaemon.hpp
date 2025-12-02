@@ -38,19 +38,20 @@ namespace saf
 {
 namespace daemon
 {
+extern std::mutex initialization_mutex;
+extern std::condition_variable initialization_cv;
 /// @brief Return codes for PhmDaemon Initialization
 enum class EInitCode : std::int8_t
 {
-    kNoError = 0,                           ///< Init Successful (no error occurred)
-    kNotInitialized = 1,                    ///< Init was not performed
-    kParsingError = -1,                     ///< Error while parsing cmdline arguments
-    kCycleTimeInitFailed = -2,              ///< Cyclic Timer initialization failed
-    kConstructFlatCfgFactoryFailed = -3,    ///< FlatCfgFactory failed loading SWCL configurations
-    kWatchdogInitFailed = -4,               ///< Watchdog Initialization failed
-    kWatchdogEnableFailed = -5,             ///< Enabling watchdog device failed
-    kMachineConfigInitFailed = -6,          ///< MachineConfigFactory failed loading the machine configuration
-    kSignalHandlerRegistrationFailed = -7,  ///< Failed to register signal handler for termination signals
-    kGeneralError = -8                      ///< General error
+    kNoError,                           ///< Init Successful (no error occurred)
+    kNotInitialized,                    ///< Init was not performed
+    kCycleTimeInitFailed,              ///< Cyclic Timer initialization failed
+    kConstructFlatCfgFactoryFailed,    ///< FlatCfgFactory failed loading SWCL configurations
+    kWatchdogInitFailed,               ///< Watchdog Initialization failed
+    kWatchdogEnableFailed,             ///< Enabling watchdog device failed
+    kMachineConfigInitFailed,          ///< MachineConfigFactory failed loading the machine configuration
+    kSignalHandlerRegistrationFailed,  ///< Failed to register signal handler for termination signals
+    kGeneralError                      ///< General error
 };
 
 
@@ -87,10 +88,10 @@ public:
     PhmDaemon& operator=(PhmDaemon&&) = delete;
 
     /// @brief Wraps the initialization steps of the PHM daemon
-    /// (command line parsing, Constructing the workers, adjusting the cycle time, initialization of fixed step timer)
+    /// (Constructing the workers, adjusting the cycle time, initialization of fixed step timer)
     /// @param[in] recovery_client Shared pointer to recovery client
     /// @return See EInitCode definition
-    EInitCode init(std::shared_ptr<score::lcm::RecoveryClient> recovery_client) noexcept(false)
+    EInitCode init(std::shared_ptr<score::lcm::IRecoveryClient> recovery_client) noexcept(false)
     {
 
         recoveryClient = recovery_client;
@@ -179,7 +180,11 @@ public:
                               "checkpoint reporting.";
 #endif
 
-        init_status.store(EInitCode::kNoError);
+        {
+            std::lock_guard lk(initialization_mutex);
+            init_status.store(EInitCode::kNoError);
+        }
+        initialization_cv.notify_all();
         while (!f_terminateCond.load())
         {
             performCyclicTriggers();
@@ -240,7 +245,7 @@ private:
     logging::PhmLogger& logger_r;
 
     /// @brief Recovery interface to Launch Manager
-    std::shared_ptr<score::lcm::RecoveryClient> recoveryClient;
+    std::shared_ptr<score::lcm::IRecoveryClient> recoveryClient;
 
     /// @brief Vector of SwCluster handler
     std::vector<SwClusterHandler> swClusterHandlers;

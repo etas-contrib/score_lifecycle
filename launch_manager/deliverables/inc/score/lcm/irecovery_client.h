@@ -12,8 +12,8 @@
 ********************************************************************************/
 
 
-#ifndef SCORE_LCM_RECOVERYCLIENT_H_
-#define SCORE_LCM_RECOVERYCLIENT_H_
+#ifndef SCORE_LCM_IRECOVERYCLIENT_H_
+#define SCORE_LCM_IRECOVERYCLIENT_H_
 
 #include "score/concurrency/future/interruptible_future.h"
 #include "score/concurrency/future/interruptible_promise.h"
@@ -22,9 +22,6 @@
 
 namespace score {
 namespace lcm {
-namespace internal {
-    struct RecoveryClientImpl;
-} // namespace internal
 
 struct RecoveryRequest {
     score::lcm::IdentifierHash pg_name_;
@@ -32,25 +29,21 @@ struct RecoveryRequest {
     std::size_t promise_id_;
 };
 
-
-class RecoveryClient {
+class IRecoveryClient {
 public:
-    RecoveryClient() noexcept;
-    ~RecoveryClient() noexcept;
-    RecoveryClient(const RecoveryClient&) = delete;
-    RecoveryClient& operator=(const RecoveryClient&) = delete;
-    RecoveryClient(RecoveryClient&&) = delete;
-    RecoveryClient& operator=(RecoveryClient&&) = delete;
+    IRecoveryClient() noexcept = default;
+    ~IRecoveryClient() noexcept = default;
+    IRecoveryClient(const IRecoveryClient&) = delete;
+    IRecoveryClient& operator=(const IRecoveryClient&) = delete;
+    IRecoveryClient(IRecoveryClient&&) = delete;
+    IRecoveryClient& operator=(IRecoveryClient&&) = delete;
 
-    score::concurrency::InterruptibleFuture<void> sendRecoveryRequest(
-        const score::lcm::IdentifierHash& pg_name, const score::lcm::IdentifierHash& pg_state) noexcept;
+    virtual score::concurrency::InterruptibleFuture<void> sendRecoveryRequest(
+        const score::lcm::IdentifierHash& pg_name, const score::lcm::IdentifierHash& pg_state) noexcept = 0;
 
-    void setResponseSuccess(std::size_t promise_id) noexcept;
-    void setResponseError(std::size_t promise_id, score::lcm::ExecErrc errType) noexcept;
-    RecoveryRequest* getNextRequest() noexcept;
-
-private:
-        std::unique_ptr<internal::RecoveryClientImpl> recovery_client_impl_;
+    virtual void setResponseSuccess(std::size_t promise_id) noexcept = 0;
+    virtual void setResponseError(std::size_t promise_id, score::lcm::ExecErrc errType) noexcept = 0;
+    virtual RecoveryRequest* getNextRequest() noexcept = 0;
 }; 
 } // namespace lcm
 } // namespace score

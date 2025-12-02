@@ -42,7 +42,7 @@ namespace saf
 {
 namespace daemon
 {
-void run(std::shared_ptr<score::lcm::RecoveryClient> recovery_client, std::atomic<EInitCode>& init_status, std::atomic_bool& cancel_thread)
+void run(std::shared_ptr<score::lcm::IRecoveryClient> recovery_client, std::atomic<EInitCode>& init_status, std::atomic_bool& cancel_thread)
 {
     try
     {
@@ -75,24 +75,41 @@ void run(std::shared_ptr<score::lcm::RecoveryClient> recovery_client, std::atomi
             if (!isRunning)
             {
                 logger_r.LogError() << "Phm Daemon: Start of cyclic execution failed.";
-                init_status.store(EInitCode::kGeneralError);
+                {
+                    std::lock_guard lk(initialization_mutex);
+                    init_status.store(EInitCode::kGeneralError);
+                }
+                initialization_cv.notify_all();
             }
         }
         else
         {
             logger_r.LogError() << "Phm Daemon: Initialization failed!";
-            init_status.store(initResult);
+            {
+                std::lock_guard lk(initialization_mutex);
+                init_status.store(initResult);
+            }
+            initialization_cv.notify_all();
         }
     }
     catch (const std::exception& e)
     {
         std::cerr << "Phm Daemon: Initialization failed due to standard exception: " << e.what() << ".\n";
         init_status.store(EInitCode::kGeneralError);
+        {
+            std::lock_guard lk(initialization_mutex);
+            init_status.store(EInitCode::kGeneralError);
+        }
+        initialization_cv.notify_all();
     }
     catch (...)
     {
         std::cerr << "Phm Daemon: Initialization failed due to exception!\n";
-        init_status.store(EInitCode::kGeneralError);
+        {
+            std::lock_guard lk(initialization_mutex);
+            init_status.store(EInitCode::kGeneralError);
+        }
+        initialization_cv.notify_all();
     }
 }
 }  // namespace daemon

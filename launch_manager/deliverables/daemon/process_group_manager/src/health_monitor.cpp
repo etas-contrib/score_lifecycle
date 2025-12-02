@@ -12,7 +12,7 @@
 ********************************************************************************/
 
 
-#include <score/lcm/internal/health_monitor_thread.hpp>
+#include <score/lcm/internal/health_monitor.hpp>
 #include <score/lcm/saf/daemon/health_monitor.hpp>
 
 namespace score
@@ -21,16 +21,21 @@ namespace lcm
 {
 namespace internal 
 {
-bool HealthMonitorThread::start(std::shared_ptr<score::lcm::RecoveryClient> client) noexcept {
-    std::atomic<score::lcm::saf::daemon::EInitCode> init_complete{score::lcm::saf::daemon::EInitCode::kNotInitialized};
-    health_monitor_thread_ = std::thread(&score::lcm::saf::daemon::run, client, std::ref(init_complete), std::ref(stop_thread_));
-    while (init_complete.load() == score::lcm::saf::daemon::EInitCode::kNotInitialized) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    return (init_complete.load() == score::lcm::saf::daemon::EInitCode::kNoError);
+bool HealthMonitor::start(std::shared_ptr<score::lcm::IRecoveryClient> client) noexcept {
+    std::atomic<score::lcm::saf::daemon::EInitCode> init_status{score::lcm::saf::daemon::EInitCode::kNotInitialized};
+    health_monitor_thread_ = std::thread(&score::lcm::saf::daemon::run, client, std::ref(init_status), std::ref(stop_thread_));
+    
+    std::unique_lock lk(score::lcm::saf::daemon::initialization_mutex);
+    score::lcm::saf::daemon::initialization_cv.wait(
+        lk,
+        [&init_status]() {
+            return init_status.load() != score::lcm::saf::daemon::EInitCode::kNotInitialized;
+        });
+
+    return (init_status.load() == score::lcm::saf::daemon::EInitCode::kNoError);
 }
 
-void HealthMonitorThread::stop() noexcept {
+void HealthMonitor::stop() noexcept {
     stop_thread_.store(true);
     if (health_monitor_thread_.joinable()) {
         health_monitor_thread_.join();

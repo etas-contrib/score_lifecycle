@@ -8,18 +8,18 @@ Purpose of this component is to have a layer of abstraction, that unifies API, f
 ## External interfaces 
 
 Component consists of three main parts:
-* Application Base class `bmw::mw::lifecycle::Application` from which application developers shall subclass their own application.
-* Lifecycle manager class `bmw::mw::lifecycle::LifecycleManager` see [lifecyclemanager.md](./lifecyclemanager.md) file.
-* Runner class `bmw::mw::lifecycle::Run` which instantiates the user provided application and decides which LifeCycleManager to use.
+* Application Base class `score::mw::lifecycle::Application` from which application developers shall subclass their own application.
+* Lifecycle manager class `score::mw::lifecycle::LifecycleManager` see [lifecyclemanager.md](lifecyclemanager.md) file.
+* Runner class `score::mw::lifecycle::Run` which instantiates the user provided application and decides which LifeCycleManager to use.
 
 Overview on how lifecycle application is related to execution manager.
-![Lifecycle Manager Application Overview](./model/lifecycle_system_view.uxf)
+![Lifecycle Manager Application Overview](model/lifecycle_system_view.uxf)
 
 ### AAS Interfaces
 N/A
 
 ### External C++ interfaces 
-`bmw:mw::Application` methods which have to be implemented by the application:
+`score:mw::Application` methods which have to be implemented by the application:
 #### Initialize
 This method shall do basic initialization of application (what was not done in application [State `Initializing`](#state-initializing)). 
 Method returns a `Result`, which either contains `void` on success or an error. In case of an error lifecycle manager will join all running threads and will return with non zero value.  
@@ -44,13 +44,13 @@ Example code:
     std::array<std::string, 3> in_args{};
     if (context.get_arguments().empty())
     {
-      bmw::mw::log::LogError() << "Incorrect arguments given\n";
+      score::mw::log::LogError() << "Incorrect arguments given\n";
     } else
     {
       context.get_argument("-i", in_args[0]);
       if (in_args[0].empty()) 
       {
-        bmw::mw::log::LogError() << "Tsync Incorrect arguments given\n";
+        score::mw::log::LogError() << "Tsync Incorrect arguments given\n";
       } else 
       {
         // argument is in in_args[0] to be used by application
@@ -67,10 +67,10 @@ N/A
 ### File system
 N/A
 ### POSIX signals
-SIGTERM see [lifecyclemanager.md](./lifecyclemanager.md)
+SIGTERM see [lifecyclemanager.md](lifecyclemanager.md)
 
 ## Static architecture
-![Structural View](./model/structural_view.uxf)
+![Structural View](model/structural_view.uxf)
 
 ## Dynamic architecture
 
@@ -78,13 +78,13 @@ SIGTERM see [lifecyclemanager.md](./lifecyclemanager.md)
 The following sequence diagram shows the interaction between OS and instances of `Application` class, which were
 decorated with a `LifecycleManager`:
 
-![Sequence View](./model/sequence_view.uxf)
+![Sequence View](model/sequence_view.uxf)
 
 ### Stateful behavior
 
 The following state machine depicts the states/transitions of an application:
 
-![Application Lifecycle](./model/app_lifecycle.uxf)
+![Application Lifecycle](model/app_lifecycle.uxf)
 
 #### State `Terminated` respectively `Not Started`
 

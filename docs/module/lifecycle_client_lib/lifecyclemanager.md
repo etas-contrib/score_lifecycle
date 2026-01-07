@@ -1,12 +1,12 @@
 # Lifecyclemanager class
 
 ## Introduction
-Purpose of `bmw::mw::lifecycle::LifecycleManager` component is to have a layer of abstraction, that unifies API, for execution managers.
+Purpose of `score::mw::lifecycle::LifecycleManager` component is to have a layer of abstraction, that unifies API, for execution managers.
 
 > This component has `ASIL-B` safety level.
 
 ## External C++ interfaces 
-`LifecycleManager` class is a decoration of [bmw::mw::lifecycle::Application](./lifecycle.md) class. It adds POSIX signal handling for SIGTERM signal, for decorated `Application`. 
+`LifecycleManager` class is a decoration of [score::mw::lifecycle::Application](lifecycle.md) class. It adds POSIX signal handling for SIGTERM signal, for decorated `Application`. 
 
 Methods which have to be implemented in case of adding new lifecycle manager:
 ### report_running

@@ -44,12 +44,12 @@ filegroup(
         "//health_monitor",
         "//health_monitor:hm_shared_lib",
         "//launch_manager",
-        "//src/lifecycle_client_lib",
         "//launch_manager:control_client",
         "//launch_manager:lifecycle_client",
         "//launch_manager:process_state_client",
         "//rust_bindings/lifecycle_client_rs",
         "//rust_bindings/monitor_rs",
+        "//src/lifecycle_client_lib",
     ],
 )
 

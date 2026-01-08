@@ -11,8 +11,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@score_baselibs//score/language/safecpp:toolchain_features.bzl", "COMPILER_WARNING_FEATURES")
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@score_baselibs//score/language/safecpp:toolchain_features.bzl", "COMPILER_WARNING_FEATURES")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -33,7 +33,7 @@ cc_library(
         "include/applicationcontext.h",
         "include/lifecyclemanager.h",
         "include/runapplication.h",
-        ],
+    ],
     copts = select({
         "//config:x86_64-qnx": [],
         "//conditions:default": ["-pthread"],
@@ -44,11 +44,11 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        "@score_baselibs//score/memory:string_literal",
         "@score_baselibs//score/language/futurecpp",
-        "@score_baselibs//score/os/utils:signal",
+        "@score_baselibs//score/memory:string_literal",
         "@score_baselibs//score/mw/log",
         "@score_baselibs//score/os:stdlib",
+        "@score_baselibs//score/os/utils:signal",
     ],
 )
 
@@ -64,9 +64,9 @@ cc_library(
     tags = ["FUSA"],
     deps = [
         "@score_baselibs//score/memory:string_literal",
+        "@score_baselibs//score/mw/log",
         "@score_baselibs//score/os:stdlib",
         "@score_baselibs//score/os/utils:signal",
-        "@score_baselibs//score/mw/log",
     ],
 )
 
@@ -94,7 +94,7 @@ cc_library(
     hdrs = [
         "include/aasapplicationcontainer.h",
         "include/application.h",
-        "include/lifecyclemanager.h"
+        "include/lifecyclemanager.h",
     ],
     features = COMPILER_WARNING_FEATURES,
     deps = [
@@ -102,24 +102,22 @@ cc_library(
     ],
 )
 
-
-
 cc_library(
     name = "lifecyclemanager",
     srcs = [
         "src/lifecyclemanager.cpp",
     ],
     hdrs = [
-        "include/lifecyclemanager.h",
         "include/application.h",
+        "include/lifecyclemanager.h",
     ],
     features = COMPILER_WARNING_FEATURES,
     tags = ["FUSA"],
     deps = [
         ":application",
+        "@score_baselibs//score/mw/log",
         "@score_baselibs//score/os:stdlib",
         "@score_baselibs//score/os/utils:signal",
-        "@score_baselibs//score/mw/log",
     ],
 )
 
@@ -130,9 +128,9 @@ cc_library(
             "src/runapplication.cpp",
         ],
         hdrs = [
-            "include/runapplication.h",
+            "include/application.h",
             "include/lifecyclemanager.h",
-            "include/application.h"
+            "include/runapplication.h",
         ],
         features = COMPILER_WARNING_FEATURES,
         tags = ["FUSA"],

@@ -12,9 +12,12 @@
 // *******************************************************************************
 
 mod common;
-mod log;
-mod protected_memory;
+mod deadline_monitor;
+mod deadline_state;
 
-pub mod deadline;
+pub use deadline_monitor::{
+    DeadlineError, DeadlineHandle, DeadlineMonitor, DeadlineMonitorBuilder, DeadlineMonitorError,
+};
 
-pub use common::{IdentTag, TimeRange};
+// FFI bindings
+pub(super) mod ffi;

@@ -752,7 +752,8 @@
     "https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/modules/score_docs_as_code/2.0.2/MODULE.bazel": "eda1324a672604fedee96e29ca3324d585085df54a2e49e30527db410c98ff03",
     "https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/modules/score_docs_as_code/2.0.3/MODULE.bazel": "9b945514727190d4c381d8965b972884ba04ce105260ffd2b3c9df51f206ebfe",
     "https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/modules/score_docs_as_code/2.2.0/MODULE.bazel": "467d9b7f70f3c4f9ba84b5e9718da0272dcf8e30a737173bf79a48f017927744",
-    "https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/modules/score_docs_as_code/2.2.0/source.json": "176af08bcfa30f5857cc6bcdd7fc2d737857d3cd8bc718c09544dba2cbba7d56",
+    "https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/modules/score_docs_as_code/2.3.0/MODULE.bazel": "e215b29e2a737316af099d2f1372e303641b0720a67a104a286efeb66c92ff14",
+    "https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/modules/score_docs_as_code/2.3.0/source.json": "3dfe1c6593e9acab12c6d7ca62bbaf9abbfe7d1c4a5e722dd8bc72f2b5e8fa4f",
     "https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/modules/score_format_checker/0.1.1/MODULE.bazel": "1acc254faa90e9f97b79ac69af25b6c21c561f8d6079914f6352b9b20d26bd37",
     "https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/modules/score_platform/0.1.0/MODULE.bazel": "cc9eae86e76f2a930510ed6e50ec991bb5661687e24881685b39c322087adf6f",
     "https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/modules/score_platform/0.1.1/MODULE.bazel": "eb086ba99f9319371fbbd0a9252dfd27b0817039b88bd4d691602974b1ada005",
@@ -6615,6 +6616,53 @@
             "score_toolchains_gcc+",
             "score_toolchains_gcc",
             "score_toolchains_gcc+"
+          ]
+        ]
+      }
+    },
+    "@@score_toolchains_qnx+//:extensions.bzl%toolchains_qnx": {
+      "general": {
+        "bzlTransitiveDigest": "F6y2fAJJUfV3b6FNSGJSyi+Pa7AqT9NG+AhWCIySUwA=",
+        "usagesDigest": "57vskEtnheV4LMUX6fJDRfsaRXNH2xz9eQ0xsOMu6y8=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "toolchains_qnx_sdp": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "urls": [
+                "https://www.qnx.com/download/download/79858/installation.tgz"
+              ],
+              "build_file": "@@score_toolchains_qnx+//toolchains:sdp.BUILD",
+              "sha256": "f2e0cb21c6baddbcb65f6a70610ce498e7685de8ea2e0f1648f01b327f6bac63",
+              "strip_prefix": "installation"
+            }
+          },
+          "toolchains_qnx_qcc": {
+            "repoRuleId": "@@score_toolchains_qnx+//toolchains:rules.bzl%qcc_toolchain",
+            "attributes": {
+              "sdp_repo": "toolchains_qnx_sdp",
+              "qcc_version": "12.2.0",
+              "sdp_version": "8.0.0",
+              "qnx_version_constraint": "@@score_bazel_platforms+//:qnx8_0",
+              "default_license_server": ""
+            }
+          },
+          "toolchains_qnx_ifs": {
+            "repoRuleId": "@@score_toolchains_qnx+//toolchains:rules.bzl%ifs_toolchain",
+            "attributes": {
+              "sdp_repo": "toolchains_qnx_sdp",
+              "qnx_version_constraint": "@@score_bazel_platforms+//:qnx8_0",
+              "default_license_server": ""
+            }
+          }
+        },
+        "recordedRepoMappingEntries": [
+          [
+            "score_toolchains_qnx+",
+            "bazel_tools",
+            "bazel_tools"
           ]
         ]
       }

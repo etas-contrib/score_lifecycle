@@ -20,6 +20,12 @@ For illustration, please refer to the following example.
         "component_properties": {
             "is_native_application": true,
             "is_supervised": false,
+            "alive_supervision": {
+                "reporting_cycle": 0.5,
+                "failed_cycles_tolerance": 2,
+                "min_indications": 1,
+                "max_indications": 3
+            },
             "is_self_terminating": true
         },
         "deployment_config": {
@@ -45,7 +51,7 @@ In the `defaults` section of file, the user can define default values for compon
 All keys have the identical names as used for the configuration of a concrete component / deployment_config.
 
 ```json
-"defaults_": {
+"defaults": {
     "deployment_config": {
         "startup_timeout": 0.5,
         "shutdown_timeout": 0.5,
@@ -58,12 +64,18 @@ All keys have the identical names as used for the configuration of a concrete co
         },
         "process_arguments": [],
         "scheduling_policy": "SCHED_OTHER",
-        "scheduling_priority": "0"
+        "scheduling_priority": "0",
         ...
     },
     "component_properties": {
         "is_native_application": false,
         "is_supervised": true,
+        "alive_supervision": {
+            "reporting_cycle": 0.5,
+            "failed_cycles_tolerance": 2,
+            "min_indications": 1,
+            "max_indications": 3
+        },
         "is_self_terminating": false,
         "is_state_manager": false,
         "depends_on": []
@@ -113,6 +125,11 @@ Initially (when mapping the new configuration to the existing software), the com
 Currently following component properties are supported:
 * `is_native_application`: Property describing if component is using S-CORE platform functionality (true / false).
 * `is_supervised`: Property describing if component sends alive notifications to Launch Manager (true / false).
+* `alive_supervision`: Description of alive monitoring, that should be applied to this component.
+  * `reporting_cycle`: Property describing the duration of time period, used for evaluation of alive supervision.
+  * `failed_cycles_tolerance`: Property describing number of reporting cycles (see `reporting_cycle`) that could fail in a row, before recovery action will be triggered.
+  * `min_indications`: Property describing minimal number of checkpoints, that shall be reported in a given `reporting_cycle`.
+  * `max_indications`: Property describing maximal number of checkpoints, that can be reported in a given `reporting_cycle`.
 * `is_self_terminating`: Property describing if component intends to terminate on its own after startup. Please note that daemons usually stay running and waits for termination request from Launch Manager (true / false).
 * `is_state_manager`: Property describing if component needs access to the API that changes current Run Target (true / false).
 * `depends_on`: List of components on which this component depends.
@@ -143,7 +160,9 @@ For every dependency, the required state of the component is implicitly "Running
 "run_targets": {
     "run_target_01": {
         "description": "Example description of a Run Target number 01.",
-        "includes": ["test_app1"]
+        "includes": {
+            "components": ["test_app1"]
+        }
     }
     ...
 }
@@ -182,6 +201,12 @@ All time periods will be configured in seconds. If a smaller time period is need
         "component_properties": {
             "is_native_application": false,
             "is_supervised": true,
+            "alive_supervision": {
+                "reporting_cycle": 0.5,
+                "failed_cycles_tolerance": 2,
+                "min_indications": 1,
+                "max_indications": 3
+            },
             "is_self_terminating": false,
             "is_state_manager": false,
             "depends_on": []
@@ -253,38 +278,32 @@ All time periods will be configured in seconds. If a smaller time period is need
     "run_targets": {
         "Minimal": {
             "description": "Minimal functionality of the system",
-            "includes": [
-                {
-                    "component": "state_manager"
-                }
-            ]
+            "includes": {
+                "components": ["state_manager"]
+            }
         },
         "Full": {
             "description": "Everything running",
-            "includes": [
-                {
-                    "run_target": "Minimal"
-                },
-                {
-                    "component": "test_app1"
-                }
-            ],
+            "includes": {
+                "components": ["test_app1"],
+                "run_targets": ["Minimal"]
+            },
             "transition_timeout": 5
         },
         "Off": {
             "description": "Nothing is running"
-        }
+        },
+        "initial_run_target": "Minimal"
     },
-    "initial_run_target": "Minimal",
     "health_monitoring" : {
-        "evaluation_cycle_ms": 500
-    },
-    "watchdogs": {
-        "simple_watchdog": {
-            "device_file_path": "/dev/watchdog",
-            "max_timeout_ms": 2000,
-            "deactivate_on_shutdown": true,
-            "require_magic_close": false
+        "evaluation_cycle": 0.5,
+        "watchdogs": {
+            "simple_watchdog": {
+                "device_file_path": "/dev/watchdog",
+                "max_timeout": 2,
+                "deactivate_on_shutdown": true,
+                "require_magic_close": false
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 # Overview
 
+
 Portable and high-performance implementation of a Lifecycle feature for S-CORE project.
 
 This repository contains source code for Launch Manager and Health Monitor. Lifecycle feature is implemented in C++ language, but Rust language bindings are also provided. Additionally, to demonstrate how to use Lifecycle, a set of example applications can be found in ``demo`` folder.
@@ -535,3 +536,4 @@ This overview represent a high level illustration of requirements coverage and i
     - Configurable recovery wait time ✅
     - External monitor notifications & watchdog support ✅
     - Internal monitoring (self-health) checks ✅
+

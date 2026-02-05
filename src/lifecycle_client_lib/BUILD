@@ -35,13 +35,11 @@ cc_library(
         "include/runapplication.h",
     ],
     copts = select({
-        "//config:x86_64-qnx": [],
-        "//config:build_qnx8": [],
+        "@platforms//os:qnx": [],
         "//conditions:default": ["-pthread"],
     }),
     linkopts = select({
-        "//config:x86_64-qnx": [],
-        "//config:build_qnx8": [],
+        "@platforms//os:qnx": [],
         "//conditions:default": ["-lpthread"],
     }),
     visibility = ["//visibility:public"],

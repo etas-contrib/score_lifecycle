@@ -23,14 +23,12 @@ cc_library(
         "include/score/lcm/lifecycle_client.h",
     ],
     copts = select({
-        "//config:x86_64-qnx": [],
-        "//config:build_qnx8": [],
+        "@platforms//os:qnx": [],
         "//conditions:default": ["-pthread"],
     }),
     includes = ["include"],
     linkopts = select({
-        "//config:x86_64-qnx": [],
-        "//config:build_qnx8": [],
+        "@platforms//os:qnx": [],
         "//conditions:default": ["-lpthread"],
     }),
     visibility = ["//visibility:public"],

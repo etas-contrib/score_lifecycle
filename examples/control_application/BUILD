@@ -17,13 +17,11 @@ cc_binary(
         "control_app_cli.cpp",
     ],
     copts = select({
-        "//config:build_qnx8": [],
-        "//config:x86_64-qnx": [],
+        "@platforms//os:qnx": [],
         "//conditions:default": ["-pthread"],
     }),
     linkopts = select({
-        "//config:build_qnx8": [],
-        "//config:x86_64-qnx": [],
+        "@platforms//os:qnx": [],
         "//conditions:default": [
             "-lpthread",
             "-lrt",
@@ -42,13 +40,11 @@ cc_binary(
         "control_daemon.cpp",
     ],
     copts = select({
-        "//config:build_qnx8": [],
-        "//config:x86_64-qnx": [],
+        "@platforms//os:qnx": [],
         "//conditions:default": ["-pthread"],
     }),
     linkopts = select({
-        "//config:build_qnx8": [],
-        "//config:x86_64-qnx": [],
+        "@platforms//os:qnx": [],
         "//conditions:default": [
             "-lpthread",
             "-lrt",

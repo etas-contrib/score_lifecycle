@@ -57,15 +57,7 @@ cc_library(
 cc_library(
     name = "osal",
     srcs = select({
-        "//config:x86_64-qnx": glob(
-            [
-                "src/internal/osal/**/*.cpp",
-            ],
-            exclude = [
-                "src/internal/osal/linux/**",
-            ],
-        ),
-        "//config:build_qnx8": glob(
+        "@platforms//os:qnx": glob(
             [
                 "src/internal/osal/**/*.cpp",
             ],

@@ -12,6 +12,18 @@
 # *******************************************************************************
 load("//config:common_cc.bzl", "cc_binary_with_common_opts", "cc_library_with_common_opts")
 
+filegroup(
+    name = "hm_flatcfg_fbs",
+    srcs = ["config/hm_flatcfg.fbs"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "hmcore_flatcfg_fbs",
+    srcs = ["config/hmcore_flatcfg.fbs"],
+    visibility = ["//visibility:public"],
+)
+
 # flatcfg configuration
 cc_library(
     name = "config",
@@ -151,8 +163,7 @@ cc_library_with_common_opts(
         "@flatbuffers",
     ] + select(
         {
-            "//config:build_qnx8": [],
-            "//config:x86_64-qnx": [],
+            "@platforms//os:qnx": [],
             "//conditions:default": [
                 "//externals/acl",
             ],
@@ -178,8 +189,7 @@ cc_library_with_common_opts(
         "//src/launch_manager_daemon/process_state_client_lib:process_state_client",
     ] + select(
         {
-            "//config:build_qnx8": [],
-            "//config:x86_64-qnx": [],
+            "@platforms//os:qnx": [],
             "//conditions:default": [
                 "//externals/acl",
             ],
@@ -239,8 +249,7 @@ cc_library_with_common_opts(
         "@flatbuffers//:flatc",
     ] + select(
         {
-            "//config:build_qnx8": [],
-            "//config:x86_64-qnx": [],
+            "@platforms//os:qnx": [],
             "//conditions:default": [
                 "//externals/acl",
             ],

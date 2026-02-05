@@ -14,6 +14,8 @@ load("//config:common_cc.bzl", "cc_binary_with_common_opts", "cc_library_with_co
 
 package(default_visibility = ["//tests:__subpackages__"])
 
+exports_files(["config/lm_flatcfg.fbs"])
+
 cc_library(
     name = "config",
     hdrs = ["config/lm_flatcfg_generated.h"],

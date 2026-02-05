@@ -134,8 +134,8 @@ int main(int argc, char **argv)
                 break;
             }
 
-            monitor.ReportCheckpoint(Checkpoints::kTwo);
-            monitor.ReportCheckpoint(Checkpoints::kThree);
+            //monitor.ReportCheckpoint(Checkpoints::kTwo);
+            //monitor.ReportCheckpoint(Checkpoints::kThree);
         } else {
             nanosleep(&req, nullptr);
         }

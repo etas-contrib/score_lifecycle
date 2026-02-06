@@ -124,6 +124,7 @@ def get_alive_supervisions(index: int, process_group: str):
 """
     )
 
+
 def get_local_supervisions(index: int):
     return (
         """

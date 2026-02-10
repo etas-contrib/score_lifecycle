@@ -17,13 +17,11 @@ cc_binary(
     ],
     copts = select({
         "@platforms//os:qnx": [],
-        "//conditions:default": ["-pthread"],
+        "@platforms//os:linux": ["-pthread"],
     }),
     linkopts = select({
-        "@platforms//os:qnx": [
-            "-lsocket",
-        ],
-        "//conditions:default": [
+        "@platforms//os:qnx": [],
+        "@platforms//os:linux": [
             "-lpthread",
             "-lrt",
         ],

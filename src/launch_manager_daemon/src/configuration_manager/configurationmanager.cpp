@@ -45,12 +45,23 @@ bool setResourceLimits(const LMFlatBuffer::ProcessStartupConfig& startup_config_
 
 }
 
-std::unique_ptr<char[]> read_flatbuffer_file(const std::string& f_filename_r) {
-    const std::string configFilePath = std::string("etc/") + f_filename_r.c_str();
+// If CONFIG_DIR environment variable is configured, then read config from <CONFIG_DIR>/<filename>
+// else try reading config from etc/<filename>
+std::unique_ptr<char[]> read_flatbuffer_file(const std::string& f_filename_r)
+{
+    std::string configFilePath = std::string("etc/") + f_filename_r.c_str();
+    const char* configDirPath = getenv("CONFIG_DIR");
+    if (configDirPath)
+    {
+        configFilePath = configDirPath + f_filename_r;
+    }
+
+    LM_LOG_DEBUG() << "Attempting to read config file from" << configFilePath;
 
     std::ifstream infile;
     infile.open(configFilePath, std::ios::binary | std::ios::in);
-    if (!infile.is_open()) {
+    if (!infile.is_open())
+    {
         return nullptr;
     }
     infile.seekg(0, std::ios::end);

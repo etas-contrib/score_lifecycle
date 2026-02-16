@@ -117,7 +117,7 @@ def preprocess_defaults(global_defaults, config):
 
     new_config["run_targets"] = {}
     for run_target, run_target_config in config.get("run_targets", {}).items():
-        # TODO: initial_run_target is not a dictionary, merging defautls not working for this currently
+        # TODO: initial_run_target is not a dictionary, merging defaults not working for this currently
         if run_target == "initial_run_target":
             new_config["run_targets"][run_target] = run_target_config
         else:
@@ -144,7 +144,7 @@ def gen_health_monitor_config(output_dir, config):
     """
     def get_process_type(application_type):
         if application_type == "STATE_MANAGER":
-            return "STATE_MANAGEMENT"
+            return "STM_PROCESS"
         else:
             return "REGULAR_PROCESS"
 
@@ -168,11 +168,14 @@ def gen_health_monitor_config(output_dir, config):
     def get_recovery_process_group_state(config):
         return "MainPG/" + config.get("run_targets", {}).get("final_recovery_action", {}).get("switch_run_target", {}).get("run_target", "Off")
 
-    SCHEMA_VERSION_MAJOR = 8
-    SCHEMA_VERSION_MINOR = 0
+    def sec_to_ms(sec : float) -> int:
+        return int(sec * 1000)
+
+    HM_SCHEMA_VERSION_MAJOR = 8
+    HM_SCHEMA_VERSION_MINOR = 0
     hm_config = {}
-    hm_config["versionMajor"] = SCHEMA_VERSION_MAJOR
-    hm_config["versionMinor"] = SCHEMA_VERSION_MINOR
+    hm_config["versionMajor"] = HM_SCHEMA_VERSION_MAJOR
+    hm_config["versionMinor"] = HM_SCHEMA_VERSION_MINOR
     hm_config["process"]= []
     hm_config["hmMonitorInterface"] = []
     hm_config["hmSupervisionCheckpoint"] = []
@@ -191,7 +194,7 @@ def gen_health_monitor_config(output_dir, config):
             process["identifier"] = component_name
             process["processType"] = get_process_type(component_config["component_properties"]["application_profile"]["application_type"])
             process["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
-            process["processExecutionErrors"] = {"processExecutionError":1}
+            process["processExecutionErrors"] = [{"processExecutionError":1}]
             hm_config["process"].append(process)
 
             hmMonitorIf = {}
@@ -212,7 +215,7 @@ def gen_health_monitor_config(output_dir, config):
             alive_supervision = {}
             alive_supervision["ruleContextKey"] = component_name + "_alive_supervision"
             alive_supervision["refCheckPointIndex"] = index
-            alive_supervision["aliveReferenceCycle"] = component_config["component_properties"]["application_profile"]["alive_supervision"]["reporting_cycle"]
+            alive_supervision["aliveReferenceCycle"] = sec_to_ms(component_config["component_properties"]["application_profile"]["alive_supervision"]["reporting_cycle"])
             alive_supervision["minAliveIndications"] = component_config["component_properties"]["application_profile"]["alive_supervision"]["min_indications"]
             alive_supervision["maxAliveIndications"] = component_config["component_properties"]["application_profile"]["alive_supervision"]["max_indications"]
             alive_supervision["isMinCheckDisabled"] = alive_supervision["minAliveIndications"] == 0
@@ -230,8 +233,8 @@ def gen_health_monitor_config(output_dir, config):
 
             with open(f"{output_dir}/{component_name}.json", "w") as process_file:
                 process_config = {}
-                process_config["versionMajor"] = SCHEMA_VERSION_MAJOR
-                process_config["versionMinor"] = SCHEMA_VERSION_MINOR
+                process_config["versionMajor"] = HM_SCHEMA_VERSION_MAJOR
+                process_config["versionMinor"] = HM_SCHEMA_VERSION_MINOR
                 process_config["process"] = []
                 process_config["hmMonitorInterface"] = []
                 process_config["hmMonitorInterface"].append(hmMonitorIf)
@@ -251,7 +254,6 @@ def gen_health_monitor_config(output_dir, config):
         hm_config["hmGlobalSupervision"].append(global_supervision)
 
         recovery_action = {}
-        recovery_action["ruleContextKey"] = "recovery_notification"
         recovery_action["recoveryNotificationTimeout"] = 5000
         recovery_action["processGroupMetaModelIdentifier"] = get_recovery_process_group_state(config)
         recovery_action["refGlobalSupervisionIndex"] =  hm_config["hmGlobalSupervision"].index(global_supervision)
@@ -261,6 +263,30 @@ def gen_health_monitor_config(output_dir, config):
 
     with open(f"{output_dir}/hm_demo.json", "w") as hm_file:
         json.dump(hm_config, hm_file, indent=4)
+
+    HM_CORE_SCHEMA_VERSION_MAJOR = 3
+    HM_CORE_SCHEMA_VERSION_MINOR = 0
+    hmcore_config = {}
+    hmcore_config["versionMajor"] = HM_CORE_SCHEMA_VERSION_MAJOR
+    hmcore_config["versionMinor"] = HM_CORE_SCHEMA_VERSION_MINOR
+    hmcore_config["watchdogs"] = []
+    hmcore_config["config"] = [{
+        "periodicity": sec_to_ms(config.get("alive_supervision", {}).get("evaluation_cycle", 0.01))
+    }]
+    for watchdog_name, watchdog_config in config.get("watchdogs", {}).items():
+        watchdog = {}
+        watchdog["shortName"] = watchdog_name
+        watchdog["deviceFilePath"] = watchdog_config["device_file_path"]
+        watchdog["maxTimeout"] = sec_to_ms(watchdog_config["max_timeout"])
+        watchdog["deactivateOnShutdown"] = watchdog_config["deactivate_on_shutdown"]
+        watchdog["hasValueDeactivateOnShutdown"] = True
+        watchdog["requireMagicClose"] = watchdog_config["require_magic_close"]
+        watchdog["hasValueRequireMagicClose"] = True
+        hmcore_config["watchdogs"].append(watchdog)
+
+    with open(f"{output_dir}/hmcore.json", "w") as hm_file:
+        json.dump(hmcore_config, hm_file, indent=4)
+
 
 def gen_launch_manager_config(output_dir, config):
     """

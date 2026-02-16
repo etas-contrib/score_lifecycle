@@ -131,3 +131,9 @@ git_override(
     module_name = "score_itf",
     commit = "7b99c23ccccd9a75113ab4c1ef5c22dee98316f8",
     remote = "https://github.com/etas-contrib/score_itf.git")
+
+# bazel_dep(name = "score_os_images", version = "0.0.1")
+# git_override(
+#     module_name = "score_os_image",
+#     commit = "ffa37244c7aeb8952f01c407dd9c3d0175469241",
+#     remote = "https://github.com/etas-contrib/score_os_images.git")

@@ -8,6 +8,8 @@ py_library(
         "ssh.py",
         "control_interface.py",
         "linux_interface.py",
+        "sftp_interface.py",
+        "file_interface.py",
         "__init__.py",
     ],
     visibility = ["//tests:__subpackages__"],

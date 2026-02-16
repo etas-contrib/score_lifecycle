@@ -273,3 +273,7 @@ pci/pci_debug2.so                        # Enhanced PCI debugging support
 
 # DHCP client configuration
 [perms=644] /etc/dhcpcd.conf = tests/utils/environments/qnx8_qemu/configs/dhcpcd.conf                                     # DHCP client configuration file
+
+
+[gid=0 uid=0 dperms=777 type=dir] /opt/score                      # SSH configuration and key storage directory
+[perms=777] /opt/score/launch_manager = ${LCM}

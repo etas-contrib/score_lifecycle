@@ -18,7 +18,11 @@ qnx_ifs(
     srcs = [
         "system.build",
         "//tests/utils/environments/qnx8_qemu/configs",
+        "//src/launch_manager_daemon:launch_manager"
     ],
+    ext_repo_maping = {
+        "LCM": "$(location //src/launch_manager_daemon:launch_manager)"
+    },
     build_file = "init.build",
     tags = ["manual"],  # Excluded from wildcard builds
     visibility = [

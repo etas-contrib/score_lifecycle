@@ -76,4 +76,5 @@ echo "---> adding /tmp_discovery folder"
 mkdir -p /tmp_ram/tmp_discovery
 ln -sP  /tmp_ram/tmp_discovery /tmp_discovery
 
+echo "---> Running sshd"
 /proc/boot/sshd -f /var/ssh/sshd_config -E /tmp/sshd.log # Start SSH daemon with specified configuration file

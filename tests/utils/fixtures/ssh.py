@@ -19,7 +19,9 @@ class SshInterface(ControlInterface):
     def exec_command_blocking(self,
         *args: str, timeout=1, **env: str
     ) -> Tuple[int, str, str]:
-        stdin, stdout, stderr = self.__ssh.exec_command(' '.join(args))
+        cmd = ' '.join(args)
+        logger.info(f"\'{cmd}\'")
+        stdin, stdout, stderr = self.__ssh.exec_command(cmd)
 
         ret_code = stdout.channel.recv_exit_status()
 
@@ -34,6 +36,10 @@ class SshInterface(ControlInterface):
         **env,
     ) -> Tuple[int, str, str]:
         pass
+
+    @property
+    def ssh(self):
+        return self.__ssh
 
 @pytest.fixture
 def ssh(target) -> SshInterface:

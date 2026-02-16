@@ -33,6 +33,7 @@ jobs:
     uses: ./.github/workflows/tests.yml
     secrets: inherit
   build-docs:
+    needs: unit-tests
     uses: eclipse-score/cicd-workflows/.github/workflows/docs.yml@main
     permissions:
       contents: write

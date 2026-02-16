@@ -27,4 +27,4 @@ jobs:
       pull-requests: read
     with:
       bazel-target: 'test //...'
-      upload-name: 'tests-report'
+      upload-name: 'bazel-testlogs'

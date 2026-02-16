@@ -151,9 +151,6 @@ def gen_health_monitor_config(output_dir, config):
     def is_supervised(application_type):
         return application_type == "STATE_MANAGER" or application_type == "REPORTING_AND_SUPERVISED"
 
-    def is_state_manager(application_type):
-        return application_type == "STATE_MANAGER"
-
     def get_all_process_group_states(run_targets):
         process_group_states = []
         for run_target, _ in run_targets.items():
@@ -186,13 +183,8 @@ def gen_health_monitor_config(output_dir, config):
     hm_config["hmGlobalSupervision"] = []
     hm_config["hmRecoveryNotification"] = []
     index = 0
-    state_manager_indices = []
     for component_name, component_config in config["components"].items():
         if is_supervised(component_config["component_properties"]["application_profile"]["application_type"]):
-            # Keep track of state managers, as any supervision failure here should fire the watchdog
-            if is_state_manager(component_config["component_properties"]["application_profile"]["application_type"]):
-                state_manager_indices.append(index)
-
             process = {}
             process["index"] = index
             process["shortName"] = component_name
@@ -247,45 +239,25 @@ def gen_health_monitor_config(output_dir, config):
 
             index += 1
 
-    if len(state_manager_indices) > 0:
-        # Create a global supervision & recovery action for StateManager processes.
-        # If this supervision fails it leads to a recovery action with property "shouldFireWatchdog:true"
-        state_manager_global_supervision = {}
-        state_manager_global_supervision["ruleContextKey"] = "StateManager_global_supervision"
-        state_manager_global_supervision["isSeverityCritical"] = True
-        state_manager_global_supervision["localSupervision"] = [{"refLocalSupervisionIndex": idx} for idx in state_manager_indices]
-        state_manager_global_supervision["refProcesses"] = [{"index": idx} for idx in state_manager_indices]
-        state_manager_global_supervision["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
-        hm_config["hmGlobalSupervision"].append(state_manager_global_supervision)
+    indices = [i for i in range(index)]
+    if len(indices) > 0:
+        # Create one global supervision & recovery action for all processes.
+        global_supervision = {}
+        global_supervision["ruleContextKey"] = "global_supervision"
+        global_supervision["isSeverityCritical"] = False
+        global_supervision["localSupervision"] = [{"refLocalSupervisionIndex": idx} for idx in indices]
+        global_supervision["refProcesses"] = [{"index": idx} for idx in indices]
+        global_supervision["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
+        hm_config["hmGlobalSupervision"].append(global_supervision)
 
-        state_manager_recovery_action = {}
-        state_manager_recovery_action["ruleContextKey"] = "StateManager_recovery_notification"
-        state_manager_recovery_action["recoveryNotificationTimeout"] = 5000
-        state_manager_recovery_action["processGroupMetaModelIdentifier"] = get_recovery_process_group_state(config)
-        state_manager_recovery_action["refGlobalSupervisionIndex"] =  hm_config["hmGlobalSupervision"].index(state_manager_global_supervision)
-        state_manager_recovery_action["instanceSpecifier"] = ""
-        state_manager_recovery_action["shouldFireWatchdog"] = True
-        hm_config["hmRecoveryNotification"].append(state_manager_recovery_action)
-
-    non_state_manager_indices = [i for i in range(index) if i not in state_manager_indices]
-    if len(non_state_manager_indices) > 0:
-        # Create a global supervision & recovery action for non-StateManager processes.
-        non_state_manager_global_supervision = {}
-        non_state_manager_global_supervision["ruleContextKey"] = "global_supervision"
-        non_state_manager_global_supervision["isSeverityCritical"] = False
-        non_state_manager_global_supervision["localSupervision"] = [{"refLocalSupervisionIndex": idx} for idx in non_state_manager_indices]
-        non_state_manager_global_supervision["refProcesses"] = [{"index": idx} for idx in non_state_manager_indices]
-        non_state_manager_global_supervision["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
-        hm_config["hmGlobalSupervision"].append(non_state_manager_global_supervision)
-
-        non_state_manager_recovery_action = {}
-        non_state_manager_recovery_action["ruleContextKey"] = "recovery_notification"
-        non_state_manager_recovery_action["recoveryNotificationTimeout"] = 5000
-        non_state_manager_recovery_action["processGroupMetaModelIdentifier"] = get_recovery_process_group_state(config)
-        non_state_manager_recovery_action["refGlobalSupervisionIndex"] =  hm_config["hmGlobalSupervision"].index(non_state_manager_global_supervision)
-        non_state_manager_recovery_action["instanceSpecifier"] = ""
-        non_state_manager_recovery_action["shouldFireWatchdog"] = False
-        hm_config["hmRecoveryNotification"].append(non_state_manager_recovery_action)
+        recovery_action = {}
+        recovery_action["ruleContextKey"] = "recovery_notification"
+        recovery_action["recoveryNotificationTimeout"] = 5000
+        recovery_action["processGroupMetaModelIdentifier"] = get_recovery_process_group_state(config)
+        recovery_action["refGlobalSupervisionIndex"] =  hm_config["hmGlobalSupervision"].index(global_supervision)
+        recovery_action["instanceSpecifier"] = ""
+        recovery_action["shouldFireWatchdog"] = False
+        hm_config["hmRecoveryNotification"].append(recovery_action)
 
     with open(f"{output_dir}/hm_demo.json", "w") as hm_file:
         json.dump(hm_config, hm_file, indent=4)

@@ -60,6 +60,7 @@ templates_path = ["templates"]
 # Enable numref
 numfig = True
 
+
 class DisplayTestLogs(Directive):
     """Find and display the raw content of all test.log files."""
 

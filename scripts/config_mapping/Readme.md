@@ -53,4 +53,7 @@ TODO
 TODO
 
 * Transition timeout
+* CPU time, Memory restrictions
 * terminated ready condition
+* restart attempts - wait Time
+* Supported recovery actions

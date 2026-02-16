@@ -30,7 +30,7 @@
                 "scheduling_policy": "SCHED_OTHER",
                 "scheduling_priority": 0,
                 "max_memory_usage": 1024,
-                "max_cpu_ussage": 75
+                "max_cpu_usage": 75
             }
         },
         "component_properties": {
@@ -61,12 +61,6 @@
         },
         "alive_supervision" : {
             "evaluation_cycle": 0.5
-        },
-        "watchdog": {
-            "device_file_path": "/dev/watchdog",
-            "max_timeout": 2.0,
-            "deactivate_on_shutdown": true,
-            "require_magic_close": false
         }
     },
     "components": {

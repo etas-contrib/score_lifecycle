@@ -11,7 +11,7 @@ script_dir = Path(__file__).parent
 tests_dir = script_dir / "tests"
 lifecycle_script = script_dir / "lifecycle_config.py"
 
-def run(input_file : Path, test_name : str):
+def run(input_file : Path, test_name : str, compare_files_only=[]):
     """
     Execute the mapping script with the given input file and compare the generated output with the expected output.
     Input:
@@ -43,8 +43,14 @@ def run(input_file : Path, test_name : str):
         print(f"Error: {e.stderr}")
         raise
 
-    if not compare_directories(actual_output_dir, expected_output_dir):
-        raise AssertionError("Actual output does not match expected output.")
+    if compare_files_only:
+        # Compare only specific files
+        if not compare_files(actual_output_dir, expected_output_dir, compare_files_only):
+            raise AssertionError("Actual output files do not match expected output files.")
+    else:
+        # Compare the complete directory content
+        if not compare_directories(actual_output_dir, expected_output_dir):
+            raise AssertionError("Actual output does not match expected output.")
 
 def compare_directories(dir1: Path, dir2: Path) -> bool:
     """
@@ -65,12 +71,30 @@ def compare_directories(dir1: Path, dir2: Path) -> bool:
             
     return True
 
+def compare_files(dir1 : Path, dir2 : Path, files : list) -> bool:
+    """
+    Compare specific files in two directories. Return True if they are the same, False otherwise.
+    """
+    for file in files:
+        file1 = dir1 / file
+        file2 = dir2 / file
+        if not filecmp.cmp(file1, file2, shallow=False):
+            print(f"Files differ: {file1} vs {file2}")
+            return False
+    return True
+
 def test_basic():
     test_name = "basic_test"
     input_file = tests_dir / test_name / "input" / "lm_config.json"
 
     run(input_file, test_name="basic_test")
 
+def test_health_config_mapping():
+    #test_name = "health_config_test"
+    #input_file = tests_dir / test_name / "input" / "lm_config.json"
+    #
+    #run(input_file, test_name="basic_test", compare_files_only=["hm_demo.json"])
+    pass
 
 def test_preprocessing_basic():
     """

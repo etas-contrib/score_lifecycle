@@ -48,9 +48,16 @@ TODO
 
 ## Mapping of Recovery Actions
 
+## Mapping of Alive Supervision
+
+## Mapping of Watchdog Configuration
+
 ## Known Limitations
 
 TODO
+
+* What if an object is explicitly set to {} in the config? Will this overwrite the default to None?
+* What about supervision and state manager?
 
 * Transition timeout
 * CPU time, Memory restrictions

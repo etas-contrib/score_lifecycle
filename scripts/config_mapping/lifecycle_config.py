@@ -201,7 +201,7 @@ def gen_health_monitor_config(output_dir, config):
             hmMonitorIf["instanceSpecifier"] = component_name
             hmMonitorIf["processShortName"] = component_name
             hmMonitorIf["portPrototype"] = "DefaultPort"
-            hmMonitorIf["interfacePath"] = "lifecycle_health" + component_name
+            hmMonitorIf["interfacePath"] = "lifecycle_health_" + component_name
             hmMonitorIf["refProcessIndex"] = index
             hmMonitorIf["permittedUid"] = component_config["deployment_config"]["sandbox"]["uid"]
             hm_config["hmMonitorInterface"].append(hmMonitorIf)

@@ -84,4 +84,5 @@ Open topics:
 
 * What if an object is explicitly set to {} in the config? Will this overwrite the default to None?
 * What about supervision and state manager?
+* What is the default ready condition?
 

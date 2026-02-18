@@ -72,6 +72,7 @@
                     "application_type": "NATIVE",
                     "is_self_terminating": true
                 },
+                "depends_on": [],
                 "process_arguments": ["-a", "-b"],
                 "ready_condition": {
                     "process_state": "Terminated"
@@ -97,7 +98,8 @@
         "someip-daemon": {
             "description": "SOME/IP application",
             "component_properties": {
-                "binary_name": "someipd"
+                "binary_name": "someipd",
+                "depends_on": []
             },
             "deployment_config": {
                 "bin_dir" : "/opt/apps/someip"

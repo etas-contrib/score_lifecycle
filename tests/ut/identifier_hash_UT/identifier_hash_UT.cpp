@@ -25,8 +25,8 @@ class IdentifierHashTest : public ::testing::Test
   protected:
     void SetUp() override
     {
-        RecordProperty("TestType", "requirements-based");
-        RecordProperty("DerivationTechnique", "requirements-analysis");
+        RecordProperty("TestType", "interface-test");
+        RecordProperty("DerivationTechnique", "explorative-testing ");
     }
 };
 
@@ -84,7 +84,7 @@ TEST_F(IdentifierHashTest, IdentifierHash_invalid_hash_no_string_representation)
 
 TEST_F(IdentifierHashTest, IdentifierHash_no_dangling_pointer_after_source_string_dies)
 {
-        RecordProperty("Description",
+    RecordProperty("Description",
                    "This test verifies that an IdentifierHash created from a std::string does not have a dangling "
                    "pointer to the original string after it goes out of scope, and that its string representation can "
                    "still be retrieved correctly.");

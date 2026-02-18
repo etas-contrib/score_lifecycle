@@ -16,7 +16,7 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
-import os
+from itertools import chain
 from pathlib import Path
 
 from docutils import nodes
@@ -69,27 +69,21 @@ class DisplayTestLogs(Directive):
         ws_root = Path(env.app.srcdir).parent
 
         result_nodes = []
-        for dirname in ["bazel-testlogs", "tests-report"]:
-            candidate = ws_root / dirname
-            if not candidate.is_dir():
-                continue
-            for root, _, files in sorted(os.walk(candidate)):
-                if "test.log" in files:
-                    log_path = Path(root) / "test.log"
-                    rel_path = log_path.relative_to(ws_root)
+        for log_file in (ws_root / "bazel-testlogs").rglob("test.log"):
+            rel_path = log_file.relative_to(ws_root)
 
-                    title = nodes.rubric(text=str(rel_path))
-                    result_nodes.append(title)
+            title = nodes.rubric(text=str(rel_path))
+            result_nodes.append(title)
 
-                    try:
-                        content = log_path.read_text(encoding="utf-8")
-                    except Exception as e:
-                        content = f"Error reading file: {e}"
+            try:
+                content = log_file.read_text(encoding="utf-8")
+            except Exception as e:
+                content = f"Error reading file: {e}"
 
-                    code = nodes.literal_block(content, content)
-                    code["language"] = "text"
-                    code["source"] = str(rel_path)
-                    result_nodes.append(code)
+            code = nodes.literal_block(content, content)
+            code["language"] = "text"
+            code["source"] = str(rel_path)
+            result_nodes.append(code)
 
         if not result_nodes:
             para = nodes.paragraph(

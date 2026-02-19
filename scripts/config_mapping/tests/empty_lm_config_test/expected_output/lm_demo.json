@@ -1,0 +1,17 @@
+{
+    "versionMajor": 7,
+    "versionMinor": 0,
+    "Process": [],
+    "ModeGroup": [
+        {
+            "identifier": "MainPG",
+            "initialMode_name": "Minimal",
+            "recoveryMode_name": "MainPG/fallback_run_target",
+            "modeDeclaration": [
+                {
+                    "identifier": "MainPG/fallback_run_target"
+                }
+            ]
+        }
+    ]
+}

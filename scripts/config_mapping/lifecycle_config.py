@@ -570,7 +570,8 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
         return json.load(file)
 
 def get_recovery_process_group_state(config):
-    if "fallback_run_target" in config:
+    fallback = config.get("fallback_run_target", None)
+    if fallback:
       return "MainPG/fallback_run_target"
     else:
         return "MainPG/Off"
@@ -632,8 +633,8 @@ def preprocess_defaults(global_defaults, config):
     for run_target, run_target_config in config.get("run_targets", {}).items():
         new_config["run_targets"][run_target] = dict_merge(merged_defaults["run_target"], run_target_config)
 
-    new_config["alive_supervision"] = dict_merge(deepcopy(merged_defaults["alive_supervision"]), config.get("alive_supervision", {}))
-    new_config["watchdogs"] = dict_merge(deepcopy(merged_defaults["watchdogs"]), config.get("watchdogs", {}))
+    new_config["alive_supervision"] = dict_merge(merged_defaults["alive_supervision"], config.get("alive_supervision", {}))
+    new_config["watchdogs"] = dict_merge(merged_defaults["watchdogs"], config.get("watchdogs", {}))
 
     for key in ("initial_run_target", "fallback_run_target"):
         if key in config:
@@ -877,7 +878,7 @@ def gen_launch_manager_config(output_dir, config):
         process["path"] = f'{component_config["deployment_config"]["bin_dir"]}/{component_config["component_properties"]["binary_name"]}'
         process["uid"] = component_config["deployment_config"]["sandbox"]["uid"]
         process["gid"] = component_config["deployment_config"]["sandbox"]["gid"]
-        process["sgids"] = component_config["deployment_config"]["sandbox"]["supplementary_group_ids"]
+        process["sgids"] = [{"sgid": sgid} for sgid in component_config["deployment_config"]["sandbox"]["supplementary_group_ids"]]
         process["securityPolicyDetails"] = component_config["deployment_config"]["sandbox"]["security_policy"]
         process["numberOfRestartAttempts"] = component_config["deployment_config"]["ready_recovery_action"]["restart"]["number_of_attempts"]
 
@@ -900,7 +901,7 @@ def gen_launch_manager_config(output_dir, config):
         process["startupConfig"][0]["terminationBehavior"] = get_terminating_behavior(component_config)
         process["startupConfig"][0]["processGroupStateDependency"] = []
         process["startupConfig"][0]["environmentVariable"] = []
-        for env_var, value in component_config["deployment_config"].get("environmental_variables",[]).items():
+        for env_var, value in component_config["deployment_config"].get("environmental_variables",{}).items():
             process["startupConfig"][0]["environmentVariable"].append({
                 "key": env_var,
                 "value": value
@@ -927,7 +928,7 @@ def gen_launch_manager_config(output_dir, config):
             ready_condition = dep_entry["component_properties"]["ready_condition"]["process_state"]
             process["startupConfig"][0]["executionDependency"].append({
                 "stateName": ready_condition,
-                "targetProcess_identifier": f"/{dependency}App/{dependency}"
+                "targetProcess_identifier": dependency
             })
         
     

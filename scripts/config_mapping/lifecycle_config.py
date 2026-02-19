@@ -3,6 +3,7 @@
 import argparse
 from copy import deepcopy
 import json
+import sys
 from typing import Dict, Any
 
 # TODO
@@ -568,6 +569,17 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
     with open(file_path, 'r') as file:
         return json.load(file)
 
+def get_recovery_process_group_state(config):
+    fallback = config.get("fallback_run_target", None)
+    if fallback:
+      return "MainPG/fallback_run_target"
+    else:
+        return "MainPG/Off"
+
+def sec_to_ms(sec : float) -> int:
+    return int(sec * 1000)
+
+
 def preprocess_defaults(global_defaults, config):
     """
     This function takes the input configuration and fills in any missing fields with default values.
@@ -624,6 +636,10 @@ def preprocess_defaults(global_defaults, config):
     new_config["alive_supervision"] = dict_merge(merged_defaults["alive_supervision"], config.get("alive_supervision", {}))
     new_config["watchdogs"] = dict_merge(merged_defaults["watchdogs"], config.get("watchdogs", {}))
 
+    for key in ("initial_run_target", "fallback_run_target"):
+        if key in config:
+            new_config[key] = config[key]
+
     #print(json.dumps(new_config, indent=4))
 
     return new_config
@@ -662,12 +678,6 @@ def gen_health_monitor_config(output_dir, config):
             refProcessGroupStates.append({"identifier": state})
         return refProcessGroupStates
     
-    def get_recovery_process_group_state(config):
-        return "MainPG/fallback_run_target"
-
-    def sec_to_ms(sec : float) -> int:
-        return int(sec * 1000)
-
     HM_SCHEMA_VERSION_MAJOR = 8
     HM_SCHEMA_VERSION_MINOR = 0
     hm_config = {}
@@ -796,8 +806,192 @@ def gen_launch_manager_config(output_dir, config):
     - A file named "lm_demo.json" containing the launch manager configuration
     """
     
+    """
+    Recursively get all components on which the run target depends
+    """
+    def format_dependency_path(path, cycle_target):
+        """Format a dependency resolution path for display, highlighting the cycle."""
+        return " -> ".join(path + [cycle_target])
+
+    def get_process_dependencies(run_target, ancestors_run_targets=None, ancestors_components=None):
+        """
+        Resolve all component dependencies for the given run target.
+
+        ancestors_run_targets and ancestors_components track the current
+        recursion path to detect cyclic dependencies without rejecting
+        legitimate diamond-shaped dependency trees.
+        """
+        if ancestors_run_targets is None:
+            ancestors_run_targets = []
+        if ancestors_components is None:
+            ancestors_components = []
+
+        out = []
+        if "depends_on" not in run_target:
+            return out
+
+        for dependency_name in run_target["depends_on"]:
+            if dependency_name in config["components"]:
+                if dependency_name in ancestors_components:
+                    path = format_dependency_path(ancestors_components, dependency_name)
+                    raise ValueError(
+                        f"Cyclic dependency detected: component '{dependency_name}' "
+                        f"has already been visited.\n  Path: {path}"
+                    )
+                ancestors_components.append(dependency_name)
+                out.append(dependency_name)
+
+                component_props = config["components"][dependency_name]["component_properties"]
+                if "depends_on" in component_props:
+                    # All dependencies must be components, since components can't depend on run targets
+                    for dep in component_props["depends_on"]:
+                        if dep not in config["components"]:
+                            raise ValueError(
+                                f"Component '{dependency_name}' depends on unknown component '{dep}'."
+                            )
+                        if dep in ancestors_components:
+                            path = format_dependency_path(ancestors_components, dep)
+                            raise ValueError(
+                                f"Cyclic dependency detected: component '{dependency_name}' "
+                                f"depends on already visited component '{dep}'.\n  Path: {path}"
+                            )
+                        ancestors_components.append(dep)
+                        out.append(dep)
+                        out += get_process_dependencies(
+                            config["components"][dep]["component_properties"],
+                            ancestors_run_targets=ancestors_run_targets,
+                            ancestors_components=ancestors_components,
+                        )
+                        ancestors_components.pop()
+
+                ancestors_components.pop()
+            else:
+                # If the dependency is not a component, it must be a run target
+                if dependency_name not in config["run_targets"]:
+                    raise ValueError(
+                        f"Run target depends on unknown run target '{dependency_name}'."
+                    )
+                if dependency_name in ancestors_run_targets:
+                    path = format_dependency_path(ancestors_run_targets, dependency_name)
+                    raise ValueError(
+                        f"Cyclic dependency detected: run target '{dependency_name}' "
+                        f"has already been visited.\n  Path: {path}"
+                    )
+                ancestors_run_targets.append(dependency_name)
+                out += get_process_dependencies(
+                    config["run_targets"][dependency_name],
+                    ancestors_run_targets=ancestors_run_targets,
+                    ancestors_components=ancestors_components,
+                )
+                ancestors_run_targets.pop()
+        return list(set(out))  # Remove duplicates
+
+    def get_terminating_behavior(component_config):
+        if component_config["component_properties"]["application_profile"]["is_self_terminating"]:
+            return "ProcessIsSelfTerminating"
+        else:
+            return "ProcessIsNotSelfTerminating"
+
+    if 'fallback_run_target' in config['run_targets']:
+        print('Run target name fallback_run_target is reserved at the moment', file=sys.stderr)
+        exit(1)
+
+    lm_config = {}
+    lm_config["versionMajor"] = 7
+    lm_config["versionMinor"] = 0
+    lm_config["Process"] = []
+    lm_config["ModeGroup"] = [{
+        "identifier": "MainPG",
+        "initialMode_name": config.get("initial_run_target", "Off"),
+        "recoveryMode_name": get_recovery_process_group_state(config),
+        "modeDeclaration": []
+    }]
+
+    process_group_states = {}
+
+    # For each component, store which run targets depends on it
+    for pgstate, values in config["run_targets"].items():
+        state_name = "MainPG/" + pgstate
+        lm_config["ModeGroup"][0]["modeDeclaration"].append({
+            "identifier": state_name
+        })
+        components = get_process_dependencies(values)
+        for component in components:
+            if component not in process_group_states:
+                process_group_states[component] = []
+            process_group_states[component].append(state_name)
+
+    if (fallback := config.get("fallback_run_target", {})):
+        lm_config["ModeGroup"][0]["modeDeclaration"].append({
+            "identifier": "MainPG/fallback_run_target"
+        })
+        fallback_components = get_process_dependencies(fallback)
+        for component in fallback_components:
+            if component not in process_group_states:
+                process_group_states[component] = []
+            process_group_states[component].append("MainPG/fallback_run_target")
+
+    for component_name, component_config in config["components"].items():
+        process = {}
+        process["identifier"] = component_name
+        process["path"] = f'{component_config["deployment_config"]["bin_dir"]}/{component_config["component_properties"]["binary_name"]}'
+        process["uid"] = component_config["deployment_config"]["sandbox"]["uid"]
+        process["gid"] = component_config["deployment_config"]["sandbox"]["gid"]
+        process["sgids"] = [{"sgid": sgid} for sgid in component_config["deployment_config"]["sandbox"]["supplementary_group_ids"]]
+        process["securityPolicyDetails"] = component_config["deployment_config"]["sandbox"]["security_policy"]
+        process["numberOfRestartAttempts"] = component_config["deployment_config"]["ready_recovery_action"]["restart"]["number_of_attempts"]
+
+        match component_config["component_properties"]["application_profile"]["application_type"]:
+            case "Native":
+                process["executable_reportingBehavior"] = "DoesNotReportExecutionState" 
+            case "State_Manager":
+                process["executable_reportingBehavior"] = "ReportsExecutionState" 
+                process["functionClusterAffiliation"] = "STATE_MANAGEMENT"
+            case "Reporting" | "Reporting_And_Supervised":
+                process["executable_reportingBehavior"] = "ReportsExecutionState" 
+
+        process["startupConfig"] = [{}]
+        process["startupConfig"][0]["executionError"] = "1"
+        process["startupConfig"][0]["identifier"] = f"{component_name}_startup_config"
+        process["startupConfig"][0]["enterTimeoutValue"] = sec_to_ms(component_config["deployment_config"]["ready_timeout"])
+        process["startupConfig"][0]["exitTimeoutValue"] = sec_to_ms(component_config["deployment_config"]["shutdown_timeout"])
+        process["startupConfig"][0]["schedulingPolicy"] = component_config["deployment_config"]["sandbox"]["scheduling_policy"]
+        process["startupConfig"][0]["schedulingPriority"] = str(component_config["deployment_config"]["sandbox"]["scheduling_priority"])
+        process["startupConfig"][0]["terminationBehavior"] = get_terminating_behavior(component_config)
+        process["startupConfig"][0]["processGroupStateDependency"] = []
+        process["startupConfig"][0]["environmentVariable"] = []
+        for env_var, value in component_config["deployment_config"].get("environmental_variables",{}).items():
+            process["startupConfig"][0]["environmentVariable"].append({
+                "key": env_var,
+                "value": value
+            })
+
+        if (arguments := component_config["component_properties"].get("process_arguments", [])):
+            arguments = [{"argument": arg} for arg in arguments]
+        process["startupConfig"][0]["processArgument"] = arguments
+
+        if component_name in process_group_states:
+            for pgstate in process_group_states[component_name]:
+                process["startupConfig"][0]["processGroupStateDependency"].append({
+                    "stateMachine_name": "MainPG",
+                    "stateName": pgstate
+                })
+
+        lm_config["Process"].append(process)
+    
+    # Execution dependencies. Assumption: Components can never depend on run targets
+    for process in lm_config["Process"]:
+        process["startupConfig"][0]["executionDependency"] = []
+        for dependency in config["components"][process["identifier"]]["component_properties"].get("depends_on", []):
+            dep_entry = config["components"][dependency]
+            ready_condition = dep_entry["component_properties"]["ready_condition"]["process_state"]
+            process["startupConfig"][0]["executionDependency"].append({
+                "stateName": ready_condition,
+                "targetProcess_identifier": dependency
+            })
+        
+    
     with open(f"{output_dir}/lm_demo.json", "w") as lm_file:
-        lm_config = {}
         json.dump(lm_config, lm_file, indent=4)
 
 

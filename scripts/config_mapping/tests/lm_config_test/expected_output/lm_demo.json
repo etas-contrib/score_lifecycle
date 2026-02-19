@@ -3,6 +3,74 @@
     "versionMinor": 0,
     "Process": [
         {
+            "identifier": "test_app2",
+            "path": "/opt/apps/test_app2/test_app2",
+            "uid": 2000,
+            "gid": 2000,
+            "sgids": [
+                {
+                    "sgid": 800
+                },
+                {
+                    "sgid": 900
+                }
+            ],
+            "securityPolicyDetails": "policy_name_2",
+            "numberOfRestartAttempts": 1,
+            "executable_reportingBehavior": "ReportsExecutionState",
+            "startupConfig": [
+                {
+                    "executionError": "1",
+                    "identifier": "test_app2_startup_config",
+                    "enterTimeoutValue": 500,
+                    "exitTimeoutValue": 500,
+                    "schedulingPolicy": "SCHED_FIFO",
+                    "schedulingPriority": "99",
+                    "terminationBehavior": "ProcessIsNotSelfTerminating",
+                    "processGroupStateDependency": [
+                        {
+                            "stateMachine_name": "MainPG",
+                            "stateName": "MainPG/Minimal"
+                        },
+                        {
+                            "stateMachine_name": "MainPG",
+                            "stateName": "MainPG/Full"
+                        }
+                    ],
+                    "environmentVariable": [
+                        {
+                            "key": "LD_LIBRARY_PATH",
+                            "value": "/opt/lib"
+                        },
+                        {
+                            "key": "GLOBAL_ENV_VAR",
+                            "value": "overridden_value"
+                        },
+                        {
+                            "key": "EMPTY_GLOBAL_ENV_VAR",
+                            "value": ""
+                        },
+                        {
+                            "key": "APP_SPECIFIC_ENV_VAR",
+                            "value": "def"
+                        }
+                    ],
+                    "processArgument": [
+                        {
+                            "argument": "-a"
+                        },
+                        {
+                            "argument": "-b"
+                        },
+                        {
+                            "argument": "--xyz"
+                        }
+                    ],
+                    "executionDependency": []
+                }
+            ]
+        },
+        {
             "identifier": "setup_filesystem_sh",
             "path": "/opt/scripts/bin/setup_filesystem.sh",
             "uid": 1000,
@@ -62,7 +130,12 @@
                             "argument": "-b"
                         }
                     ],
-                    "executionDependency": []
+                    "executionDependency": [
+                        {
+                            "stateName": "Running",
+                            "targetProcess_identifier": "test_app2"
+                        }
+                    ]
                 }
             ]
         },

@@ -45,7 +45,7 @@
                     "max_indications": 3
                 }
             },
-            "depends_on": ["test_app2", "test_app3"],
+            "depends_on": ["test_app2"],
             "process_arguments": ["-a", "-b", "--xyz"],
             "ready_condition": {
                 "process_state": "Running"
@@ -64,6 +64,30 @@
         }
     },
     "components": {
+        "test_app2": {
+            "description": "Another simple test application",
+            "component_properties": {
+                "binary_name": "test_app2",
+                "depends_on": []
+            },
+            "deployment_config": {
+                "bin_dir" : "/opt/apps/test_app2",
+                "environmental_variables": {
+                    "GLOBAL_ENV_VAR": "overridden_value",
+                    "APP_SPECIFIC_ENV_VAR": "def"
+                },
+                "sandbox": {
+                    "uid": 2000,
+                    "gid": 2000,
+                    "supplementary_group_ids": [800, 900],
+                    "security_policy": "policy_name_2",
+                    "scheduling_policy": "SCHED_FIFO",
+                    "scheduling_priority": 99,
+                    "max_memory_usage": 2048,
+                    "max_cpu_usage": 50
+                }
+            }
+        },
         "setup_filesystem_sh": {
             "description": "Script to mount partitions at the right directories",
             "component_properties": {
@@ -72,7 +96,6 @@
                     "application_type": "Native",
                     "is_self_terminating": true
                 },
-                "depends_on": [],
                 "process_arguments": ["-a", "-b"],
                 "ready_condition": {
                     "process_state": "Terminated"

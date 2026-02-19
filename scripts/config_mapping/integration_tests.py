@@ -46,7 +46,7 @@ def run(input_file : Path, test_name : str, compare_files_only=[], exclude_files
 
     if compare_files_only:
         # Compare only specific files
-        if not compare_files(actual_output_dir, expected_output_dir, compare_files_only, exclude_files):
+        if not compare_files(actual_output_dir, expected_output_dir, compare_files_only):
             raise AssertionError("Actual output files do not match expected output files.")
     else:
         # Compare the complete directory content
@@ -114,4 +114,23 @@ def test_empty_health_config_mapping():
     
     run(input_file, test_name, exclude_files=["lm_demo.json"])
 
+def test_launch_config_mapping():
+    """
+    Test generation of the launch manager configuration with
+    * Different application types
+    * Different dependency configurations
+    * Different ready conditions
+    """
+    test_name = "lm_config_test"
+    input_file = tests_dir / test_name / "input" / "lm_config.json"
+    
+    run(input_file, test_name, compare_files_only=["lm_demo.json"])
 
+def test_empty_launch_config_mapping():
+    """
+    Test generation of the launch manager configuration with no processes defined
+    """
+    test_name = "empty_lm_config_test"
+    input_file = tests_dir / test_name / "input" / "lm_config.json"
+    
+    run(input_file, test_name, compare_files_only=["lm_demo.json"])

@@ -12,16 +12,21 @@
 # *******************************************************************************
 load("@score_tooling//:defs.bzl", "score_py_pytest")
 load("//tests/utils:bazel/integration.bzl", "integration_test")
+load("//tests/utils:bazel/integration.bzl", "package_test_binaries")
 
-integration_test(
-    name = "smoke",
-    srcs = [
-        "smoke.py",
-    ],
-    deps = [
-        "//tests/utils/fixtures",
-    ],
-    args = [ "--image-path=$(location //tests/utils/environments:test_environment)" ],
-    data = ["//tests/utils/environments:test_environment"],
-    tags = ["local"]
-)
+# integration_test(
+#     name = "itf_smoke",
+#     srcs = [
+#         "smoke.py",
+#     ],
+#     deps = [
+#         "//tests/utils/fixtures",
+#     ],
+#     args = [
+#         "--image-path=$(location //tests/utils/environments:test_environment)",
+#         "--binaries_path=$(location //tests/integration/smoke:test_binaries)"
+#     ],
+#     data = ["//tests/utils/environments:test_environment",
+#     "//tests/integration/smoke:test_binaries"],
+#     tags = ["local"]
+# )

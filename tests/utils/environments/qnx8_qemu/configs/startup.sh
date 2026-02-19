@@ -43,9 +43,17 @@ devb-ram ram capacity=1 blk ramdisk=10m,cache=512k,vnode=256 2>/dev/null  # Crea
 waitfor /dev/ram0                       # Wait for RAM disk device to be ready
 
 echo "---> mounting ram disk"
+
 mkqnx6fs -q /dev/ram0                   # Create QNX6 filesystem on RAM disk (quiet mode)
 waitfor /dev/ram0                       # Wait for filesystem creation to complete
 mount -t qnx6 /dev/ram0 /tmp_ram        # Mount RAM disk as QNX6 filesystem at /tmp_ram
+
+
+devb-ram ram capacity=1 blk ramdisk=500m,cache=512k,vnode=256 2>/dev/null  # Create 10MB RAM disk with 512KB cache
+waitfor /dev/ram1
+mkqnx6fs -q /dev/ram1
+waitfor /dev/ram1
+mount -t qnx6 /dev/ram1 /opt
 
 echo "---> Starting mqueue"
 mqueue                                  # Start POSIX message queue resource manager
@@ -73,6 +81,7 @@ else
 fi
 
 echo "---> adding /tmp_discovery folder"
+mkdir -p /opt/score/tests
 mkdir -p /tmp_ram/tmp_discovery
 ln -sP  /tmp_ram/tmp_discovery /tmp_discovery
 

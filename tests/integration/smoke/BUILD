@@ -13,6 +13,8 @@
 load("@pip_score_venv_test//:requirements.bzl", "all_requirements")
 load("@score_tooling//:defs.bzl", "score_py_pytest")
 load("//config:flatbuffers_rules.bzl", "flatbuffer_json_to_bin")
+load("//tests/utils:bazel/integration.bzl", "package_test_binaries")
+load("//tests/utils:bazel/integration.bzl", "integration_test")
 
 flatbuffer_json_to_bin(
     name = "test_lm_cfg",
@@ -36,7 +38,7 @@ cc_binary(
     deps = [
         "//src/control_client_lib",
         "//src/launch_manager_daemon/lifecycle_client_lib:lifecycle_client",
-        "//tests/integration:test_helper",
+        "//tests/utils:test_helper",
         "@googletest//:gtest_main",
     ],
 )
@@ -47,27 +49,28 @@ cc_binary(
     deps = [
         "//src/control_client_lib",
         "//src/launch_manager_daemon/lifecycle_client_lib:lifecycle_client",
-        "//tests/integration:test_helper",
+        "//tests/utils:test_helper",
         "@googletest//:gtest_main",
     ],
 )
 
-score_py_pytest(
+package_test_binaries(
+    name = "test_binaries",
+    test_name = "smoke",
+    binaries = {
+        "//src/launch_manager_daemon:launch_manager": "bin/",
+        ":control_daemon_mock": "bin/",
+        ":gtest_process": "bin/",
+        ":test_lm_cfg": "bin/etc/",
+        ":test_hm_cfg": "bin/etc/"
+    },
+)
+
+
+integration_test(
     name = "smoke",
     srcs = [
         "smoke.py",
     ],
-    args = [
-    ],
-    data = [
-        ":control_daemon_mock",
-        ":gtest_process",
-        "//src/launch_manager_daemon:launch_manager",
-    ],
-    tags = [
-        "integration",
-    ],
-    deps = all_requirements + [
-        "//tests/integration:testing_utils",
-    ],
+    test_binaries = "//tests/integration/smoke:test_binaries",
 )

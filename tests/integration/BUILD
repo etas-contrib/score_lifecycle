@@ -40,14 +40,7 @@ score_virtualenv(
     venv_name = ".python_tc_venv",
 )
 
-cc_library(
-    name = "test_helper",
-    hdrs = ["test_helper.hpp"],
-    visibility = ["//tests:__subpackages__"],
-    deps = [
-        "@googletest//:gtest_main",
-    ],
-)
+
 
 py_library(
     name = "control_interface",

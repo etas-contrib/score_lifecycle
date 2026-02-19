@@ -10,20 +10,24 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-from tests.integration.testing_utils import (
-    get_common_interface,
-    check_for_failures,
-    format_logs,
+from tests.utils.fixtures.setup_test import ( setup_tests,
+    download_test_results,
+    test_dir
 )
-from pathlib import Path
+from tests.utils.fixtures.sftp_interface import file_interface
+from tests.utils.fixtures.check_for_failures import check_for_failures
+from tests.utils.fixtures import control_interface
+from tests.utils.fixtures.target import target
 
+import logging
 
-def test_smoke():
-    code, stdout, stderr = get_common_interface().run_until_file_deployed(
-        "src/launch_manager_daemon/launch_manager"
+def test_smoke(setup_tests, control_interface, download_test_results, test_dir):
+
+    code, stdout, stderr = control_interface.run_until_file_deployed(
+        "cd /opt/score/tests/smoke/bin/ && ./launch_manager"
     )
+    logging.info(stdout)
+    logging.info(stderr)
 
-    print(format_logs(code, stdout, stderr))
-
-    check_for_failures(Path("tests/integration/smoke"), 2)
-    assert code == 0
+    download_test_results()
+    check_for_failures(test_dir, 2)

@@ -569,6 +569,16 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
     with open(file_path, 'r') as file:
         return json.load(file)
 
+def get_recovery_process_group_state(config):
+    if "fallback_run_target" in config:
+      return "MainPG/fallback_run_target"
+    else:
+        return "MainPG/Off"
+
+def sec_to_ms(sec : float) -> int:
+    return int(sec * 1000)
+
+
 def preprocess_defaults(global_defaults, config):
     """
     This function takes the input configuration and fills in any missing fields with default values.
@@ -667,12 +677,6 @@ def gen_health_monitor_config(output_dir, config):
             refProcessGroupStates.append({"identifier": state})
         return refProcessGroupStates
     
-    def get_recovery_process_group_state(config):
-        return "MainPG/fallback_run_target"
-
-    def sec_to_ms(sec : float) -> int:
-        return int(sec * 1000)
-
     HM_SCHEMA_VERSION_MAJOR = 8
     HM_SCHEMA_VERSION_MINOR = 0
     hm_config = {}
@@ -828,6 +832,10 @@ def gen_launch_manager_config(output_dir, config):
         else:
             return "ProcessIsNotSelfTerminating"
 
+    if 'fallback_run_target' in config['run_targets']:
+        print('Run target name fallback_run_target is reserved at the moment', file=sys.stderr)
+        exit(1)
+
     lm_config = {}
     lm_config["versionMajor"] = 7
     lm_config["versionMinor"] = 0
@@ -835,30 +843,25 @@ def gen_launch_manager_config(output_dir, config):
     lm_config["ModeGroup"] = [{
         "identifier": "MainPG",
         "initialMode_name": config.get("initial_run_target", "Off"),
-        "recoveryMode_name": "MainPG/fallback_run_target",
+        "recoveryMode_name": get_recovery_process_group_state(config),
         "modeDeclaration": []
     }]
 
     process_group_states = {}
 
-    if 'fallback_run_target' in config['run_targets']:
-        print('Run target name fallback_run_target is reserved at the moment', file=sys.stderr)
-        exit(1)
-
     # For each component, store which run targets depends on it
     for pgstate, values in config["run_targets"].items():
+        state_name = "MainPG/" + pgstate
         lm_config["ModeGroup"][0]["modeDeclaration"].append({
-            "identifier": "MainPG/" + pgstate
+            "identifier": state_name
         })
         components = set(get_process_dependencies(values))
-        state_name = "MainPG/" + pgstate
         for component in components:
             if component not in process_group_states:
                 process_group_states[component] = []
             process_group_states[component].append(state_name)
 
-    fallback = config.get("fallback_run_target", {})
-    if fallback:
+    if (fallback := config.get("fallback_run_target", {})):
         lm_config["ModeGroup"][0]["modeDeclaration"].append({
             "identifier": "MainPG/fallback_run_target"
         })
@@ -886,15 +889,12 @@ def gen_launch_manager_config(output_dir, config):
                 process["functionClusterAffiliation"] = "STATE_MANAGEMENT"
             case "Reporting" | "Reporting_And_Supervised":
                 process["executable_reportingBehavior"] = "ReportsExecutionState" 
-            case _:
-                print(f'Unknown reporting behavior: {component_config["component_properties"]["application_profile"]["application_type"]}')
-                exit(1)
 
         process["startupConfig"] = [{}]
         process["startupConfig"][0]["executionError"] = "1"
         process["startupConfig"][0]["identifier"] = f"{component_name}_startup_config"
-        process["startupConfig"][0]["enterTimeoutValue"] = int(component_config["deployment_config"]["ready_timeout"] * 1000)
-        process["startupConfig"][0]["exitTimeoutValue"] = int(component_config["deployment_config"]["shutdown_timeout"] * 1000)
+        process["startupConfig"][0]["enterTimeoutValue"] = sec_to_ms(component_config["deployment_config"]["ready_timeout"])
+        process["startupConfig"][0]["exitTimeoutValue"] = sec_to_ms(component_config["deployment_config"]["shutdown_timeout"])
         process["startupConfig"][0]["schedulingPolicy"] = component_config["deployment_config"]["sandbox"]["scheduling_policy"]
         process["startupConfig"][0]["schedulingPriority"] = str(component_config["deployment_config"]["sandbox"]["scheduling_priority"])
         process["startupConfig"][0]["terminationBehavior"] = get_terminating_behavior(component_config)

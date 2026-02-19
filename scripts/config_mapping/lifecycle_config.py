@@ -809,23 +809,82 @@ def gen_launch_manager_config(output_dir, config):
     """
     Recursively get all components on which the run target depends
     """
-    def get_process_dependencies(run_target):
+    def format_dependency_path(path, cycle_target):
+        """Format a dependency resolution path for display, highlighting the cycle."""
+        return " -> ".join(path + [cycle_target])
+
+    def get_process_dependencies(run_target, ancestors_run_targets=None, ancestors_components=None):
+        """
+        Resolve all component dependencies for the given run target.
+
+        ancestors_run_targets and ancestors_components track the current
+        recursion path to detect cyclic dependencies without rejecting
+        legitimate diamond-shaped dependency trees.
+        """
+        if ancestors_run_targets is None:
+            ancestors_run_targets = []
+        if ancestors_components is None:
+            ancestors_components = []
+
         out = []
         if "depends_on" not in run_target:
             return out
-        for component in run_target["depends_on"]:
-            if component in config["components"]:
-                out.append(component)
-                if "depends_on" in config["components"][component]["component_properties"]:
+
+        for dependency_name in run_target["depends_on"]:
+            if dependency_name in config["components"]:
+                if dependency_name in ancestors_components:
+                    path = format_dependency_path(ancestors_components, dependency_name)
+                    raise ValueError(
+                        f"Cyclic dependency detected: component '{dependency_name}' "
+                        f"has already been visited.\n  Path: {path}"
+                    )
+                ancestors_components.append(dependency_name)
+                out.append(dependency_name)
+
+                component_props = config["components"][dependency_name]["component_properties"]
+                if "depends_on" in component_props:
                     # All dependencies must be components, since components can't depend on run targets
-                    for dep in config["components"][component]["component_properties"]["depends_on"]:
-                        if dep not in out:
-                            out.append(dep)
-                            out += get_process_dependencies(config["components"][dep]["component_properties"])
+                    for dep in component_props["depends_on"]:
+                        if dep not in config["components"]:
+                            raise ValueError(
+                                f"Component '{dependency_name}' depends on unknown component '{dep}'."
+                            )
+                        if dep in ancestors_components:
+                            path = format_dependency_path(ancestors_components, dep)
+                            raise ValueError(
+                                f"Cyclic dependency detected: component '{dependency_name}' "
+                                f"depends on already visited component '{dep}'.\n  Path: {path}"
+                            )
+                        ancestors_components.append(dep)
+                        out.append(dep)
+                        out += get_process_dependencies(
+                            config["components"][dep]["component_properties"],
+                            ancestors_run_targets=ancestors_run_targets,
+                            ancestors_components=ancestors_components,
+                        )
+                        ancestors_components.pop()
+
+                ancestors_components.pop()
             else:
                 # If the dependency is not a component, it must be a run target
-                out += get_process_dependencies(config["run_targets"][component])
-        return out
+                if dependency_name not in config["run_targets"]:
+                    raise ValueError(
+                        f"Run target depends on unknown run target '{dependency_name}'."
+                    )
+                if dependency_name in ancestors_run_targets:
+                    path = format_dependency_path(ancestors_run_targets, dependency_name)
+                    raise ValueError(
+                        f"Cyclic dependency detected: run target '{dependency_name}' "
+                        f"has already been visited.\n  Path: {path}"
+                    )
+                ancestors_run_targets.append(dependency_name)
+                out += get_process_dependencies(
+                    config["run_targets"][dependency_name],
+                    ancestors_run_targets=ancestors_run_targets,
+                    ancestors_components=ancestors_components,
+                )
+                ancestors_run_targets.pop()
+        return list(set(out))  # Remove duplicates
 
     def get_terminating_behavior(component_config):
         if component_config["component_properties"]["application_profile"]["is_self_terminating"]:
@@ -856,7 +915,7 @@ def gen_launch_manager_config(output_dir, config):
         lm_config["ModeGroup"][0]["modeDeclaration"].append({
             "identifier": state_name
         })
-        components = set(get_process_dependencies(values))
+        components = get_process_dependencies(values)
         for component in components:
             if component not in process_group_states:
                 process_group_states[component] = []
@@ -866,7 +925,7 @@ def gen_launch_manager_config(output_dir, config):
         lm_config["ModeGroup"][0]["modeDeclaration"].append({
             "identifier": "MainPG/fallback_run_target"
         })
-        fallback_components = list(set(get_process_dependencies(fallback)))
+        fallback_components = get_process_dependencies(fallback)
         for component in fallback_components:
             if component not in process_group_states:
                 process_group_states[component] = []

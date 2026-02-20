@@ -36,7 +36,10 @@ try:
     from jsonschema import validators, RefResolver, FormatChecker
     from jsonschema.exceptions import RefResolutionError, SchemaError, ValidationError
 except ImportError:
-    print("This script requires the 'jsonschema' package. Install with:\n  pip install jsonschema", file=sys.stderr)
+    print(
+        "This script requires the 'jsonschema' package. Install with:\n  pip install jsonschema",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 
@@ -75,7 +78,9 @@ def build_validator(schema_path: Path):
     try:
         ValidatorClass.check_schema(schema)
     except SchemaError as e:
-        raise SchemaError(f"Your schema appears invalid: {e.message}\nAt: {'/'.join(map(str, e.path))}") from e
+        raise SchemaError(
+            f"Your schema appears invalid: {e.message}\nAt: {'/'.join(map(str, e.path))}"
+        ) from e
 
     # Base URI for resolving relative $refs like "./types/*.schema.json"
     base_uri = schema_path.resolve().parent.as_uri() + "/"
@@ -101,12 +106,29 @@ def find_json_files(root: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Validate JSON instance(s) against a multi-file JSON Schema.")
-    parser.add_argument("--schema", required=True, type=Path, help="Path to the top-level schema (e.g., ./schema/s-core_launch_manager.schema.json)")
+    parser = argparse.ArgumentParser(
+        description="Validate JSON instance(s) against a multi-file JSON Schema."
+    )
+    parser.add_argument(
+        "--schema",
+        required=True,
+        type=Path,
+        help="Path to the top-level schema (e.g., ./schema/s-core_launch_manager.schema.json)",
+    )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--instance", type=Path, help="Path to a single JSON instance to validate")
-    group.add_argument("--instances-dir", type=Path, help="Path to a directory containing JSON instances (recursively)")
-    parser.add_argument("--stop-on-first", action="store_true", help="Stop after the first instance with errors")
+    group.add_argument(
+        "--instance", type=Path, help="Path to a single JSON instance to validate"
+    )
+    group.add_argument(
+        "--instances-dir",
+        type=Path,
+        help="Path to a directory containing JSON instances (recursively)",
+    )
+    parser.add_argument(
+        "--stop-on-first",
+        action="store_true",
+        help="Stop after the first instance with errors",
+    )
     args = parser.parse_args()
 
     try:
@@ -120,7 +142,10 @@ def main():
         instance_paths = [args.instance]
     else:
         if not args.instances_dir.exists():
-            print(f"[Error] Instances directory not found: {args.instances_dir}", file=sys.stderr)
+            print(
+                f"[Error] Instances directory not found: {args.instances_dir}",
+                file=sys.stderr,
+            )
             sys.exit(1)
         instance_paths = find_json_files(args.instances_dir)
         if not instance_paths:
@@ -140,7 +165,9 @@ def main():
         except RefResolutionError as e:
             print(f"Error --> {path}: Failed to resolve a $ref - {e}", file=sys.stderr)
             print("  Tips:")
-            print("   * Ensure $ref paths like './types/...' are correct relative to the top-level schema file.")
+            print(
+                "   * Ensure $ref paths like './types/...' are correct relative to the top-level schema file."
+            )
             print("   * Make sure referenced files exist and are valid JSON schemas.")
             any_failed = True
             if args.stop_on_first:
@@ -154,7 +181,9 @@ def main():
             print(f"Error --> {path}: {len(errors)} error(s)")
             for i, err in enumerate(errors, 1):
                 instance_loc = json_pointer_path(err.path)
-                schema_loc = "/".join(map(str, err.schema_path)) if err.schema_path else "(root)"
+                schema_loc = (
+                    "/".join(map(str, err.schema_path)) if err.schema_path else "(root)"
+                )
                 print(f"  [{i}] at {instance_loc}")
                 print(f"      --> {err.message}")
                 print(f"      schema path: {schema_loc}")
@@ -166,4 +195,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

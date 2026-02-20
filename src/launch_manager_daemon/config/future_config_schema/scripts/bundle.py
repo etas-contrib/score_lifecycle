@@ -40,6 +40,7 @@ from typing import Any, Dict, Tuple
 
 Json = Any
 
+
 class DefsBundler:
     def __init__(self, input_file: Path) -> None:
         self.input_file = input_file.resolve()
@@ -54,29 +55,29 @@ class DefsBundler:
     def _is_local_file_ref(ref: str) -> bool:
         if not isinstance(ref, str):
             return False
-        if ref.startswith('#'):
+        if ref.startswith("#"):
             return False
-        if '://' in ref:
+        if "://" in ref:
             return False
         return True
 
     @staticmethod
     def _split_ref(ref: str) -> Tuple[str, str]:
         # Returns (file_part, fragment_pointer) where fragment_pointer is like "/a/b" (without leading '#') or ''
-        if '#' in ref:
-            file_part, frag = ref.split('#', 1)
-            if frag.startswith('/'):
+        if "#" in ref:
+            file_part, frag = ref.split("#", 1)
+            if frag.startswith("/"):
                 return file_part, frag  # JSON Pointer already
-            if frag.startswith('#/'):
+            if frag.startswith("#/"):
                 return file_part, frag[1:]
             # treat unknown as JSON Pointer missing leading '/'
-            return file_part, '/' + frag if frag else ''
-        return ref, ''
+            return file_part, "/" + frag if frag else ""
+        return ref, ""
 
     @staticmethod
     def _derive_name_from_file(path: Path) -> str:
         name = path.stem  # e.g., "watchdog.schema"
-        if name.endswith('.schema'):
+        if name.endswith(".schema"):
             name = name[:-7]  # remove trailing ".schema"
         return name
 
@@ -93,7 +94,11 @@ class DefsBundler:
     def _strip_ids(self, schema: Json) -> Json:
         # Remove $id and nested $schema fields from imported defs to avoid base-URI conflicts
         if isinstance(schema, dict):
-            schema = {k: self._strip_ids(v) for k, v in schema.items() if k not in ('$id', '$schema')}
+            schema = {
+                k: self._strip_ids(v)
+                for k, v in schema.items()
+                if k not in ("$id", "$schema")
+            }
         elif isinstance(schema, list):
             schema = [self._strip_ids(v) for v in schema]
         return schema
@@ -102,7 +107,7 @@ class DefsBundler:
         target = (current_file.parent / ref_path).resolve()
         if target in self.file_to_defname:
             return self.file_to_defname[target]
-        with open(target, 'r', encoding='utf-8') as f:
+        with open(target, "r", encoding="utf-8") as f:
             schema = json.load(f)
         name_base = self._derive_name_from_file(target)
         name = self._unique_def_name(name_base)
@@ -116,15 +121,22 @@ class DefsBundler:
     def _rewrite_refs(self, node: Json, current_file: Path) -> Json:
         # Traverse node; for any local file $ref, add that file into $defs and rewrite the $ref to #/$defs/<name>/fragment
         if isinstance(node, dict):
-            if '$ref' in node and isinstance(node['$ref'], str):
-                ref_str = node['$ref']
+            if "$ref" in node and isinstance(node["$ref"], str):
+                ref_str = node["$ref"]
                 if self._is_local_file_ref(ref_str):
                     file_part, frag = self._split_ref(ref_str)
-                    defname = self._register_def_from_file(current_file, file_part) if file_part else None
+                    defname = (
+                        self._register_def_from_file(current_file, file_part)
+                        if file_part
+                        else None
+                    )
                     if defname:
                         # Compose new JSON Pointer: #/$defs/<defname><frag>
                         pointer = f"#/$defs/{defname}{frag}"
-                        return {**{k: v for k, v in node.items() if k != '$ref'}, '$ref': pointer}
+                        return {
+                            **{k: v for k, v in node.items() if k != "$ref"},
+                            "$ref": pointer,
+                        }
             # Otherwise, descend
             return {k: self._rewrite_refs(v, current_file) for k, v in node.items()}
         elif isinstance(node, list):
@@ -133,7 +145,7 @@ class DefsBundler:
             return node
 
     def bundle(self, out_path: Path) -> None:
-        with open(self.input_file, 'r', encoding='utf-8') as f:
+        with open(self.input_file, "r", encoding="utf-8") as f:
             root = json.load(f)
 
         bundled_root = self._deepcopy(root)
@@ -142,7 +154,9 @@ class DefsBundler:
         bundled_root = self._rewrite_refs(bundled_root, self.input_file)
 
         # Merge with existing $defs if any
-        existing_defs = bundled_root.get('$defs', {}) if isinstance(bundled_root, dict) else {}
+        existing_defs = (
+            bundled_root.get("$defs", {}) if isinstance(bundled_root, dict) else {}
+        )
         if not isinstance(existing_defs, dict):
             existing_defs = {}
 
@@ -186,20 +200,24 @@ class DefsBundler:
         # ----------------------------------------------------------------
 
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, 'w', encoding='utf-8') as f:
+        with open(out_path, "w", encoding="utf-8") as f:
             json.dump(bundled_root, f, indent=2, ensure_ascii=False)
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description='Bundle multi-file JSON Schema into one file using $defs (deduplicated).')
-    ap.add_argument('--input', required=True, help='Path to the top-level schema JSON')
-    ap.add_argument('--output', required=True, help='Path to write the bundled schema JSON')
+    ap = argparse.ArgumentParser(
+        description="Bundle multi-file JSON Schema into one file using $defs (deduplicated)."
+    )
+    ap.add_argument("--input", required=True, help="Path to the top-level schema JSON")
+    ap.add_argument(
+        "--output", required=True, help="Path to write the bundled schema JSON"
+    )
     args = ap.parse_args()
 
     bundler = DefsBundler(Path(args.input))
     bundler.bundle(Path(args.output))
     print(f"Bundled schema written to: {args.output}")
 
-if __name__ == '__main__':
-    main()
 
+if __name__ == "__main__":
+    main()

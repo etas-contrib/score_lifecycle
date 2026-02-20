@@ -326,9 +326,7 @@
           "description": "Specifies the recovery action to execute when a component assigned to this Run Target fails."
         }
       },
-      "required": [
-        "recovery_action"
-      ],
+      "required": [],
       "additionalProperties": false
     },
     "alive_supervision": {
@@ -486,7 +484,8 @@
     }
   },
   "required": [
-    "schema_version"
+    "schema_version",
+    "initial_run_target"
   ],
   "additionalProperties": false
 }

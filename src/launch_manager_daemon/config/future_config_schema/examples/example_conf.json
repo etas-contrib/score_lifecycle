@@ -47,12 +47,7 @@
         },
         "run_target": {
             "depends_on": [],
-            "transition_timeout": 5,
-            "recovery_action": {
-                "switch_run_target": {
-                    "run_target": "Off"
-                }
-            }
+            "transition_timeout": 5
         },
         "alive_supervision" : {
             "evaluation_cycle": 0.5

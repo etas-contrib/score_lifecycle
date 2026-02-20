@@ -24,13 +24,16 @@ def integration_test(name, srcs, test_binaries, args = [], deps = [], data = [],
     merged_srcs = srcs + ["//tests/utils/fixtures:conf"]
     merged_deps = deps + ["//tests/utils/fixtures"]
     merged_data = data + [test_binaries, "//tests/utils/environments:test_environment"]
-    merged_args = args + [ "--image-path=$(location //tests/utils/environments:test_environment)"]
+    merged_args = args + select({
+        "//config:host": ["--image-path=native"],
+        "//config:x86_64-qnx": [ "--image-path=$(location //tests/utils/environments:test_environment)"],
+    })
     
     merged_env = dict(env)
     merged_env["SCORE_TEST_BINARY_PATH"] = "$(locations {})".format(test_binaries)
     merged_env["SCORE_TEST_REMOTE_DIRECTORY"] = "/opt/score/tests/{test_name}".format(test_name=name)
     
-    # Forward everything to score_py_pytest
+    # forward everything to score_py_pytest
     score_py_pytest(
         name = name,
         srcs = merged_srcs,

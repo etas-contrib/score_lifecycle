@@ -10,14 +10,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-from tests.utils.fixtures.setup_test import ( setup_tests,
+from tests.utils.fixtures import (
+    file_interface,
+    control_interface,
+    target,
+    setup_tests,
     download_test_results,
     test_dir
 )
-from tests.utils.fixtures.sftp_interface import file_interface
-from tests.utils.fixtures.check_for_failures import check_for_failures
-from tests.utils.fixtures import control_interface
-from tests.utils.fixtures.target import target
+
+# check_for_failures
 
 import logging
 

@@ -4,16 +4,19 @@ load("@rules_python//python:defs.bzl", "py_library")
 py_library(
     name = "fixtures",
     srcs = [
-        "target.py",
-        "ssh.py",
-        "control_interface.py",
-        "linux_interface.py",
-        "setup_test.py",
-        "sftp_interface.py",
-        "check_for_failures.py",
-        "file_interface.py",
+        "control_interface/control_interface.py",
+        "control_interface/linux_interface.py",
+        "control_interface/ssh.py",
+        "control_interface/fixture.py",
+        "file_interface/file_interface.py",
+        "file_interface/fixture.py",
+        "file_interface/sftp_interface.py",
+        "target/fixture.py",
+        "utils/setup_test.py",
+        "utils/check_for_failures.py",
         "__init__.py",
     ],
+    imports = ["../../.."],
     visibility = ["//tests:__subpackages__"],
     deps = [
         requirement("pytest"),
@@ -24,7 +27,6 @@ py_library(
     ],
     tags = [
         "local",
-        "integration"
     ]
 )
 

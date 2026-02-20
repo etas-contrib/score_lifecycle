@@ -1,16 +1,17 @@
-from .control_interface import ControlInterface
-from .linux_interface import LinuxControl
-from .ssh import SshInterface
-from itf.core.com.ssh import Ssh
-import pytest
-        
-@pytest.fixture
-def control_interface(target, request) -> ControlInterface:
+from tests.utils.fixtures.control_interface.fixture import control_interface
+from tests.utils.fixtures.file_interface.fixture import file_interface
+from tests.utils.fixtures.target.fixture import target
+from tests.utils.fixtures.utils.setup_test import (
+    download_test_results,
+    test_dir,
+    setup_tests
+)
 
-    # if no image provided then run natively
-    if not request.config.getoption("--image-path"):
-        yield LinuxInterface
-    else:
-        with Ssh("192.168.100.10") as ssh: 
-            yield SshInterface(ssh)
-
+__all__ = [
+    "control_interface",
+    "file_interface",
+    "target",
+    "download_test_results",
+    "test_dir",
+    "setup_tests"
+]

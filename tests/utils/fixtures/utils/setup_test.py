@@ -1,7 +1,7 @@
 import pytest
 from os import environ, path
 from pathlib import Path
-from .sftp_interface import file_interface
+from tests.utils.fixtures.file_interface.fixture import file_interface
 import logging
 from time import sleep
 from typing import List
@@ -35,7 +35,11 @@ def download_test_results(file_interface, test_dir):
     return _
 
 @pytest.fixture
-def setup_tests(file_interface, control_interface):
+def setup_tests(request, file_interface, control_interface):
+    if request.config.getoption("--image-path") == "native":
+        yield None
+        return None
+
     bin_paths = environ["SCORE_TEST_BINARY_PATH"]
     bin_paths = [Path(p) for p in bin_paths.split(' ')]
 

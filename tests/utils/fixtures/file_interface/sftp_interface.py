@@ -1,7 +1,6 @@
-from .file_interface import FileInterface
+from tests.utils.fixtures.file_interface.file_interface import FileInterface
 from itf.core.com.sftp import Sftp
 from pathlib import Path
-import pytest
 import logging
 
 logger = logging.getLogger(__name__)
@@ -23,9 +22,3 @@ class SftpInterface(FileInterface):
             yield p,f
 
 
-@pytest.fixture
-def file_interface(control_interface):
-    logger.info("Starting SFTP Connection")
-    with Sftp(control_interface.ssh, "not_needed") as sftp:
-        yield SftpInterface(sftp)
-        logger.info("Closing SFTP Connection")

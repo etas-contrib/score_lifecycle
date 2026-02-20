@@ -1,5 +1,5 @@
-from tests.utils.fixtures.target import target
-from tests.utils.fixtures.control_interface import ControlInterface
+from tests.utils.fixtures.target.fixture import target
+from tests.utils.fixtures.control_interface.control_interface import ControlInterface
 from itf.core.com.ssh import execute_command, Ssh
 from typing import Tuple
 from pathlib import Path
@@ -115,15 +115,4 @@ class SshInterface(ControlInterface):
     @property
     def ssh(self):
         return self.__ssh
-
-@pytest.fixture
-def ssh(target) -> SshInterface:
-
-    logger.info("Starting SSH Connection")
-    with Ssh("192.168.100.10") as ssh:
-
-        yield SshInterface(ssh)
-
-        logger.info("Closing SSH Connection")
-
 

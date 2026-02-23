@@ -1,6 +1,6 @@
 from tests.utils.fixtures.control_interface.control_interface import ControlInterface
 from tests.utils.fixtures.control_interface.linux_interface import LinuxControl
-from tests.utils.fixtures.control_interface.ssh import SshInterface
+from tests.utils.fixtures.control_interface.ssh_interface import SshInterface
 from tests.utils.fixtures.target.fixture import target
 from itf.core.com.ssh import Ssh
 import pytest

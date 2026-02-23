@@ -30,6 +30,12 @@ config_setting(
         "config": "build_qnx8",
     },
 )
+config_setting(
+    name = "host",
+    define_values = {
+        "config": "host",
+    },
+)
 
 config_setting(
     name = "thread_sanitizer_enabled",

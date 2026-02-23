@@ -16,17 +16,19 @@ from tests.utils.fixtures import (
     target,
     setup_tests,
     download_test_results,
-    test_dir
+    test_dir,
+    check_for_failures
 )
 
-# check_for_failures
 
+from pathlib import Path
 import logging
 
 def test_smoke(setup_tests, control_interface, download_test_results, test_dir):
 
     code, stdout, stderr = control_interface.run_until_file_deployed(
-        "cd /opt/score/tests/smoke/bin/ && ./launch_manager"
+            "./launch_manager",
+            cwd = "/opt/score/tests/smoke/bin"
     )
     logging.info(stdout)
     logging.info(stderr)

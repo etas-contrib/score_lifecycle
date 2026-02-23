@@ -95,4 +95,4 @@ libslog2.so.1                      # System logging library (slog2_* functions)
 devb-eide                          # Block device driver for IDE/SATA hard drives and SSDs
                                         # Required for mounting QNX6 file systems from disk partitions
 
-[+include] tests/utils/environments/qnx8_qemu/system.build
+[+include] tests/utils/environments/x86_64-qnx/system.build

@@ -38,7 +38,7 @@ cc_binary(
     deps = [
         "//src/control_client_lib",
         "//src/launch_manager_daemon/lifecycle_client_lib:lifecycle_client",
-        "//tests/utils:test_helper",
+        "//tests/utils/test_helper",
         "@googletest//:gtest_main",
     ],
 )
@@ -49,7 +49,7 @@ cc_binary(
     deps = [
         "//src/control_client_lib",
         "//src/launch_manager_daemon/lifecycle_client_lib:lifecycle_client",
-        "//tests/utils:test_helper",
+        "//tests/utils/test_helper",
         "@googletest//:gtest_main",
     ],
 )
@@ -66,11 +66,11 @@ package_test_binaries(
     },
 )
 
-
 integration_test(
     name = "smoke",
     srcs = [
         "smoke.py",
     ],
     test_binaries = "//tests/integration/smoke:test_binaries",
+    tags = [ "requires-fakeroot ", "local"]
 )

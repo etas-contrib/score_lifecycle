@@ -10,6 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+
 load("@pip_score_venv_test//:requirements.bzl", "all_requirements")
 load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load("@score_tooling//python_basics:defs.bzl", "score_py_pytest", "score_virtualenv")
@@ -38,13 +39,4 @@ score_virtualenv(
     name = "python_tc_venv",
     reqs = all_requirements,
     venv_name = ".python_tc_venv",
-)
-
-cc_library(
-    name = "test_helper",
-    hdrs = ["test_helper.hpp"],
-    visibility = ["//tests:__subpackages__"],
-    deps = [
-        "@googletest//:gtest_main",
-    ],
 )

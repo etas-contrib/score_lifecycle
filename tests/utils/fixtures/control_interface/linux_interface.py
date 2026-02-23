@@ -12,27 +12,45 @@
 # *******************************************************************************
 import signal
 import subprocess
-import shutil
 import threading
 import time
-from typing import List, Optional, Tuple, Literal
+from typing import List, Optional, Tuple, Dict, Union
 from pathlib import Path
 import os
 from .control_interface import ControlInterface
+import logging
 
+
+logger = logging.getLogger(__name__)
 _TIMEOUT_CODE = -1
 
 
 class LinuxControl(ControlInterface):
-    def exec_command_blocking(*args, timeout=1, **env) -> Tuple[int, str, str]:
+
+    def exec_command_blocking(
+            self,
+            args: Union[str, List[str]],
+            cwd: Optional[Path] = None,
+            timeout=1,
+            env: Optional[Dict[str, str]] = None) -> Tuple[int, str, str]:
+
+        if not env:
+            env = {}
+
         try:
             res = subprocess.run(
-                args, env=env, capture_output=True, text=True, timeout=timeout
+                args, env=env, cwd=cwd, capture_output=True, text=True, timeout=timeout
             )
             return res.returncode, "".join(res.stdout), "".join(res.stderr)
-        except subprocess.TimeoutExpired as ex:
-            return _TIMEOUT_CODE, ex.output.decode("utf-8"), ex.stderr
 
+        except subprocess.TimeoutExpired as ex:
+            if not ex.stderr:
+                stderr = ""
+            else:
+                stderr = ex.stderr.decode("utf-8")
+            return _TIMEOUT_CODE, str(ex.output.decode("utf-8")), stderr
+
+    @staticmethod
     def _reader(stream, sink: List[str]):
         """Read text lines from a stream until EOF and append to sink."""
         try:
@@ -47,7 +65,8 @@ class LinuxControl(ControlInterface):
                 pass
 
     def _terminate_process_group(
-        proc: subprocess.Popen, sigterm_timeout_seconds: float
+            self,
+            proc: subprocess.Popen, sigterm_timeout_seconds: float
     ):
         """Terminate all processes in a processgroup. Graceful termination is
         attempted before SIGKILL is sent"""
@@ -72,23 +91,31 @@ class LinuxControl(ControlInterface):
             proc.kill()
 
     def run_until_file_deployed(
-        *args,
-        timeout=1,
-        file_path=Path("tests/integration/test_end"),
-        poll_interval=0.05,
-        **env,
+            self,
+            args: Union[str, List[str]],
+            cwd: Optional[Path] = None,
+            timeout=1,
+            file_path=Path("tests/integration/test_end"),
+            poll_interval=0.05,
+            env: Optional[Dict[str, str]] = None,
     ) -> Tuple[int, str, str]:
+
+        if not env:
+            env = {}
+
+        if isinstance(args, str):
+            args = args.split(' ')
+
         proc = subprocess.Popen(
-            ("/usr/bin/fakeroot", "/usr/bin/fakechroot", "-s", "chroot", ".", *args),
+            ["/usr/bin/fakeroot"] + args,
             env=env,
+            cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            bufsize=1,
             text=True,
-            preexec_fn=os.setsid,  # start the process in its own process group so we can signal the whole group
         )
 
-        # Start reader threads to capture stdout/stderr without blocking
+        # start reader threads to capture stdout/stderr without blocking
         stdout_lines: List[str] = []
         stderr_lines: List[str] = []
         t_out = threading.Thread(
@@ -108,7 +135,7 @@ class LinuxControl(ControlInterface):
         try:
             while True:
                 rc = proc.poll()
-                if rc is not None:  # Exited already
+                if rc is not None:  # exited already
                     exit_code = rc
                     break
 
@@ -116,74 +143,25 @@ class LinuxControl(ControlInterface):
 
                 if file_path.exists():
                     exit_code = 0
-                    LinuxControl._terminate_process_group(proc, timeout)
+                    self._terminate_process_group(proc, timeout)
                     os.remove(file_path)
                     break
 
                 if now >= deadline:
                     exit_code = _TIMEOUT_CODE
-                    LinuxControl._terminate_process_group(proc, timeout)
+                    self._terminate_process_group(proc, timeout)
                     break
 
                 time.sleep(poll_interval)
         except KeyboardInterrupt:
-            LinuxControl._terminate_process_group(proc, timeout)
+            self._terminate_process_group(proc, timeout)
 
-        # Ensure readers finish
+        if not exit_code:
+            exit_code = -1
+
+        # ensure readers finish
         t_out.join(timeout=2.0)
         t_err.join(timeout=2.0)
 
         return exit_code, "".join(stdout_lines), "".join(stderr_lines)
 
-
-def get_common_interface() -> ControlInterface:
-    """Get a platform independent façade to execute commands on the target"""
-    match get_platform():
-        case "linux":
-            return LinuxControl
-        case "qemu":
-            raise NotImplementedError("QEMU façade is not yet implemented")
-        case _:
-            raise KeyError("Platform not recognised")
-
-
-def get_platform() -> Literal["linux", "qemu"]:
-    return "linux"
-
-
-def get_bazel_out_dir() -> Path:
-    """Files written to this location are accessible from `bazel-out` when
-    `--remote_download_outputs=all`
-    """
-    return Path(os.environ.get("TEST_UNDECLARED_OUTPUTS_DIR"))
-
-
-def check_for_failures(path: Path, expected_count: int):
-    """Check expected_count xml files for failures, raising an exception if
-    a failure is found or a different number of xml files are found.
-    """
-    failing_files = []
-    checked_files = []
-    for file in path.iterdir():
-        if file.suffix == ".xml":
-            gtest_xml = open(file).read()
-            query = 'failures="'
-            failure_number = gtest_xml[gtest_xml.find(query) + len(query)]
-            if failure_number != "0":
-                failing_files.append(file.name)
-            checked_files.append(file.name)
-            shutil.copy(file, get_bazel_out_dir())
-    if len(failing_files) > 0:
-        raise RuntimeError(
-            f"Failures found in the following files:\n {'\n'.join(failing_files)}"
-        )
-    if len(checked_files) != expected_count:
-        raise RuntimeError(
-            f"Expected to find {expected_count} xml files, instead found {len(checked_files)}:\n{'\n'.join(checked_files)}"
-        )
-
-
-def format_logs(exit_code: int, stdout: str, stderr: str) -> str:
-    """Human-readable format for exit code, stdout and stderr"""
-    extra_info = " (timeout)" if exit_code == _TIMEOUT_CODE else ""
-    return f"stdout:\n{stdout}\n\nstderr:\n{stderr}\n\nExit status = {exit_code}{extra_info}"

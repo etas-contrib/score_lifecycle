@@ -48,7 +48,6 @@ def integration_test(name, srcs, test_binaries, args = [], deps = [], data = [],
 def _package_test_binaries_impl(ctx):
     """Packages test binaries into a given structure.
     """
-    test_name = ctx.attr.name
     output_files = []
     
     for target, relative_location in ctx.attr.binaries.items():

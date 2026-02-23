@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2026 Contributors to the Eclipse Foundation
+# Copyright (c) 2025 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -10,6 +10,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@pip_score_venv_test//:requirements.bzl", "all_requirements")
-load("@rules_python//python:pip.bzl", "compile_pip_requirements")
-load("@score_tooling//python_basics:defs.bzl", "score_py_pytest", "score_virtualenv")
+
+load("@score_toolchains_qnx//rules/fs:ifs.bzl", "qnx_ifs")
+
+qnx_ifs(
+    name = "init_build",
+    srcs = [
+        "system.build",
+        "//tests/utils/environments/x86_64-qnx/configs",
+    ],
+    build_file = "init.build",
+    tags = ["manual"],  # Excluded from wildcard builds
+    visibility = [
+        "//tests:__subpackages__",
+    ],
+)

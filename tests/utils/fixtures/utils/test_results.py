@@ -1,5 +1,5 @@
 from pathlib import Path
-import shutil
+
 
 def check_for_failures(path: Path, expected_count: int):
     """Check expected_count xml files for failures, raising an exception if

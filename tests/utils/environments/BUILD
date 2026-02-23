@@ -11,12 +11,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-filegroup(
-    name = "target_config",
-    srcs = ["target_config.json"],
-    visibility = ["//tests/it:__subpackages__"],
-)
-
 # Empty target for native builds
 filegroup(
     name = "empty_target",
@@ -25,13 +19,11 @@ filegroup(
         "//tests:__subpackages__",
     ],
 )
-# aarch63-qnx
-# x86_64-qnx
+
 alias(
     name = "test_environment",
     actual = select({
-        "//config:x86_64-qnx": "//tests/utils/environments/qnx8_qemu:init_build",
-        # "//config:build_qnx8": "//tests/utils/environments/qnx8_qemu:init_build",
+        "//config:x86_64-qnx": "//tests/utils/environments/x86_64-qnx:init_build",
         "//conditions:default": ":empty_target",
     }),
     visibility = [

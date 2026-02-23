@@ -6,6 +6,7 @@ from tests.utils.fixtures.utils.setup_test import (
     test_dir,
     setup_tests
 )
+from tests.utils.fixtures.utils.test_results import check_for_failures
 
 __all__ = [
     "control_interface",
@@ -13,5 +14,6 @@ __all__ = [
     "target",
     "download_test_results",
     "test_dir",
-    "setup_tests"
+    "setup_tests",
+    "check_for_failures"
 ]

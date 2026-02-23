@@ -239,8 +239,8 @@ pci/pci_debug2.so                        # Enhanced PCI debugging support
 ### SCRIPTS ###
 #############################################
 # System startup and initialization scripts
-[perms=700] /etc/startup.sh = tests/utils/environments/qnx8_qemu/configs/startup.sh                # Main system startup script
-[perms=700] /etc/network_setup.sh = tests/utils/environments/qnx8_qemu/configs/network_setup.sh    # Network configuration script
+[perms=700] /etc/startup.sh = tests/utils/environments/x86_64-qnx/configs/startup.sh                # Main system startup script
+[perms=700] /etc/network_setup.sh = tests/utils/environments/x86_64-qnx/configs/network_setup.sh    # Network configuration script
 
 
 #############################################
@@ -249,30 +249,30 @@ pci/pci_debug2.so                        # Enhanced PCI debugging support
 # This section defines critical configuration files that control system
 # behavior, hardware access, security policies, and user environment setup.
 
-[perms=0444] pci_server.cfg = tests/utils/environments/qnx8_qemu/configs/pci_server.cfg        # PCI server configuration
-[perms=0444] pci_hw.cfg = tests/utils/environments/qnx8_qemu/configs/pci_hw.cfg              # PCI hardware configuration
-[perms=0444] qcrypto.conf = tests/utils/environments/qnx8_qemu/configs/qcrypto.conf          # QNX cryptographic library configuration
+[perms=0444] pci_server.cfg = tests/utils/environments/x86_64-qnx/configs/pci_server.cfg        # PCI server configuration
+[perms=0444] pci_hw.cfg = tests/utils/environments/x86_64-qnx/configs/pci_hw.cfg              # PCI hardware configuration
+[perms=0444] qcrypto.conf = tests/utils/environments/x86_64-qnx/configs/qcrypto.conf          # QNX cryptographic library configuration
 
 # System hostname configuration  
-/etc/hostname = tests/utils/environments/qnx8_qemu/configs/hostname         # System hostname definition file
-/etc/profile = tests/utils/environments/qnx8_qemu/configs/profile
+/etc/hostname = tests/utils/environments/x86_64-qnx/configs/hostname         # System hostname definition file
+/etc/profile = tests/utils/environments/x86_64-qnx/configs/profile
 
 # System user and group databases
-/etc/passwd = tests/utils/environments/qnx8_qemu/configs/passwd             # User account database with login information
-/etc/group = tests/utils/environments/qnx8_qemu/configs/group               # Group membership database
+/etc/passwd = tests/utils/environments/x86_64-qnx/configs/passwd             # User account database with login information
+/etc/group = tests/utils/environments/x86_64-qnx/configs/group               # Group membership database
 
 
 #############################################
 ### SSH CONFIGURATION ###
 #############################################
 # SSH server configuration (no static host keys - generated at runtime)
-[perms=444] /var/ssh/sshd_config = tests/utils/environments/qnx8_qemu/configs/sshd_config  # SSH daemon configuration file
+[perms=444] /var/ssh/sshd_config = tests/utils/environments/x86_64-qnx/configs/sshd_config  # SSH daemon configuration file
 
-[uid=0 gid=0 perms=400] /var/ssh/ssh_host_rsa_key = tests/utils/environments/qnx8_qemu/configs/ssh_host_rsa_key      # SSH server private key
-[uid=0 gid=0 perms=400] /var/ssh/ssh_host_rsa_key.pub = tests/utils/environments/qnx8_qemu/configs/ssh_host_rsa_key.pub  # SSH server public key
+[uid=0 gid=0 perms=400] /var/ssh/ssh_host_rsa_key = tests/utils/environments/x86_64-qnx/configs/ssh_host_rsa_key      # SSH server private key
+[uid=0 gid=0 perms=400] /var/ssh/ssh_host_rsa_key.pub = tests/utils/environments/x86_64-qnx/configs/ssh_host_rsa_key.pub  # SSH server public key
 
 # DHCP client configuration
-[perms=644] /etc/dhcpcd.conf = tests/utils/environments/qnx8_qemu/configs/dhcpcd.conf                                     # DHCP client configuration file
+[perms=644] /etc/dhcpcd.conf = tests/utils/environments/x86_64-qnx/configs/dhcpcd.conf                                     # DHCP client configuration file
 
 
 [gid=0 uid=0 dperms=777 type=dir] /opt/score

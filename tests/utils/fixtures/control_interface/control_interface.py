@@ -13,46 +13,57 @@
 from typing import Tuple
 from pathlib import Path
 from abc import ABC, abstractmethod
+from typing import Union, Optional, List, Dict
 
 
 class ControlInterface(ABC):
-    """Platform independent interface to execute commands on the target"""
+    """Platform independent interface to execute commands on the target
+    """
 
     @abstractmethod
     def exec_command_blocking(
-        *args: str, timeout=1, **env: str
-    ) -> Tuple[int, str, str]:
+        self,
+        args: Union[str, List[str]],
+        cwd: Optional[Path] = None,
+        timeout: int = 1,
+        env: Optional[Dict[str, str]] = None) -> Tuple[int, str, str]:
         """Execute a command on the target
 
         Args:
-            *args (str): Command to run with arguments
-            timeout (int): Time in seconds to exit after, returning status -1
-            **env (str): Environment vars to set
+            args: Arguments for the command.
+            cwd: Working directory to execute the command in.
+            timeout: Timeout in seconds to run the command.
+            env: Dictionary of environmental variables to execute the
+                 command under.
 
         Returns:
-            (int, str, str): exit_status, stdout, stderr
+            return code, stdout, stderr
         """
         raise NotImplementedError()
 
     @abstractmethod
     def run_until_file_deployed(
-        *args,
-        timeout=1,
-        file_path=Path("tests/integration/test_end"),
-        poll_interval=0.05,
-        **env,
+            self,
+            args: Union[str, List[str]],
+            cwd: Optional[Path] = None,
+            timeout: int = 1,
+            file_path: Path = Path("tests/integration/test_end"),
+            poll_interval: float = 0.05,
+            env: Optional[Dict[str, str]] = None,
     ) -> Tuple[int, str, str]:
         """Launch a process and terminate it once a given file has been deployed
 
         Args:
-
-            *args (str): Command to run with arguments
-            timeout (int): Time in seconds to exit after, returning status -1
-            file_path (Path): File to wait for
-            poll_interval (float): How often, in seconds, to check if we should terminate the process
-            **env (str): Environment vars to set
+            args: Arguments for the command.
+            cwd: Working directory to execute the command in.
+            timeout: Timeout in seconds to run the command.
+            file_path: The path of the file to check.
+            poll_interval: Interval in seconds to check the files existance.
+            env: Dictionary of environmental variables to execute the
+                 command under.
 
         Returns:
-            (int, str, str): exit_status, stdout, stderr
+            return code, stdout, stderr
         """
+
         raise NotImplementedError()

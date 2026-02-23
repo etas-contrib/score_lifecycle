@@ -1,5 +1,6 @@
+
 # *******************************************************************************
-# Copyright (c) 2025 Contributors to the Eclipse Foundation
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -11,17 +12,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 
-load("@score_toolchains_qnx//rules/fs:ifs.bzl", "qnx_ifs")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
-qnx_ifs(
-    name = "init_build",
-    srcs = [
-        "system.build",
-        "//tests/utils/environments/qnx8_qemu/configs",
-    ],
-    build_file = "init.build",
-    tags = ["manual"],  # Excluded from wildcard builds
-    visibility = [
-        "//tests:__subpackages__",
+cc_library(
+    name = "test_helper",
+    hdrs = ["include/test_helper.hpp"],
+    includes = [ "include" ],
+    visibility = ["//tests:__subpackages__"],
+    deps = [
+        "@googletest//:gtest_main",
     ],
 )

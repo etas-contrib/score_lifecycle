@@ -9,6 +9,10 @@ common --registry=https://raw.githubusercontent.com/eclipse-score/bazel_registry
 common --registry=https://bcr.bazel.build
 common --credential_helper=*.qnx.com=%workspace%/scripts/internal/qnx_creds.py
 
+build:host --platforms=@score_bazel_platforms//:x86_64-linux
+build:host --define=config=host
+build:host --sandbox_writable_path=/opt/score
+
 build:x86_64-linux --platforms=@score_bazel_platforms//:x86_64-linux
 build:x86_64-linux --define=config=x86_64-linux
 
@@ -24,6 +28,7 @@ build:x86_64-qnx --extra_toolchains=@toolchains_qnx_qcc//:qcc_x86_64
 build:x86_64-qnx --extra_toolchains=@toolchains_qnx_ifs//:ifs_x86_64
 build:x86_64-qnx --extra_toolchains=@rules_python//python/runtime_env_toolchains:all  # needed to override python toolchain to use host
 build:x86_64-qnx --define=config=x86_64-qnx
+
 
 common --@score_baselibs//score/mw/log/flags:KRemote_Logging=False
 common --@score_baselibs//score/json:base_library=nlohmann

@@ -5,8 +5,9 @@ from typing import Generator
 import logging
 
 logger = logging.getLogger(__name__)
-class SftpInterface(FileInterface):
 
+
+class SftpInterface(FileInterface):
     def __init__(self, sftp: Sftp):
         self.__sftp = sftp
         pass
@@ -23,4 +24,3 @@ class SftpInterface(FileInterface):
         for path, files in self.__sftp.walk(str(remote_path)):
             for file in files:
                 yield Path(path) / file
-

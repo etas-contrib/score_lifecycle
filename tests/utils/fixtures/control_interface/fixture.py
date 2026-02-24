@@ -5,14 +5,13 @@ from tests.utils.fixtures.target.fixture import target
 from itf.core.com.ssh import Ssh
 import pytest
 
+
 @pytest.fixture
 def control_interface(target, request) -> ControlInterface:
-
     # if no image provided then run natively
     if request.config.getoption("--image-path") == "native":
         yield LinuxControl()
 
     else:
-        with Ssh("192.168.100.10") as ssh: 
+        with Ssh("192.168.100.10") as ssh:
             yield SshInterface(ssh)
-

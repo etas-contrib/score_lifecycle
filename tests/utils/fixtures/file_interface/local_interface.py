@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class LocalFile(FileInterface):
-
     def download(self, remote_path: Path, local_path: Path):
         copy(remote_path, local_path)
 

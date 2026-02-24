@@ -17,8 +17,10 @@ from typing import Union, Optional, List, Dict
 
 
 class ControlInterface(ABC):
-    """Platform independent interface to execute commands on the target
-    """
+    """Platform independent interface to execute commands on the target"""
+
+    _TIMEOUT_CODE = -1
+    _FILE_FOUND_CODE = 0
 
     @abstractmethod
     def exec_command_blocking(
@@ -26,7 +28,8 @@ class ControlInterface(ABC):
         args: Union[str, List[str]],
         cwd: Optional[Path] = None,
         timeout: int = 1,
-        env: Optional[Dict[str, str]] = None) -> Tuple[int, str, str]:
+        env: Optional[Dict[str, str]] = None,
+    ) -> Tuple[int, str, str]:
         """Execute a command on the target
 
         Args:
@@ -43,21 +46,21 @@ class ControlInterface(ABC):
 
     @abstractmethod
     def run_until_file_deployed(
-            self,
-            args: Union[str, List[str]],
-            cwd: Optional[Path] = None,
-            timeout: int = 1,
-            file_path: Path = Path("tests/integration/test_end"),
-            poll_interval: float = 0.05,
-            env: Optional[Dict[str, str]] = None,
+        self,
+        args: Union[str, List[str]],
+        file_path: Path,
+        cwd: Optional[Path] = None,
+        timeout: int = 1,
+        poll_interval: float = 0.05,
+        env: Optional[Dict[str, str]] = None,
     ) -> Tuple[int, str, str]:
         """Launch a process and terminate it once a given file has been deployed
 
         Args:
             args: Arguments for the command.
+            file_path: The path of the file to check.
             cwd: Working directory to execute the command in.
             timeout: Timeout in seconds to run the command.
-            file_path: The path of the file to check.
             poll_interval: Interval in seconds to check the files existance.
             env: Dictionary of environmental variables to execute the
                  command under.

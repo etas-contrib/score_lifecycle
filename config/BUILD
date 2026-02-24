@@ -41,6 +41,7 @@ config_setting(
         "@platforms//cpu:arm64",
     ],
 )
+
 config_setting(
     name = "host",
     define_values = {

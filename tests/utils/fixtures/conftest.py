@@ -1,5 +1,6 @@
 import pytest
 
+
 def pytest_addoption(parser):
     parser.addoption(
         "--image-path",
@@ -7,4 +8,3 @@ def pytest_addoption(parser):
         required=False,
         help="Path to the image file for the target",
     )
-

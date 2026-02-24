@@ -13,8 +13,7 @@
 load("@pip_score_venv_test//:requirements.bzl", "all_requirements")
 load("@score_tooling//:defs.bzl", "score_py_pytest")
 load("//config:flatbuffers_rules.bzl", "flatbuffer_json_to_bin")
-load("//tests/utils:bazel/integration.bzl", "package_test_binaries")
-load("//tests/utils:bazel/integration.bzl", "integration_test")
+load("//tests/utils:bazel/integration.bzl", "integration_test", "package_test_binaries")
 
 flatbuffer_json_to_bin(
     name = "test_lm_cfg",
@@ -56,14 +55,14 @@ cc_binary(
 
 package_test_binaries(
     name = "test_binaries",
-    test_name = "smoke",
     binaries = {
         "//src/launch_manager_daemon:launch_manager": "bin/",
         ":control_daemon_mock": "bin/",
         ":gtest_process": "bin/",
         ":test_lm_cfg": "bin/etc/",
-        ":test_hm_cfg": "bin/etc/"
+        ":test_hm_cfg": "bin/etc/",
     },
+    test_name = "smoke",
 )
 
 integration_test(
@@ -71,6 +70,9 @@ integration_test(
     srcs = [
         "smoke.py",
     ],
+    tags = [
+        "local",
+        "requires-fakeroot ",
+    ],
     test_binaries = "//tests/integration/smoke:test_binaries",
-    tags = [ "requires-fakeroot ", "local"]
 )

@@ -8,6 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 @pytest.fixture
 def file_interface(request, control_interface) -> FileInterface:
     if request.config.getoption("--image-path") == "native":

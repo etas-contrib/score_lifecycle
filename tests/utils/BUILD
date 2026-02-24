@@ -16,10 +16,10 @@ load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load("@score_tooling//python_basics:defs.bzl", "score_py_pytest", "score_virtualenv")
 
 # In order to update the requirements, change the `requirements.txt` file and run:
-# `bazel run //tests/integration:requirements.update`.
+# `bazel run //tests/utils:requirements.update`.
 # This will update the `requirements.lock` file.
 # To upgrade all dependencies to their latest versions, run:
-# `bazel run //tests/integration:requirements.update -- --upgrade`.
+# `bazel run //tests/utils:requirements.update -- --upgrade`.
 compile_pip_requirements(
     name = "requirements",
     srcs = [

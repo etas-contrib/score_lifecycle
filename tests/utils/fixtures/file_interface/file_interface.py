@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Generator
 
+
 class FileInterface(ABC):
-    """
-    """
+    """ """
 
     @abstractmethod
     def download(self, remote_path: Path, local_path: Path) -> None:
@@ -18,7 +18,7 @@ class FileInterface(ABC):
 
     @abstractmethod
     def upload(self, local_path: Path, remote_path: Path) -> None:
-        """Download a file from the remote to a local path
+        """Upload a file from the local path to the remote
 
         Args:
             local_path: Local path to upload the file from.

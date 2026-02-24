@@ -1,4 +1,3 @@
-
 # *******************************************************************************
 # Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
@@ -17,7 +16,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 cc_library(
     name = "test_helper",
     hdrs = ["include/test_helper.hpp"],
-    includes = [ "include" ],
+    includes = ["include"],
     visibility = ["//tests:__subpackages__"],
     deps = [
         "@googletest//:gtest_main",

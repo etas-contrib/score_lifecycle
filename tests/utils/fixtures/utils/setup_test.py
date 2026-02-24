@@ -17,7 +17,7 @@ def test_dir():
 
 def remote_binary_paths() -> List[Path]:
     bin_paths = environ["SCORE_TEST_BINARY_PATH"]
-    bin_paths = [Path(p) for p in bin_paths.split(' ')]
+    bin_paths = [Path(p) for p in bin_paths.split(" ")]
     root_path_index = list(bin_paths[-1].parts).index("opt")
     return [Path("/", *p.parts[root_path_index:]) for p in bin_paths]
 
@@ -40,17 +40,19 @@ def download_test_results(file_interface, test_dir):
 def setup_tests(request, file_interface, control_interface):
     # upload all binaries required by test
     bin_paths = environ["SCORE_TEST_BINARY_PATH"]
-    bin_paths = [Path(p) for p in bin_paths.split(' ')]
+    bin_paths = [Path(p) for p in bin_paths.split(" ")]
 
     root_path_index = list(bin_paths[-1].parts).index("opt")
 
     for file in bin_paths:
-        assert file.is_file() , f"{file} is not a file"
+        assert file.is_file(), f"{file} is not a file"
         remote_path = Path("/", *file.parts[root_path_index:])
         file_interface.upload(file, remote_path)
 
         if request.config.getoption("--image-path") != "native":
-            ret, _, stderr = control_interface.exec_command_blocking(f"chmod +x {str(remote_path)}")
+            ret, _, stderr = control_interface.exec_command_blocking(
+                f"chmod +x {str(remote_path)}"
+            )
             assert ret == 0, f"Ret code: {ret}, {stderr}"
 
     logger.info("Test case setup finished")

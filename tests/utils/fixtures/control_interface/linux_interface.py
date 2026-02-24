@@ -22,18 +22,16 @@ import logging
 
 
 logger = logging.getLogger(__name__)
-_TIMEOUT_CODE = -1
 
 
 class LinuxControl(ControlInterface):
-
     def exec_command_blocking(
-            self,
-            args: Union[str, List[str]],
-            cwd: Optional[Path] = None,
-            timeout=1,
-            env: Optional[Dict[str, str]] = None) -> Tuple[int, str, str]:
-
+        self,
+        args: Union[str, List[str]],
+        cwd: Optional[Path] = None,
+        timeout=1,
+        env: Optional[Dict[str, str]] = None,
+    ) -> Tuple[int, str, str]:
         if not env:
             env = {}
 
@@ -48,7 +46,7 @@ class LinuxControl(ControlInterface):
                 stderr = ""
             else:
                 stderr = ex.stderr.decode("utf-8")
-            return _TIMEOUT_CODE, str(ex.output.decode("utf-8")), stderr
+            return self._TIMEOUT_CODE, str(ex.output.decode("utf-8")), stderr
 
     @staticmethod
     def _reader(stream, sink: List[str]):
@@ -65,8 +63,7 @@ class LinuxControl(ControlInterface):
                 pass
 
     def _terminate_process_group(
-            self,
-            proc: subprocess.Popen, sigterm_timeout_seconds: float
+        self, proc: subprocess.Popen, sigterm_timeout_seconds: float
     ):
         """Terminate all processes in a processgroup. Graceful termination is
         attempted before SIGKILL is sent"""
@@ -91,20 +88,19 @@ class LinuxControl(ControlInterface):
             proc.kill()
 
     def run_until_file_deployed(
-            self,
-            args: Union[str, List[str]],
-            cwd: Optional[Path] = None,
-            timeout=1,
-            file_path=Path("tests/integration/test_end"),
-            poll_interval=0.05,
-            env: Optional[Dict[str, str]] = None,
+        self,
+        args: Union[str, List[str]],
+        file_path: Path,
+        cwd: Optional[Path] = None,
+        timeout=1,
+        poll_interval=0.05,
+        env: Optional[Dict[str, str]] = None,
     ) -> Tuple[int, str, str]:
-
         if not env:
             env = {}
 
         if isinstance(args, str):
-            args = args.split(' ')
+            args = args.split(" ")
 
         proc = subprocess.Popen(
             ["/usr/bin/fakeroot"] + args,
@@ -140,15 +136,14 @@ class LinuxControl(ControlInterface):
                     break
 
                 now = time.time()
-
                 if file_path.exists():
-                    exit_code = 0
+                    exit_code = self._FILE_FOUND_CODE
                     self._terminate_process_group(proc, timeout)
                     os.remove(file_path)
                     break
 
                 if now >= deadline:
-                    exit_code = _TIMEOUT_CODE
+                    exit_code = self._TIMEOUT_CODE
                     self._terminate_process_group(proc, timeout)
                     break
 
@@ -156,7 +151,7 @@ class LinuxControl(ControlInterface):
         except KeyboardInterrupt:
             self._terminate_process_group(proc, timeout)
 
-        if not exit_code:
+        if exit_code is None:
             exit_code = -1
 
         # ensure readers finish
@@ -164,4 +159,3 @@ class LinuxControl(ControlInterface):
         t_err.join(timeout=2.0)
 
         return exit_code, "".join(stdout_lines), "".join(stderr_lines)
-

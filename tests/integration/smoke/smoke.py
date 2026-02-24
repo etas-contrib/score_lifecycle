@@ -17,21 +17,23 @@ from tests.utils.fixtures import (
     setup_tests,
     download_test_results,
     test_dir,
-    check_for_failures
+    check_for_failures,
 )
 
 
 from pathlib import Path
 import logging
 
-def test_smoke(setup_tests, control_interface, download_test_results, test_dir):
 
+def test_smoke(setup_tests, control_interface, download_test_results, test_dir):
     code, stdout, stderr = control_interface.run_until_file_deployed(
-            "./launch_manager",
-            cwd = "/opt/score/tests/smoke/bin"
+        "./launch_manager",
+        Path("/opt/score/tests/smoke/test_end"),
+        cwd="/opt/score/tests/smoke/bin",
+        timeout=1,
     )
-    logging.info(stdout)
-    logging.info(stderr)
+
+    assert code == 0, f"Return code is not 0\nstdout:{stdout}\nstderr:{stderr}"
 
     download_test_results()
     check_for_failures(test_dir, 2)

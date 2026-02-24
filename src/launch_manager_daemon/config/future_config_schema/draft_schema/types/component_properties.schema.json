@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "description": "Defines a reusable type that captures essential development-time characteristics of a software component.",
+  "description": "Defines a reusable type that captures essential characteristics of a software component.",
   "properties": {
     "binary_name": {
       "type": "string",

@@ -19,6 +19,7 @@ the old format by running:
 
     python3 scripts/config_mapping/lifecycle_config.py <output_file> -o <output_dir>
 """
+
 import argparse
 import json
 import os

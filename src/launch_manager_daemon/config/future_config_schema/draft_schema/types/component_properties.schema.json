@@ -5,7 +5,7 @@
   "properties": {
     "binary_name": {
       "type": "string",
-      "description": "Specifies the relative path of the executable file inside the directory defined by 'deployment_config.bin_dir'. The final executable path will be resolved as '{bin_dir}/{binary_name}'. Example values include simple filenames (e.g., 'test_app1') or subdirectory paths (e.g., 'bin/test_app1')."
+      "description": "Specifies the relative path of the executable file inside the directory defined by 'deployment_config.bin_dir'. The final executable path will be resolved as '{deployment_config.bin_dir}/{binary_name}'. Example values include simple filenames (e.g., 'test_app1') or subdirectory paths (e.g., 'bin/test_app1')."
     },
 
     "application_profile": {

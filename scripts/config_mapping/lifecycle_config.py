@@ -663,7 +663,7 @@ def gen_health_monitor_config(output_dir, config):
             return "REGULAR_PROCESS"
 
     def is_supervised(application_type):
-        return application_type == "State_Manager" or application_type == "Reporting_And_Supervised"
+        return application_type == "Reporting_And_Supervised"
 
     def get_all_process_group_states(run_targets):
         process_group_states = []
@@ -692,15 +692,43 @@ def gen_health_monitor_config(output_dir, config):
     hm_config["hmLocalSupervision"] = []
     hm_config["hmGlobalSupervision"] = []
     hm_config["hmRecoveryNotification"] = []
+    # Build a mapping of run_target -> list of supervised component names
+    run_target_components = {}
+    for rt_name, rt_config in config["run_targets"].items():
+        if rt_name == "Off":
+            continue
+        supervised_deps = []
+        for dep_name in rt_config.get("depends_on", []):
+            if dep_name in config["components"]:
+                comp = config["components"][dep_name]
+                if is_supervised(comp["component_properties"]["application_profile"]["application_type"]):
+                    supervised_deps.append(dep_name)
+        if supervised_deps:
+            run_target_components[rt_name] = supervised_deps
+
     index = 0
+    # Track which process indices belong to each run target
+    run_target_indices = {rt: [] for rt in run_target_components}
+
     for component_name, component_config in config["components"].items():
         if is_supervised(component_config["component_properties"]["application_profile"]["application_type"]):
+            # Find which run target this component belongs to
+            component_rt = None
+            for rt_name, comp_list in run_target_components.items():
+                if component_name in comp_list:
+                    component_rt = rt_name
+                    break
+
             process = {}
             process["index"] = index
             process["shortName"] = component_name
             process["identifier"] = component_name
             process["processType"] = get_process_type(component_config["component_properties"]["application_profile"]["application_type"])
-            process["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
+            # Each process references only its own run target's process group state
+            if component_rt:
+                process["refProcessGroupStates"] = [{"identifier": "MainPG/" + component_rt}]
+            else:
+                process["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
             process["processExecutionErrors"] = [{"processExecutionError":1}]
             hm_config["process"].append(process)
 
@@ -729,7 +757,10 @@ def gen_health_monitor_config(output_dir, config):
             alive_supervision["isMaxCheckDisabled"] = alive_supervision["maxAliveIndications"] == 0
             alive_supervision["failedSupervisionCyclesTolerance"] = component_config["component_properties"]["application_profile"]["alive_supervision"]["failed_cycles_tolerance"]
             alive_supervision["refProcessIndex"] = index
-            alive_supervision["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
+            if component_rt:
+                alive_supervision["refProcessGroupStates"] = [{"identifier": "MainPG/" + component_rt}]
+            else:
+                alive_supervision["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
             hm_config["hmAliveSupervision"].append(alive_supervision)
 
             local_supervision = {}
@@ -747,23 +778,31 @@ def gen_health_monitor_config(output_dir, config):
                 process_config["hmMonitorInterface"].append(hmMonitorIf)
                 json.dump(process_config, process_file, indent=4)
 
+            if component_rt:
+                run_target_indices[component_rt].append(index)
             index += 1
 
-    indices = [i for i in range(index)]
-    if len(indices) > 0:
-        # Create one global supervision & recovery action for all processes.
+    # Create one global supervision & recovery notification per run target (process group)
+    recovery_state = get_recovery_process_group_state(config)
+    for rt_name, rt_indices in run_target_components.items():
+        proc_indices = run_target_indices.get(rt_name, [])
+        if not proc_indices:
+            continue
+
         global_supervision = {}
-        global_supervision["ruleContextKey"] = "global_supervision"
+        global_supervision["ruleContextKey"] = f"GlobalSupervision_{rt_name}"
         global_supervision["isSeverityCritical"] = False
-        global_supervision["localSupervision"] = [{"refLocalSupervisionIndex": idx} for idx in indices]
-        global_supervision["refProcesses"] = [{"index": idx} for idx in indices]
-        global_supervision["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
+        global_supervision["localSupervision"] = [{"refLocalSupervisionIndex": idx} for idx in proc_indices]
+        global_supervision["refProcesses"] = [{"index": idx} for idx in proc_indices]
+        global_supervision["refProcessGroupStates"] = [{"identifier": "MainPG/" + rt_name}]
+        gs_index = len(hm_config["hmGlobalSupervision"])
         hm_config["hmGlobalSupervision"].append(global_supervision)
 
         recovery_action = {}
+        recovery_action["shortName"] = f"RecoveryNotification_{rt_name}"
         recovery_action["recoveryNotificationTimeout"] = 5000
-        recovery_action["processGroupMetaModelIdentifier"] = get_recovery_process_group_state(config)
-        recovery_action["refGlobalSupervisionIndex"] =  hm_config["hmGlobalSupervision"].index(global_supervision)
+        recovery_action["processGroupMetaModelIdentifier"] = recovery_state
+        recovery_action["refGlobalSupervisionIndex"] = gs_index
         recovery_action["instanceSpecifier"] = ""
         recovery_action["shouldFireWatchdog"] = False
         hm_config["hmRecoveryNotification"].append(recovery_action)

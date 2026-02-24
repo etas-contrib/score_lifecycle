@@ -707,29 +707,16 @@ def gen_health_monitor_config(output_dir, config):
             run_target_components[rt_name] = supervised_deps
 
     index = 0
-    # Track which process indices belong to each run target
-    run_target_indices = {rt: [] for rt in run_target_components}
 
     for component_name, component_config in config["components"].items():
         if is_supervised(component_config["component_properties"]["application_profile"]["application_type"]):
-            # Find which run target this component belongs to
-            component_rt = None
-            for rt_name, comp_list in run_target_components.items():
-                if component_name in comp_list:
-                    component_rt = rt_name
-                    break
-
             process = {}
             process["index"] = index
             process["shortName"] = component_name
             process["identifier"] = component_name
             process["processType"] = get_process_type(component_config["component_properties"]["application_profile"]["application_type"])
-            # Each process references only its own run target's process group state
-            if component_rt:
-                process["refProcessGroupStates"] = [{"identifier": "MainPG/" + component_rt}]
-            else:
-                process["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
-            process["processExecutionErrors"] = [{"processExecutionError":1}]
+            process["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
+            process["processExecutionErrors"] = [{"processExecutionError":1} for _ in process["refProcessGroupStates"]]
             hm_config["process"].append(process)
 
             hmMonitorIf = {}
@@ -757,10 +744,7 @@ def gen_health_monitor_config(output_dir, config):
             alive_supervision["isMaxCheckDisabled"] = alive_supervision["maxAliveIndications"] == 0
             alive_supervision["failedSupervisionCyclesTolerance"] = component_config["component_properties"]["application_profile"]["alive_supervision"]["failed_cycles_tolerance"]
             alive_supervision["refProcessIndex"] = index
-            if component_rt:
-                alive_supervision["refProcessGroupStates"] = [{"identifier": "MainPG/" + component_rt}]
-            else:
-                alive_supervision["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
+            alive_supervision["refProcessGroupStates"] = get_all_refProcessGroupStates(config["run_targets"])
             hm_config["hmAliveSupervision"].append(alive_supervision)
 
             local_supervision = {}
@@ -778,8 +762,6 @@ def gen_health_monitor_config(output_dir, config):
                 process_config["hmMonitorInterface"].append(hmMonitorIf)
                 json.dump(process_config, process_file, indent=4)
 
-            if component_rt:
-                run_target_indices[component_rt].append(index)
             index += 1
 
     indices = [i for i in range(index)]

@@ -45,9 +45,7 @@ rm -rf tmp
 rm -rf config/tmp
 mkdir config/tmp
 
-python3 config/gen_lifecycle_config.py -c "$NUMBER_OF_CPP_PROCESSES" -r "$NUMBER_OF_RUST_PROCESSES" -n "$NUMBER_OF_NON_SUPERVISED_CPP_PROCESSES" -o config/tmp/
-
-python3 ../scripts/config_mapping/lifecycle_config.py config/tmp/lifecycle_demo.json -o config/tmp/
+python3 ../scripts/config_mapping/lifecycle_config.py config/lifecycle_demo.json -o config/tmp/
 
 for f in config/tmp/*.json; do
     base=$(basename "$f")

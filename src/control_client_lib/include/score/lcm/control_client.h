@@ -17,6 +17,7 @@
 #include "score/concurrency/future/interruptible_promise.h"
 #include "score/result/result.h"
 #include <string_view>
+#include <memory>
 #include "score/lcm/exec_error_domain.h"
 
 namespace score {

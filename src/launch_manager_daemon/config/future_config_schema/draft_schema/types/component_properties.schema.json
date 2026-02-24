@@ -61,7 +61,7 @@
 
     "depends_on": {
       "type": "array",
-      "description": "Specifies the names of components that this component depends on. Each dependency must be initialized and reach its ready state before this component can start.",
+      "description": "Specifies the names of components that this component depends on. Each dependency must be initialized and reach its ready state before the launch_manager will start this component.",
       "items": {
         "type": "string",
         "description": "Specifies the name of a component on which this component depends."

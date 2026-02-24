@@ -28,12 +28,12 @@ PROC_MACRO_DEPS = [
 CC_SOURCES = [
     "cpp/common.cpp",
     "cpp/deadline_monitor.cpp",
-    "cpp/ffi_helpers.h",
     "cpp/health_monitor.cpp",
 ]
 
 CC_HDRS = [
     "cpp/include/score/hm/common.h",
+    "cpp/include/score/hm/tag.h",
     "cpp/include/score/hm/deadline/deadline_monitor.h",
     "cpp/include/score/hm/health_monitor.h",
 ]
@@ -42,6 +42,7 @@ CC_HDRS = [
 rust_library(
     name = "health_monitoring_lib",
     srcs = glob(["rust/**/*.rs"]),
+    crate_root = "rust/lib.rs",
     proc_macro_deps = PROC_MACRO_DEPS,
     visibility = ["//visibility:public"],
     deps = COMMON_DEPS,
@@ -65,6 +66,7 @@ rust_static_library(
     name = "health_monitoring_lib_ffi",
     srcs = glob(["rust/**/*.rs"]),
     crate_name = "health_monitoring_lib",
+    crate_root = "rust/lib.rs",
     proc_macro_deps = [
         "@score_baselibs_rust//src/testing_macros:score_testing_macros",
     ],
@@ -77,6 +79,7 @@ rust_static_library(
     name = "health_monitoring_lib_stub_supervisor",
     srcs = glob(["rust/**/*.rs"]),
     crate_features = ["stub_supervisor_api_client"],  # Uses the stub supervisor API client, used for C++ testing
+    crate_root = "rust/lib.rs",
     proc_macro_deps = PROC_MACRO_DEPS,
     visibility = ["//visibility:private"],
     deps = COMMON_DEPS,
@@ -106,7 +109,7 @@ rust_test(
         "@platforms//os:qnx": [
             "-Clink-arg=-lc++",
         ],
-        "//conditions:default": [
+        "@platforms//os:linux": [
             "-Clink-arg=-lrt",
             "-Clink-arg=-lstdc++",
         ],
@@ -124,7 +127,7 @@ cc_gtest_unit_test(
     ],
     linkopts = select({
         "@platforms//os:qnx": ["-lsocket"],
-        "//conditions:default": [],
+        "@platforms//os:linux": [],
     }),
     deps = [
         ":health_monitoring_lib_cc_stub_supervisor",

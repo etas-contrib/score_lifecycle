@@ -6,7 +6,7 @@
     "evaluation_cycle": {
       "type": "number",
       "exclusiveMinimum": 0,
-      "description": "Specifies the length of the time window used to assess incoming alive supervision reports."
+      "description": "Specifies the length, in seconds (e.g., '0.5' for 500 milliseconds), of the time window used to assess incoming alive supervision reports."
     }
   },
 

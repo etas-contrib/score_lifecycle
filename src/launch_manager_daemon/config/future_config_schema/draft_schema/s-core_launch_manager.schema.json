@@ -98,7 +98,7 @@
         },
         "transition_timeout": {
           "type": "number",
-          "description": "Specifies the time limit for the Run Target transition. If this limit is exceeded, the transition is considered failed.",
+          "description": "Specifies the time limit, in seconds (e.g., '1.5' for 1500 milliseconds), for the Run Target transition. If this limit is exceeded, the transition is considered failed.",
           "exclusiveMinimum": 0
         }
       },

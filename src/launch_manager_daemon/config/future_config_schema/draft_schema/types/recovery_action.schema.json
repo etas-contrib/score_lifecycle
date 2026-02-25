@@ -15,7 +15,7 @@
         "delay_before_restart": {
           "type": "number",
           "minimum": 0,
-          "description": "Specifies the delay duration that the Launch Manager waits before initiating a restart attempt."
+          "description": "Specifies the delay duration, in seconds (e.g., '0.25' for 250 milliseconds), that the Launch Manager waits before initiating a restart attempt."
         }
       },
       "required": [],

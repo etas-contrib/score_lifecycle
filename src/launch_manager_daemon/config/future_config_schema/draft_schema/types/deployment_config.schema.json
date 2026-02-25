@@ -7,12 +7,12 @@
     "ready_timeout": {
       "type": "number",
       "exclusiveMinimum": 0,
-      "description": "Specifies the maximum time allowed for the component to reach its ready state. The timeout is measured from when the component process is created until the ready conditions specified in 'component_properties.ready_condition' are met."
+      "description": "Specifies the maximum time, in seconds (e.g., '0.25' for 250 milliseconds), allowed for the component to reach its ready state. The timeout is measured from when the component process is created until the ready conditions specified in 'component_properties.ready_condition' are met."
     },
     "shutdown_timeout": {
       "type": "number",
       "exclusiveMinimum": 0,
-      "description": "Specifies the maximum time allowed for the component to terminate after it receives a SIGTERM signal from the Launch Manager. The timeout is measured from when the Launch Manager sends the SIGTERM signal until the Operating System notifies the Launch Manager that the child process has terminated."
+      "description": "Specifies the maximum time, in seconds (e.g., '0.75' for 750 milliseconds), allowed for the component to terminate after it receives a SIGTERM signal from the Launch Manager. The timeout is measured from when the Launch Manager sends the SIGTERM signal until the Operating System notifies the Launch Manager that the child process has terminated."
     },
     "environmental_variables": {
       "type": "object",
@@ -115,7 +115,7 @@
         "max_cpu_usage": {
           "type": "integer",
           "exclusiveMinimum": 0,
-          "description": "Specifies the maximum CPU usage limit for the component, expressed as a percentage of total CPU capacity."
+          "description": "Specifies the maximum CPU usage limit for the component, expressed as a percentage (%) of total CPU capacity."
         }
       },
       "additionalProperties": false

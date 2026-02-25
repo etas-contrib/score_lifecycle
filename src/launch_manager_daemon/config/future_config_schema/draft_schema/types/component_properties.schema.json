@@ -33,7 +33,7 @@
             "reporting_cycle": {
               "type": "number",
               "exclusiveMinimum": 0,
-              "description": "Specifies the duration of the time interval used to verify that the component sends alive notifications within the expected time frame."
+              "description": "Specifies the duration, in seconds (e.g., '0.5' for 500 milliseconds), of the time interval used to verify that the component sends alive notifications within the expected time frame."
             },
             "failed_cycles_tolerance": {
               "type": "integer",
@@ -61,7 +61,7 @@
 
     "depends_on": {
       "type": "array",
-      "description": "Specifies the names of components that this component depends on. Each dependency must be initialized and reach its ready state before the launch_manager will start this component.",
+      "description": "Specifies the names of components that this component depends on. Each dependency must be initialized and reach its ready state before the Launch Manager will start this component.",
       "items": {
         "type": "string",
         "description": "Specifies the name of a component on which this component depends."

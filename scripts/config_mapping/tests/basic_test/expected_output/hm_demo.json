@@ -18,6 +18,9 @@
             "processExecutionErrors": [
                 {
                     "processExecutionError": 1
+                },
+                {
+                    "processExecutionError": 1
                 }
             ]
         },
@@ -37,6 +40,9 @@
             "processExecutionErrors": [
                 {
                     "processExecutionError": 1
+                },
+                {
+                    "processExecutionError": 1
                 }
             ]
         },
@@ -54,6 +60,9 @@
                 }
             ],
             "processExecutionErrors": [
+                {
+                    "processExecutionError": 1
+                },
                 {
                     "processExecutionError": 1
                 }
@@ -231,6 +240,7 @@
     ],
     "hmRecoveryNotification": [
         {
+            "shortName": "recovery_notification",
             "recoveryNotificationTimeout": 5000,
             "processGroupMetaModelIdentifier": "MainPG/fallback_run_target",
             "refGlobalSupervisionIndex": 0,

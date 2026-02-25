@@ -32,8 +32,10 @@ def test_smoke(setup_tests, control_interface, download_test_results, test_dir):
         cwd="/opt/score/tests/smoke/bin",
         timeout=1,
     )
+    logging.info(stdout)
+    logging.info(stderr)
 
-    assert code == 0, f"Return code is not 0\nstdout:{stdout}\nstderr:{stderr}"
+    assert code == 0, f"Exit code was not 0! {code} instead"
 
     download_test_results()
     check_for_failures(test_dir, 2)

@@ -25,7 +25,8 @@ def integration_test(name, srcs, test_binaries, args = [], deps = [], data = [],
     merged_data = data + [test_binaries, "//tests/utils/environments:test_environment"]
     merged_args = args + select({
         "//config:host": ["--image-path=native"],
-        "//conditions:default": ["--image-path=$(location //tests/utils/environments:test_environment)"],
+        "//config:x86_64-qnx": ["--image-path=$(location //tests/utils/environments:test_environment)"],
+        "//conditions:default": ["--image-path=native"],
     })
 
     merged_env = dict(env)

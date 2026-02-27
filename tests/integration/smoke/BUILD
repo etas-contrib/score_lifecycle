@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@pip_score_venv_test//:requirements.bzl", "all_requirements")
+load("@score_lifecycle_pip//:requirements.bzl", "all_requirements")
 load("@score_tooling//:defs.bzl", "score_py_pytest")
 load("//config:flatbuffers_rules.bzl", "flatbuffer_json_to_bin")
 

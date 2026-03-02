@@ -16,158 +16,71 @@
 Launch Manager Configuration Schema
 ###################################
 
-This folder contains the development environment for the Launch Manager configuration JSON Schema. The schema defines and validates the structure of Launch Manager configuration files.
+This folder contains the Launch Manager configuration JSON Schema. The schema defines and validates the structure of Launch Manager configuration files.
 
 Overview
 ********
 
-This project uses a **two-folder approach** for schema management:
-
-- ``draft_schema/`` - Multi-file schema structure for active development
-- ``published_schema/`` - Single-file schema for end-user consumption
-
-The multi-file structure in ``draft_schema/`` makes it easier to maintain and modify the schema by organizing reusable components into separate files. When development is complete, these files are compiled into a single file in ``published_schema/`` for convenience of end users.
+This project manages the Launch Manager configuration schema as a single, self-contained file. When you need to modify or extend the schema, you should directly edit `s-core_launch_manager.schema.json`.
 
 **Project Structure:**
 
 ::
 
-    +-- draft_schema/          # Multi-file schema under development
-    +-- published_schema/      # Single-file schema ready for use
-    +-- examples/              # Sample configuration files
-    +-- scripts/               # Tools for bundling and validation
+    +-- s-core_launch_manager.schema.json # The Launch Manager schema.
+    +-- examples/                         # Illustrative example configuration files for the schema.
+    +-- scripts/                          # Utility scripts, including a validation tool.
 
 Quick Start
 ***********
 
-For End Users
-=============
-
-If you just want to validate your Launch Manager configuration:
-
-1. Use the schema in ``published_schema/s-core_launch_manager.schema.json``
-2. Check the ``examples/`` folder for sample configurations
-3. Validate your config:
-
-   .. code-block:: bash
-
-      validate.py --schema published_schema/s-core_launch_manager.schema.json --instance your_config.json
-
-For Schema Developers
+For Users & Developers
 ======================
 
-If you're modifying or extending the schema:
+Whether you're validating a Launch Manager configuration against the schema, or actively developing and modifying the schema itself, here's how to interact with this project:
 
-1. Edit files in ``draft_schema/``
-2. Bundle your changes:
+1.  **Locate the Schema:** The complete schema definition resides in ``s-core_launch_manager.schema.json``.
+2.  **Explore Examples:** The ``examples/`` folder provides various sample Launch Manager configuration files. These are invaluable for understanding how the schema applies in practice and how to structure your own configurations.
+3.  **Validate Your Configuration:** Use the provided validation script to check if your configuration file conforms to the schema:
 
-   .. code-block:: bash
+    .. code-block:: bash
 
-      bundle.py --input draft_schema/s-core_launch_manager.schema.json --output published_schema/s-core_launch_manager.schema.json
-
-3. Test against examples to ensure nothing broke
-
+       scripts/validate.py --schema s-core_launch_manager.schema.json --instance your_config.json
 
 Examples
 ********
 
-Configuration examples are provided in the ``examples`` folder, each accompanied by a brief description. **Start here** if you're new to Launch Manager configurations - these show real-world usage patterns.
+The ``examples`` folder contains a set of sample Launch Manager configuration files. Each example demonstrates valid configurations according to the ``s-core_launch_manager.schema.json``.
 
-
-Schema Development (draft_schema)
-**********************************
-
-The ``draft_schema`` folder contains the primary development work. The setup uses a multi-file structure where:
-
-- **Reusable types** are stored in the ``types/`` subfolder
-- **Top-level schema** resides in ``s-core_launch_manager.schema.json`` file
-
-Working with $ref Paths
-========================
-
-The multi-file schema uses JSON Schema's ``$ref`` keyword to reference definitions across files. Understanding how these references work is crucial when modifying the schema.
-
-**Key principle:** All ``$ref`` paths are relative to the location of the file containing the reference, not to any root folder.
-
-Reference Examples
-------------------
-
-**To reference a file in a subfolder** (e.g., from ``s-core_launch_manager.schema.json`` to ``types/deployment_config.schema.json``):
-
-.. code-block:: json
-
-    "$ref": "./types/deployment_config.schema.json"
-
-**To reference a file in the same folder:** (e.g., from ``types/deployment_config.schema.json`` to ``types/recovery_action.schema.json``):
-
-.. code-block:: json
-
-    "$ref": "./recovery_action.schema.json"
-
-Common Pitfalls
----------------
-
-- **Always use relative paths** starting with ``./`` or ``../``
-- **Don't use absolute paths** or paths from the project root
-- **Remember the current file's location** when constructing paths
-- When moving files, **update all references** to and from that file
-
-The bundling script resolves all these relative references into a single file, so the published schema doesn't need external file references.
-
-
-Published Schema (published_schema)
-************************************
-
-The official, end-user consumable schema is placed in the ``published_schema`` folder. Upon completion of development, the multi-file schema from the ``draft_schema`` folder is merged into a single file and published here.
-
-**This is the version end users should reference** in their validation tools and IDE configurations.
-
+**Recommendation:** If you are new to Launch Manager configurations, **start by reviewing these examples**. They offer practical insight into the expected structure, available properties, and common use cases defined by the schema.
 
 Scripts
 *******
 
-Utility scripts for schema development are located in the ``scripts`` folder:
-
-bundle.py
-=========
-
-Merges the multi-file schema into a single file for end-user distribution.
-
-**Usage:**
-
-.. code-block:: bash
-
-   bundle.py --input ../draft_schema/s-core_launch_manager.schema.json --output ../published_schema/s-core_launch_manager.schema.json 
-   Bundled schema written to: ../published_schema/s-core_launch_manager.schema.json
-
-**When to use:** After making changes in ``draft_schema/``, run this to create the publishable version.
+The ``scripts`` folder houses utility scripts designed to assist with schema development.
 
 validate.py
 ===========
 
-Validates Launch Manager configuration instances against the schema. This script supports both single-file and multi-file schema formats.
+The ``validate.py`` script is a crucial tool for verifying that any given Launch Manager configuration instance adheres to the rules defined in `s-core_launch_manager.schema.json`.
 
-**Validate against published schema:**
+**Usage:**
 
-.. code-block:: bash
-
-   validate.py --schema ../published_schema/s-core_launch_manager.schema.json --instance ../examples/example_conf.json 
-   Success --> ../examples/example_conf.json: valid
-
-**Validate against draft schema (during development):**
+To validate a configuration file (e.g., `example_conf.json` from the `examples` folder) against the schema:
 
 .. code-block:: bash
 
-   validate.py --schema ../draft_schema/s-core_launch_manager.schema.json --instance ../examples/example_conf.json 
-   Success --> ../examples/example_conf.json: valid
+   scripts/validate.py --schema s-core_launch_manager.schema.json --instance examples/example_conf.json
+   Success --> examples/example_conf.json: valid
 
-**When to use:** Run this frequently during development to catch errors early. Always validate examples before publishing.
-
+**When to use:**
+*   **During Development:** Run this script frequently whenever you're creating or modifying a Launch Manager configuration file. It provides immediate feedback on whether your changes are valid according to the schema.
+*   **Schema Development:** If you are making changes to `s-core_launch_manager.schema.json` itself, always run `validate.py` against the examples to ensure your schema changes haven't inadvertently broken existing, valid configurations.
 
 Typical Workflow
 ****************
 
-1. **Modify** schema files in ``draft_schema/``
-2. **Validate** your changes against examples using the draft schema
-3. **Bundle** the multi-file schema into a single file
-4. **Validate** examples again against the published schema
+For schema developers or those creating new configurations:
+
+1.  **Modify** the ``s-core_launch_manager.schema.json`` file (if you're updating the schema definition) or your Launch Manager configuration file.
+2.  **Validate** your changes using the `scripts/validate.py` script against relevant example files or your new configuration. This iterative process helps ensure compliance and catch errors early.

@@ -19,7 +19,7 @@
             },
             "recovery_action": {
                 "switch_run_target": {
-                    "run_target": "Off"
+                    "run_target": "fallback_run_target"
                 }
             },
             "sandbox": {
@@ -63,7 +63,7 @@
             "evaluation_cycle": 0.5
         }
     },
-    "initial_run_target": "Minimal",
+    "initial_run_target": "Startup",
     "fallback_run_target": {
         "description": "Switching off everything",
         "depends_on": [],

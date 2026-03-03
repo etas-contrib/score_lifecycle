@@ -1,0 +1,158 @@
+{
+    "versionMajor": 7,
+    "versionMinor": 0,
+    "Process": [
+        {
+            "identifier": "non_supervised_comp",
+            "path": "/opt/scripts/bin/comp",
+            "uid": 3,
+            "gid": 0,
+            "sgids": [],
+            "securityPolicyDetails": "",
+            "numberOfRestartAttempts": 1,
+            "executable_reportingBehavior": "DoesNotReportExecutionState",
+            "startupConfig": [
+                {
+                    "executionError": "1",
+                    "identifier": "non_supervised_comp_startup_config",
+                    "enterTimeoutValue": 500,
+                    "exitTimeoutValue": 500,
+                    "schedulingPolicy": "SCHED_OTHER",
+                    "schedulingPriority": "0",
+                    "terminationBehavior": "ProcessIsSelfTerminating",
+                    "processGroupStateDependency": [],
+                    "environmentVariable": [],
+                    "processArgument": [],
+                    "executionDependency": []
+                }
+            ]
+        },
+        {
+            "identifier": "state_manager",
+            "path": "/opt/apps/state_manager/sm",
+            "uid": 4,
+            "gid": 0,
+            "sgids": [],
+            "securityPolicyDetails": "",
+            "numberOfRestartAttempts": 1,
+            "executable_reportingBehavior": "ReportsExecutionState",
+            "functionClusterAffiliation": "STATE_MANAGEMENT",
+            "startupConfig": [
+                {
+                    "executionError": "1",
+                    "identifier": "state_manager_startup_config",
+                    "enterTimeoutValue": 500,
+                    "exitTimeoutValue": 500,
+                    "schedulingPolicy": "SCHED_OTHER",
+                    "schedulingPriority": "0",
+                    "terminationBehavior": "ProcessIsNotSelfTerminating",
+                    "processGroupStateDependency": [
+                        {
+                            "stateMachine_name": "MainPG",
+                            "stateName": "MainPG/Startup"
+                        },
+                        {
+                            "stateMachine_name": "MainPG",
+                            "stateName": "MainPG/Full"
+                        }
+                    ],
+                    "environmentVariable": [],
+                    "processArgument": [],
+                    "executionDependency": []
+                }
+            ]
+        },
+        {
+            "identifier": "reporting_supervised_component",
+            "path": "/opt/scripts/bin/comp",
+            "uid": 5,
+            "gid": 0,
+            "sgids": [],
+            "securityPolicyDetails": "",
+            "numberOfRestartAttempts": 1,
+            "executable_reportingBehavior": "ReportsExecutionState",
+            "startupConfig": [
+                {
+                    "executionError": "1",
+                    "identifier": "reporting_supervised_component_startup_config",
+                    "enterTimeoutValue": 500,
+                    "exitTimeoutValue": 500,
+                    "schedulingPolicy": "SCHED_OTHER",
+                    "schedulingPriority": "0",
+                    "terminationBehavior": "ProcessIsSelfTerminating",
+                    "processGroupStateDependency": [
+                        {
+                            "stateMachine_name": "MainPG",
+                            "stateName": "MainPG/Full"
+                        }
+                    ],
+                    "environmentVariable": [],
+                    "processArgument": [
+                        {
+                            "argument": "-a"
+                        },
+                        {
+                            "argument": "-b"
+                        }
+                    ],
+                    "executionDependency": []
+                }
+            ]
+        },
+        {
+            "identifier": "reporting_supervised_component_with_no_max_indications",
+            "path": "/opt/scripts/bin/comp",
+            "uid": 5,
+            "gid": 0,
+            "sgids": [],
+            "securityPolicyDetails": "",
+            "numberOfRestartAttempts": 1,
+            "executable_reportingBehavior": "ReportsExecutionState",
+            "startupConfig": [
+                {
+                    "executionError": "1",
+                    "identifier": "reporting_supervised_component_with_no_max_indications_startup_config",
+                    "enterTimeoutValue": 500,
+                    "exitTimeoutValue": 500,
+                    "schedulingPolicy": "SCHED_OTHER",
+                    "schedulingPriority": "0",
+                    "terminationBehavior": "ProcessIsSelfTerminating",
+                    "processGroupStateDependency": [
+                        {
+                            "stateMachine_name": "MainPG",
+                            "stateName": "MainPG/Full"
+                        }
+                    ],
+                    "environmentVariable": [],
+                    "processArgument": [
+                        {
+                            "argument": "-a"
+                        },
+                        {
+                            "argument": "-b"
+                        }
+                    ],
+                    "executionDependency": []
+                }
+            ]
+        }
+    ],
+    "ModeGroup": [
+        {
+            "identifier": "MainPG",
+            "initialMode_name": "not-used",
+            "recoveryMode_name": "MainPG/fallback_run_target",
+            "modeDeclaration": [
+                {
+                    "identifier": "MainPG/Startup"
+                },
+                {
+                    "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
+                }
+            ]
+        }
+    ]
+}

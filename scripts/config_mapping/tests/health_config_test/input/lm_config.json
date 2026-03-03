@@ -99,27 +99,27 @@
         }
     },
     "run_targets": {
-        "Minimal": {
+        "Startup": {
             "description": "Minimal functionality of the system",
             "depends_on": ["state_manager"],
             "recovery_action": {
                 "switch_run_target": {
-                    "run_target": "Off"
+                    "run_target": "fallback_run_target"
                 }
             }
         },
         "Full": {
             "description": "Everything running",
-            "depends_on": ["reporting_supervised_component", "reporting_supervised_component_with_no_max_indications", "Minimal"],
+            "depends_on": ["reporting_supervised_component", "reporting_supervised_component_with_no_max_indications", "Startup"],
             "transition_timeout": 5,
             "recovery_action": {
                 "switch_run_target": {
-                    "run_target": "Minimal"
+                    "run_target": "fallback_run_target"
                 }
             }
         }
     },
-    "initial_run_target": "Full",
+    "initial_run_target": "Startup",
     "fallback_run_target": {
         "description": "Switching off everything",
         "depends_on": [],

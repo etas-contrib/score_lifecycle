@@ -5,7 +5,7 @@
     "ModeGroup": [
         {
             "identifier": "MainPG",
-            "initialMode_name": "Minimal",
+            "initialMode_name": "not-used",
             "recoveryMode_name": "MainPG/fallback_run_target",
             "modeDeclaration": [
                 {

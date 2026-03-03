@@ -6,6 +6,7 @@ from pathlib import Path
 import filecmp
 
 script_dir = Path(__file__).parent
+schema_path = script_dir.parent.parent / "src" / "launch_manager_daemon" / "config" / "s-core_launch_manager.schema.json"
 tests_dir = script_dir / "tests"
 lifecycle_script = script_dir / "lifecycle_config.py"
 
@@ -37,6 +38,8 @@ def run(input_file: Path, test_name: str, compare_files_only=[], exclude_files=[
         str(input_file),
         "-o",
         str(actual_output_dir),
+        "--schema",
+        str(schema_path),
     ]
 
     try:

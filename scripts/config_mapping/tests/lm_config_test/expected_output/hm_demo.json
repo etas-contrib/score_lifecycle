@@ -9,13 +9,22 @@
             "processType": "REGULAR_PROCESS",
             "refProcessGroupStates": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
                 }
             ],
             "processExecutionErrors": [
+                {
+                    "processExecutionError": 1
+                },
+                {
+                    "processExecutionError": 1
+                },
                 {
                     "processExecutionError": 1
                 }
@@ -28,13 +37,22 @@
             "processType": "REGULAR_PROCESS",
             "refProcessGroupStates": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
                 }
             ],
             "processExecutionErrors": [
+                {
+                    "processExecutionError": 1
+                },
+                {
+                    "processExecutionError": 1
+                },
                 {
                     "processExecutionError": 1
                 }
@@ -47,13 +65,22 @@
             "processType": "REGULAR_PROCESS",
             "refProcessGroupStates": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
                 }
             ],
             "processExecutionErrors": [
+                {
+                    "processExecutionError": 1
+                },
+                {
+                    "processExecutionError": 1
+                },
                 {
                     "processExecutionError": 1
                 }
@@ -66,13 +93,22 @@
             "processType": "STM_PROCESS",
             "refProcessGroupStates": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
                 }
             ],
             "processExecutionErrors": [
+                {
+                    "processExecutionError": 1
+                },
+                {
+                    "processExecutionError": 1
+                },
                 {
                     "processExecutionError": 1
                 }
@@ -148,10 +184,13 @@
             "refProcessIndex": 0,
             "refProcessGroupStates": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
                 }
             ]
         },
@@ -167,10 +206,13 @@
             "refProcessIndex": 1,
             "refProcessGroupStates": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
                 }
             ]
         },
@@ -186,10 +228,13 @@
             "refProcessIndex": 2,
             "refProcessGroupStates": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
                 }
             ]
         },
@@ -205,10 +250,13 @@
             "refProcessIndex": 3,
             "refProcessGroupStates": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
                 }
             ]
         }
@@ -287,16 +335,20 @@
             ],
             "refProcessGroupStates": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"
+                },
+                {
+                    "identifier": "MainPG/fallback_run_target"
                 }
             ]
         }
     ],
     "hmRecoveryNotification": [
         {
+            "shortName": "recovery_notification",
             "recoveryNotificationTimeout": 5000,
             "processGroupMetaModelIdentifier": "MainPG/fallback_run_target",
             "refGlobalSupervisionIndex": 0,

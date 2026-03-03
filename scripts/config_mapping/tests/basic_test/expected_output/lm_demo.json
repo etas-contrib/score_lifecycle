@@ -33,7 +33,7 @@
                     "processGroupStateDependency": [
                         {
                             "stateMachine_name": "MainPG",
-                            "stateName": "MainPG/Minimal"
+                            "stateName": "MainPG/Startup"
                         },
                         {
                             "stateMachine_name": "MainPG",
@@ -301,7 +301,7 @@
                     "processGroupStateDependency": [
                         {
                             "stateMachine_name": "MainPG",
-                            "stateName": "MainPG/Minimal"
+                            "stateName": "MainPG/Startup"
                         },
                         {
                             "stateMachine_name": "MainPG",
@@ -346,11 +346,11 @@
     "ModeGroup": [
         {
             "identifier": "MainPG",
-            "initialMode_name": "Minimal",
+            "initialMode_name": "not-used",
             "recoveryMode_name": "MainPG/fallback_run_target",
             "modeDeclaration": [
                 {
-                    "identifier": "MainPG/Minimal"
+                    "identifier": "MainPG/Startup"
                 },
                 {
                     "identifier": "MainPG/Full"

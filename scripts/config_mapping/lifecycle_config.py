@@ -22,7 +22,7 @@ score_defaults = json.loads("""
         },
         "recovery_action": {
             "switch_run_target": {
-                "run_target": "Off"
+                "run_target": "fallback_run_target"
             }
         },
         "sandbox": {
@@ -47,7 +47,7 @@ score_defaults = json.loads("""
         "transition_timeout": 5,
         "recovery_action": {
             "switch_run_target": {
-                "run_target": "Off"
+                "run_target": "fallback_run_target"
             }
         }
     },
@@ -57,6 +57,9 @@ score_defaults = json.loads("""
     "watchdogs": {}
 }
 """)
+
+def report_error(message):
+    print(message, file=sys.stderr)
 
 # There are various dictionaries in the config where only a single entry is allowed.
 # We do not want to merge the defaults with the user specified values for these dictionaries.
@@ -70,12 +73,8 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
 
 
 def get_recovery_process_group_state(config):
-    fallback = config.get("fallback_run_target", None)
-    if fallback:
-        return "MainPG/fallback_run_target"
-    else:
-        return "MainPG/Off"
-
+    # Existence has already been validated in the custom_validations function
+    return "MainPG/fallback_run_target"
 
 def sec_to_ms(sec: float) -> int:
     return int(sec * 1000)
@@ -195,6 +194,7 @@ def gen_health_monitor_config(output_dir, config):
         process_group_states = []
         for run_target, _ in run_targets.items():
             process_group_states.append("MainPG/" + run_target)
+        process_group_states.append("MainPG/fallback_run_target")
         return process_group_states
 
     def get_all_refProcessGroupStates(run_targets):
@@ -472,13 +472,6 @@ def gen_launch_manager_config(output_dir, config):
         else:
             return "ProcessIsNotSelfTerminating"
 
-    if "fallback_run_target" in config["run_targets"]:
-        print(
-            "Run target name fallback_run_target is reserved at the moment",
-            file=sys.stderr,
-        )
-        exit(1)
-
     lm_config = {}
     lm_config["versionMajor"] = 7
     lm_config["versionMinor"] = 0
@@ -486,7 +479,7 @@ def gen_launch_manager_config(output_dir, config):
     lm_config["ModeGroup"] = [
         {
             "identifier": "MainPG",
-            "initialMode_name": config.get("initial_run_target", "Off"),
+            "initialMode_name": "not-used",
             "recoveryMode_name": get_recovery_process_group_state(config),
             "modeDeclaration": [],
         }
@@ -606,6 +599,42 @@ def gen_launch_manager_config(output_dir, config):
     with open(f"{output_dir}/lm_demo.json", "w") as lm_file:
         json.dump(lm_config, lm_file, indent=4)
 
+def custom_validations(config):
+    success = True
+
+    if config.get("initial_run_target") != "Startup":
+        report_error(
+            "initial_run_target must be configured to 'Startup'. Other values are not yet supported yet."
+        )
+        success = False
+
+    if "Startup" not in config["run_targets"]:
+        report_error(
+            "\"Startup\" is a mandatory RunTarget and must be defined in the configuration."
+        )
+        success = False
+
+    
+    if "fallback_run_target" in config["run_targets"]:
+        report_error(
+            "RunTarget name \"fallback_run_target\" is reserved, please choose a different name."
+        )
+        success = False
+
+    # Check that for any switch_run_target recovery action, the run_target is set to "fallback_run_target"
+    for _, run_target in config["run_targets"].items():
+        recovery_target_name = run_target.get("recovery_action", {}).get("switch_run_target", {}).get("run_target", "fallback_run_target")
+        if recovery_target_name != "fallback_run_target":
+            report_error("For any switch_run_target recovery action, the recovery RunTarget must be set to \"fallback_run_target\".")
+            success = False
+
+    if "fallback_run_target" not in config:
+        report_error("fallback_run_target is a mandatory configuration but was not found in the config.")
+        success = False
+
+    return success
+
+
 def check_validation_dependency():
     try:
         import jsonschema
@@ -621,9 +650,14 @@ def schema_validation(json_input, schema):
         print("Schema Validation successful")
         return True
     except ValidationError as err:
-        print(err)
+        print(err, file=sys.stderr)
         return False
 
+# Possible exit codes returned from this script
+SUCCESS = 0
+SCHEMA_VALIDATION_DEPENDENCY_ERROR = 1
+SCHEMA_VALIDATION_FAILURE = 2
+CUSTOM_VALIDATION_FAILURE = 3
 
 def main():
     parser = argparse.ArgumentParser()
@@ -645,7 +679,7 @@ def main():
     if args.schema:
         # User asked for validation explicitly, but the dependency is not installed, we should exit with an error
         if args.validate and not check_validation_dependency():
-            exit(1)
+            exit(SCHEMA_VALIDATION_DEPENDENCY_ERROR)
 
         # User asked not explicitly for validation, but the dependency is not installed, we should print a warning and continue without validation
         if not check_validation_dependency():
@@ -655,18 +689,25 @@ def main():
             json_schema = load_json_file(args.schema)
             validation_successful = schema_validation(input_config, json_schema)
             if not validation_successful:
-                exit(1)
+                exit(SCHEMA_VALIDATION_FAILURE)
         
             if args.validate:
-                exit(0)
+                exit(SUCCESS)
     else:
       print("No schema provided, skipping validation. Provide the path to the json schema with \"--schema <path>\" to enable validation.")
 
     preprocessed_config = preprocess_defaults(score_defaults, input_config)
-    gen_health_monitor_config(args.output_dir, preprocessed_config)
-    gen_launch_manager_config(args.output_dir, preprocessed_config)
+    if not custom_validations(preprocessed_config):
+        exit(CUSTOM_VALIDATION_FAILURE)
 
-    return 0
+    try:
+        gen_health_monitor_config(args.output_dir, preprocessed_config)
+        gen_launch_manager_config(args.output_dir, preprocessed_config)
+    except ValueError as e:
+        print(f"Error during configuration generation: {e}", file=sys.stderr)
+        exit(CUSTOM_VALIDATION_FAILURE)
+
+    return SUCCESS
 
 
 if __name__ == "__main__":

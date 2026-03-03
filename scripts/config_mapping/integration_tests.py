@@ -4,8 +4,15 @@ import subprocess
 import shutil
 from pathlib import Path
 import filecmp
+from lifecycle_config import (
+    SUCCESS,
+    SCHEMA_VALIDATION_DEPENDENCY_ERROR,
+    SCHEMA_VALIDATION_FAILURE,
+    CUSTOM_VALIDATION_FAILURE,
+)
 
 script_dir = Path(__file__).parent
+schema_path = script_dir.parent.parent / "src" / "launch_manager_daemon" / "config" / "s-core_launch_manager.schema.json"
 tests_dir = script_dir / "tests"
 lifecycle_script = script_dir / "lifecycle_config.py"
 
@@ -37,6 +44,8 @@ def run(input_file: Path, test_name: str, compare_files_only=[], exclude_files=[
         str(input_file),
         "-o",
         str(actual_output_dir),
+        "--schema",
+        str(schema_path),
     ]
 
     try:
@@ -151,3 +160,52 @@ def test_empty_launch_config_mapping():
     input_file = tests_dir / test_name / "input" / "lm_config.json"
 
     run(input_file, test_name, compare_files_only=["lm_demo.json"])
+
+def test_custom_validation_failures():
+    """
+    Test that custom validation checks implemented in lifecycle_config.py are correctly identifying invalid configurations.
+    The input configuration contains the following issues:
+    * The run target "Minimal" has a recovery action that switches to a run target "Full" instead of "fallback_run_target"
+    * The mandatory "fallback_run_target" is missing from the configuration
+    * Reserved name "fallback_run_target" is used for a RunTarget name which is not allowed
+    * Initial RunTarget is not configured to "Startup"
+    * The "Startup" RunTarget is missing from the configuration, which is mandatory
+    """
+    test_name = "custom_validation_failures_test"
+    input_file = tests_dir / test_name / "input" / "lm_config.json"
+
+    try:
+        run(input_file, test_name)
+        raise AssertionError("Expected an error due to custom validation failures, but the mapping script executed successfully.")
+    except subprocess.CalledProcessError as e:
+        assert e.returncode == CUSTOM_VALIDATION_FAILURE, f"Expected exit code {CUSTOM_VALIDATION_FAILURE}, got {e.returncode}"
+
+        expected_errors = [
+            "recovery RunTarget must be set to \"fallback_run_target\"",
+            "fallback_run_target is a mandatory configuration",
+            "RunTarget name \"fallback_run_target\" is reserved",
+            "initial_run_target must be configured to 'Startup'",
+            "\"Startup\" is a mandatory RunTarget"
+        ]
+        actual_error_output = e.stderr
+        for expected_error in expected_errors:
+            if expected_error not in actual_error_output:
+                print(f"Expected error message not found: {expected_error}")
+                print(f"Actual error output: {actual_error_output}")
+                raise AssertionError(f"Expected error message not found: {expected_error}")
+
+
+def test_schema_validation_failures():
+    """
+    Test that schema validation errors are correctly raised when the input configuration does not conform to the defined JSON schema.
+    The input configuration contains the following issues:
+    * Missing required fields
+    """
+    test_name = "schema_validation_failure_test"
+    input_file = tests_dir / test_name / "input" / "lm_config.json"
+
+    try:
+        run(input_file, test_name)
+        raise AssertionError("Expected an error due to schema validation failures, but the mapping script executed successfully.")
+    except subprocess.CalledProcessError as e:
+        assert e.returncode == SCHEMA_VALIDATION_FAILURE, f"Expected exit code {SCHEMA_VALIDATION_FAILURE}, got {e.returncode}"

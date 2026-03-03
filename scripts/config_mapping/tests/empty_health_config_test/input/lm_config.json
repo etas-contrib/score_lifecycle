@@ -41,12 +41,12 @@
         }
     },
     "run_targets": {
-        "Minimal": {
+        "Startup": {
             "description": "Minimal functionality of the system",
             "depends_on": ["non_supervised_comp"],
             "recovery_action": {
                 "switch_run_target": {
-                    "run_target": "Full"
+                    "run_target": "fallback_run_target"
                 }
             }
         },
@@ -56,12 +56,12 @@
             "transition_timeout": 5,
             "recovery_action": {
                 "switch_run_target": {
-                    "run_target": "Minimal"
+                    "run_target": "fallback_run_target"
                 }
             }
         }
     },
-    "initial_run_target": "Full",
+    "initial_run_target": "Startup",
     "fallback_run_target": {
         "description": "Switching off everything",
         "depends_on": [],

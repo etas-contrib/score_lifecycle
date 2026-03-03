@@ -9,6 +9,9 @@
             "recoveryMode_name": "MainPG/fallback_run_target",
             "modeDeclaration": [
                 {
+                    "identifier": "MainPG/Startup"
+                },
+                {
                     "identifier": "MainPG/fallback_run_target"
                 }
             ]

@@ -73,11 +73,7 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
 
 
 def get_recovery_process_group_state(config):
-    fallback = config.get("fallback_run_target", None)
-    if not fallback:
-        report_error(
-            "fallback_run_target not found, but it is a mandatory configuration.")
-        exit(1)
+    # Existence has already been validated in the custom_validations function
     return "MainPG/fallback_run_target"
 
 def sec_to_ms(sec: float) -> int:
@@ -612,18 +608,29 @@ def custom_validations(config):
         )
         success = False
 
+    if "Startup" not in config["run_targets"]:
+        report_error(
+            "\"Startup\" is a mandatory RunTarget and must be defined in the configuration."
+        )
+        success = False
+
+    
     if "fallback_run_target" in config["run_targets"]:
         report_error(
-            "Run target name \"fallback_run_target\" is reserved, please choose a different name."
+            "RunTarget name \"fallback_run_target\" is reserved, please choose a different name."
         )
         success = False
 
     # Check that for any switch_run_target recovery action, the run_target is set to "fallback_run_target"
-    for name, run_target in config["run_targets"].items():
+    for _, run_target in config["run_targets"].items():
         recovery_target_name = run_target.get("recovery_action", {}).get("switch_run_target", {}).get("run_target", "fallback_run_target")
         if recovery_target_name != "fallback_run_target":
-            report_error("For any switch_run_target recovery action, the run_target must be set to \"fallback_run_target\".")
+            report_error("For any switch_run_target recovery action, the recovery RunTarget must be set to \"fallback_run_target\".")
             success = False
+
+    if "fallback_run_target" not in config:
+        report_error("fallback_run_target is a mandatory configuration but was not found in the config.")
+        success = False
 
     return success
 
@@ -643,9 +650,14 @@ def schema_validation(json_input, schema):
         print("Schema Validation successful")
         return True
     except ValidationError as err:
-        print(err)
+        print(err, file=sys.stderr)
         return False
 
+# Possible exit codes returned from this script
+SUCCESS = 0
+SCHEMA_VALIDATION_DEPENDENCY_ERROR = 1
+SCHEMA_VALIDATION_FAILURE = 2
+CUSTOM_VALIDATION_FAILURE = 3
 
 def main():
     parser = argparse.ArgumentParser()
@@ -667,7 +679,7 @@ def main():
     if args.schema:
         # User asked for validation explicitly, but the dependency is not installed, we should exit with an error
         if args.validate and not check_validation_dependency():
-            exit(1)
+            exit(SCHEMA_VALIDATION_DEPENDENCY_ERROR)
 
         # User asked not explicitly for validation, but the dependency is not installed, we should print a warning and continue without validation
         if not check_validation_dependency():
@@ -677,21 +689,25 @@ def main():
             json_schema = load_json_file(args.schema)
             validation_successful = schema_validation(input_config, json_schema)
             if not validation_successful:
-                exit(1)
+                exit(SCHEMA_VALIDATION_FAILURE)
         
             if args.validate:
-                exit(0)
+                exit(SUCCESS)
     else:
       print("No schema provided, skipping validation. Provide the path to the json schema with \"--schema <path>\" to enable validation.")
 
     preprocessed_config = preprocess_defaults(score_defaults, input_config)
     if not custom_validations(preprocessed_config):
-        exit(1)
+        exit(CUSTOM_VALIDATION_FAILURE)
 
-    gen_health_monitor_config(args.output_dir, preprocessed_config)
-    gen_launch_manager_config(args.output_dir, preprocessed_config)
+    try:
+        gen_health_monitor_config(args.output_dir, preprocessed_config)
+        gen_launch_manager_config(args.output_dir, preprocessed_config)
+    except ValueError as e:
+        print(f"Error during configuration generation: {e}", file=sys.stderr)
+        exit(CUSTOM_VALIDATION_FAILURE)
 
-    return 0
+    return SUCCESS
 
 
 if __name__ == "__main__":

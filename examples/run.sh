@@ -23,13 +23,22 @@ file_exists() {
     fi
 }
 
-LM_BINARY="$PWD/../bazel-bin/src/launch_manager_daemon/launch_manager"
-DEMO_APP_BINARY="$PWD/../bazel-bin/examples/cpp_supervised_app/cpp_supervised_app"
-DEMO_APP_WO_HM_BINARY="$PWD/../bazel-bin/examples/cpp_lifecycle_app/cpp_lifecycle_app"
-RUST_APP_BINARY="$PWD/../bazel-bin/examples/rust_supervised_app/rust_supervised_app"
-CONTROL_APP_BINARY="$PWD/../bazel-bin/examples/control_application/control_daemon"
-CONTROL_CLI_BINARY="$PWD/../bazel-bin/examples/control_application/lmcontrol"
-CFG_DIR="$PWD/../bazel-bin/examples/flatbuffer_out/"
+# When run via 'bazel run', BUILD_WORKSPACE_DIRECTORY is set to the workspace root.
+# Otherwise, assume we're running from the examples/ directory.
+if [ -n "$BUILD_WORKSPACE_DIRECTORY" ]; then
+    BAZEL_BIN="$BUILD_WORKSPACE_DIRECTORY/bazel-bin"
+    cd "$BUILD_WORKSPACE_DIRECTORY/examples"
+else
+    BAZEL_BIN="$PWD/../bazel-bin"
+fi
+
+LM_BINARY="$BAZEL_BIN/src/launch_manager_daemon/launch_manager"
+DEMO_APP_BINARY="$BAZEL_BIN/examples/cpp_supervised_app/cpp_supervised_app"
+DEMO_APP_WO_HM_BINARY="$BAZEL_BIN/examples/cpp_lifecycle_app/cpp_lifecycle_app"
+RUST_APP_BINARY="$BAZEL_BIN/examples/rust_supervised_app/rust_supervised_app"
+CONTROL_APP_BINARY="$BAZEL_BIN/examples/control_application/control_daemon"
+CONTROL_CLI_BINARY="$BAZEL_BIN/examples/control_application/lmcontrol"
+CFG_DIR="$BAZEL_BIN/examples/flatbuffer_out/"
 
 file_exists $LM_BINARY
 file_exists $DEMO_APP_BINARY
@@ -38,13 +47,7 @@ file_exists $RUST_APP_BINARY
 file_exists $CONTROL_APP_BINARY
 file_exists $CONTROL_CLI_BINARY
 
-NUMBER_OF_CPP_PROCESSES=1
-NUMBER_OF_RUST_PROCESSES=1
-NUMBER_OF_NON_SUPERVISED_CPP_PROCESSES=1
-
 rm -rf tmp
-rm -rf config/tmp
-mkdir config/tmp
 
 mkdir -p tmp/launch_manager/etc
 cp $LM_BINARY tmp/launch_manager/launch_manager
@@ -68,9 +71,9 @@ cp $CONTROL_APP_BINARY tmp/control_app/
 cp $CONTROL_CLI_BINARY tmp/control_app/
 
 mkdir -p tmp/lib
-cp $PWD/../bazel-bin/src/launch_manager_daemon/process_state_client_lib/libprocess_state_client.so tmp/lib/
-cp $PWD/../bazel-bin/src/launch_manager_daemon/lifecycle_client_lib/liblifecycle_client.so tmp/lib/
-cp $PWD/../bazel-bin/src/control_client_lib/libcontrol_client_lib.so tmp/lib/
+cp $BAZEL_BIN/src/launch_manager_daemon/process_state_client_lib/libprocess_state_client.so tmp/lib/
+cp $BAZEL_BIN/src/launch_manager_daemon/lifecycle_client_lib/liblifecycle_client.so tmp/lib/
+cp $BAZEL_BIN/src/control_client_lib/libcontrol_client_lib.so tmp/lib/
 
 docker build . -t demo
 

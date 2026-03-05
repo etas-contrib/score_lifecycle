@@ -88,7 +88,7 @@ inline LogLevel GetLevelFromEnv() {
          }
 
     } else {
-        return LogLevel::kDebug;
+        return LogLevel::kInfo;
     }
 }
 

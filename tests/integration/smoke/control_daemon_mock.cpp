@@ -30,7 +30,6 @@ TEST(Smoke, Daemon) {
     }
     TEST_STEP("Activate RunTarget Running") {
         score::cpp::stop_token stop_token;
-        auto result2 = score::lcm::LifecycleClient{}.ReportExecutionState(score::lcm::ExecutionState::kRunning);
         auto result = client.ActivateRunTarget("Running").Get(stop_token);
         EXPECT_TRUE(result.has_value());
     }

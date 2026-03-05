@@ -12,7 +12,7 @@
             },
             "recovery_action": {
                 "switch_run_target": {
-                    "run_target": "Startup"
+                    "run_target": "fallback_run_target"
                 }
             },
             "environmental_variables": {
@@ -81,7 +81,7 @@
             ],
             "recovery_action": {
                 "switch_run_target": {
-                    "run_target": "Startup"
+                    "run_target": "fallback_run_target"
                 }
             }
         },
@@ -92,7 +92,7 @@
             ],
             "recovery_action": {
                 "switch_run_target": {
-                    "run_target": "Startup"
+                    "run_target": "fallback_run_target"
                 }
             }
         },

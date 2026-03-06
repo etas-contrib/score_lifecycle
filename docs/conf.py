@@ -36,6 +36,7 @@ version = "0.1"
 
 
 extensions = [
+    "myst_parser",
     "sphinx_design",
     "sphinx_needs",
     "sphinxcontrib.plantuml",

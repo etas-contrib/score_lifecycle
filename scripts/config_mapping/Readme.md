@@ -39,19 +39,8 @@ python3 lifecycle_config.py <new_configuration.json> --schema <path/to/schema> -
 
 # Running Tests
 
-You may want to use the virtual environment:
-
 ```bash
-python3 -m venv myvenv
-. myvenv/bin/activate
-pip3 install -r requirements.txt
-```
-
-Execute tests:
-
-```bash
-pytest unit_tests.py
-pytest integration_tests.py
+bazel test //scripts/config_mapping:lifecycle_config_tests
 ```
 
 # Mapping Details

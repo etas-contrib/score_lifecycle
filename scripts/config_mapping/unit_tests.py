@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-
-from lifecycle_config import preprocess_defaults
+from scripts.config_mapping.lifecycle_config import preprocess_defaults
 import json
-
 
 def test_preprocessing_basic():
     """
@@ -32,7 +30,7 @@ def test_preprocessing_basic():
         "alive_supervision": {
             "evaluation_cycle": 0.5
         },
-        "watchdogs": {}
+        "watchdog": {}
     }""")
 
     config = json.loads("""{
@@ -82,13 +80,11 @@ def test_preprocessing_basic():
         "alive_supervision": {
             "evaluation_cycle": 0.1
         },
-        "watchdogs": {
-            "simple_watchdog": {
-                "device_file_path": "/dev/watchdog",
-                "max_timeout": 2,
-                "deactivate_on_shutdown": true,
-                "require_magic_close": false
-            }
+        "watchdog": {
+            "device_file_path": "/dev/watchdog",
+            "max_timeout": 2,
+            "deactivate_on_shutdown": true,
+            "require_magic_close": false
         }
     }""")
 
@@ -130,13 +126,11 @@ def test_preprocessing_basic():
         "alive_supervision": {
             "evaluation_cycle": 0.1
         },
-        "watchdogs": {
-            "simple_watchdog": {
-                "device_file_path": "/dev/watchdog",
-                "max_timeout": 2,
-                "deactivate_on_shutdown": true,
-                "require_magic_close": false
-            }
+        "watchdog": {
+            "device_file_path": "/dev/watchdog",
+            "max_timeout": 2,
+            "deactivate_on_shutdown": true,
+            "require_magic_close": false
         }
     }""")
 

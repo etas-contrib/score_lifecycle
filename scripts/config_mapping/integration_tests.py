@@ -4,7 +4,7 @@ import subprocess
 import shutil
 from pathlib import Path
 import filecmp
-from lifecycle_config import (
+from scripts.config_mapping.lifecycle_config import (
     SUCCESS,
     SCHEMA_VALIDATION_DEPENDENCY_ERROR,
     SCHEMA_VALIDATION_FAILURE,

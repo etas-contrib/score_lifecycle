@@ -354,7 +354,7 @@ def gen_health_monitor_config(output_dir, config):
  
     if watchdog_config := config.get("watchdog", {}):
         watchdog = {}
-        watchdog["shortName"] = "Watchdog"
+        watchdog["shortName"] = "watchdog"
         watchdog["deviceFilePath"] = watchdog_config["device_file_path"]
         watchdog["maxTimeout"] = sec_to_ms(watchdog_config["max_timeout"])
         watchdog["deactivateOnShutdown"] = watchdog_config["deactivate_on_shutdown"]

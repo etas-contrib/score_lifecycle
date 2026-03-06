@@ -4,4 +4,5 @@
 :maxdepth: 1
 
 user_guide.md
+examples.md
 ```

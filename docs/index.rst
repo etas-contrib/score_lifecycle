@@ -20,7 +20,9 @@ Lifecycle
    :glob:
    :titlesonly:
 
-   module/*/index
+   module/lifecycle_daemon/index
+   module/lifecycle_client_lib/index
+   module/health_monitor/index
    statistics.rst
 
 Overview

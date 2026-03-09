@@ -11,7 +11,9 @@ def _launch_manager_config_impl(ctx):
         inputs = [config, schema],
         outputs = [gen_dir_json],
         tools = [script],
+        mnemonic = "LifecycleJsonConfigGeneration",
         executable = script,
+        progress_message = "generating Launch Manager config from {}".format(config.short_path),
         arguments = [
             config.path,
             "--schema", schema.path, 
@@ -64,7 +66,9 @@ def _launch_manager_config_impl(ctx):
             hm_schema=hm_schema.path,
             flatc=flatc.path
         ),
-        arguments = []
+        arguments = [],
+        mnemonic = "LaunchManagerFlatbufferConfigGeneration",
+        progress_message = "compiling generated Launch Manager configs in {} to flatbuffer files in {}".format(gen_dir_json.short_path, gen_dir_flatbuffer.short_path)
     )
 
     rf = ctx.runfiles(

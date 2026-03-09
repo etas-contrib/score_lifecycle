@@ -1,7 +1,7 @@
-load("//scripts/config_mapping:config.bzl", "gen_lifecycle_config")
+load("//:defs.bzl", "launch_manager_config")
 load(":run_examples.bzl", "run_examples")
 
-gen_lifecycle_config(
+launch_manager_config(
     name ="example_config",
     config="//examples/config:lifecycle_demo_config")
 

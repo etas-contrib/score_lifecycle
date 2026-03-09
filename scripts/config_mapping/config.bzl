@@ -1,4 +1,4 @@
-def _gen_lifecycle_config_impl(ctx):
+def _launch_manager_config_impl(ctx):
     config = ctx.file.config
     schema = ctx.file.schema
     script = ctx.executable.script
@@ -77,8 +77,8 @@ def _gen_lifecycle_config_impl(ctx):
     return DefaultInfo(files = depset([gen_dir_flatbuffer]), runfiles = rf)
 
 
-gen_lifecycle_config = rule(
-    implementation = _gen_lifecycle_config_impl,
+launch_manager_config = rule(
+    implementation = _launch_manager_config_impl,
     attrs = {
         "config": attr.label(
             allow_single_file = [".json"],

@@ -10,16 +10,16 @@ Providing a json file using the new configuration format as input, the script wi
 
 ## Bazel
 
-The bazel function `gen_lifecycle_config` handles the translation of the new configuration format into the old configuration format and also does the subsequent compilation to flatbuffer files.
+The bazel function `launch_manager_config` handles the translation of the new configuration format into the old configuration format and also does the subsequent compilation to flatbuffer files.
 
 ```python
-load("@score_lifecycle_health//scripts/config_mapping:config.bzl", "gen_lifecycle_config")
+load("@score_lifecycle_health//:defs.bzl", "launch_manager_config")
 
 # This is your launch manager configuration in the new format
 exports_files(["lm_config.json"])
 
 # Afterwards, you can refer to the generated flatbuffer files with :example_config_gen
-gen_lifecycle_config(
+launch_manager_config(
     name ="example_config_gen",
     config="//scripts/config_mapping:lm_config.json"
 )

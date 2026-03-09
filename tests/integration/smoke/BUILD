@@ -18,8 +18,8 @@ exports_files(
     ["lm_demo.json"], 
     visibility = ["//examples:__subpackages__"])
 
-load("//scripts/config_mapping:config.bzl", "gen_lifecycle_config")
-gen_lifecycle_config(
+load("//:defs.bzl", "launch_manager_config")
+launch_manager_config(
     name ="lm_smoketest_config",
     config="//tests/integration/smoke:lifecycle_smoketest.json",
     flatbuffer_out_dir="etc"

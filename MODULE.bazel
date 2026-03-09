@@ -119,7 +119,7 @@ python.toolchain(
 use_repo(python)
 
 # Python pip dependencies
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip", dev_dependency = True)
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     hub_name = "score_lifecycle_pip",
     python_version = PYTHON_VERSION,

@@ -651,7 +651,7 @@ def schema_validation(json_input, schema):
         print("Schema Validation successful")
         return True
     except ValidationError as err:
-        print(err, file=sys.stderr)
+        print(err.message, file=sys.stderr)
         return False
 
 # Possible exit codes returned from this script

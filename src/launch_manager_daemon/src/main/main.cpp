@@ -81,7 +81,7 @@ void reserveFD(int fd)
     int tmp_fd = open("/dev/null", O_RDWR | O_CLOEXEC);
     if (tmp_fd < 0)
     {
-        std::cerr << "unable to get an unsed file descriptor\n";
+        std::cerr << "unable to get an unused file descriptor\n";
         std::abort();
     }
 
@@ -106,16 +106,14 @@ void reserveFD(int fd)
 // coverity[autosar_cpp14_a15_3_3_violation:FALSE] Only logging occurs outside the try-catch enclosing main().
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[])
 {
-    // reserve files descriptor osal::IpcCommsSync::sync_fd (fd3) and osal::IpcCommsSync::state_client_handler_nudge_fd
-    // (fd4)
-    // for communication tpyes:
-    // kNoComms !fd3 & !fd4
+    // reserve files descriptor osal::IpcCommsSync::sync_fd (fd3) and
+    // osal::IpcCommsSync::control_client_handler_nudge_fd (fd4) for communication tpyes: kNoComms !fd3 & !fd4
     // kReporting  fd3 & !fd4
     // kControlClient  fd3 & fd4
     // kLaunchManager  does not matter
     // the file descriptors are closed inside the handleComms function.
     reserveFD(osal::IpcCommsSync::sync_fd);
-    reserveFD(osal::IpcCommsSync::state_client_handler_nudge_fd);
+    reserveFD(osal::IpcCommsSync::control_client_handler_nudge_fd);
 
     int exit_code = EXIT_FAILURE;
 
@@ -162,7 +160,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[])
     }
 
     close(osal::IpcCommsSync::sync_fd);
-    close(osal::IpcCommsSync::state_client_handler_nudge_fd);
+    close(osal::IpcCommsSync::control_client_handler_nudge_fd);
 
     LM_LOG_INFO() << "Launch Manager completed with exit code value:" << exit_code;
 

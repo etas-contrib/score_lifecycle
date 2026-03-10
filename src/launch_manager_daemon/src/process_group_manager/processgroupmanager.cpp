@@ -136,7 +136,7 @@ inline bool ProcessGroupManager::initializeControlClientHandler()
     bool result = false;
 
     // Create shared memory for the nudge semaphore, using the specific
-    // file descriptor osal::Comms::state_client_handler_nudge_fd, and a random name.
+    // file descriptor osal::Comms::control_client_handler_nudge_fd, and a random name.
     // The name is removed from the file system after creation, memory
     // is mapped and a pointer stored, the FD is kept open.
     ControlClientChannel::nudgeControlClientHandler_ = nullptr;
@@ -154,10 +154,10 @@ inline bool ProcessGroupManager::initializeControlClientHandler()
         if (0 == ftruncate(fd, static_cast<off_t>(sizeof(osal::Semaphore))))
         {
             int fd2 =
-                dup2(fd, osal::IpcCommsSync::state_client_handler_nudge_fd);  // always make sure we are using fd=4
+                dup2(fd, osal::IpcCommsSync::control_client_handler_nudge_fd);  // always make sure we are using fd=4
             close(fd);
 
-            if (osal::IpcCommsSync::state_client_handler_nudge_fd == fd2)
+            if (osal::IpcCommsSync::control_client_handler_nudge_fd == fd2)
             {
                 void* buf = mmap(NULL, sizeof(osal::Semaphore), PROT_WRITE, MAP_SHARED, fd2, 0);
 

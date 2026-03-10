@@ -75,8 +75,8 @@ struct IpcCommsSync final
 
     /// @brief Constant for the file descriptor used to signal state transitions
     /// The semaphore used to signal state transitions is stored in an unlinked shared memory area. This requires
-    /// the constant “state_client_handler_nudge_fd” so that the spawned processes can access this resource.
-    static const int state_client_handler_nudge_fd = 4;
+    /// the constant “control_client_handler_nudge_fd” so that the spawned processes can access this resource.
+    static const int control_client_handler_nudge_fd = 4;
 
     // Cannot construct or destruct objects of this type
 

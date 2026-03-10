@@ -83,7 +83,7 @@ void ControlClientChannel::sendRequest(ControlClientMessage& msg)
     // now map the semaphore and post on it
     // Attempt to map the semaphore
     auto* nudgeLM = mmap(
-        NULL, sizeof(osal::Semaphore), PROT_WRITE, MAP_SHARED, osal::IpcCommsSync::state_client_handler_nudge_fd, 0);
+        NULL, sizeof(osal::Semaphore), PROT_WRITE, MAP_SHARED, osal::IpcCommsSync::control_client_handler_nudge_fd, 0);
 
     // RULECHECKER_comment(1, 1, check_c_style_cast, "This is the definition provided by the OS and does a C-style
     // cast.", true)

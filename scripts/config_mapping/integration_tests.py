@@ -12,7 +12,14 @@ from scripts.config_mapping.lifecycle_config import (
 )
 
 script_dir = Path(__file__).parent
-schema_path = script_dir.parent.parent / "src" / "launch_manager_daemon" / "config" / "config_schema" / "s-core_launch_manager.schema.json"
+schema_path = (
+    script_dir.parent.parent
+    / "src"
+    / "launch_manager_daemon"
+    / "config"
+    / "config_schema"
+    / "s-core_launch_manager.schema.json"
+)
 tests_dir = script_dir / "tests"
 lifecycle_script = script_dir / "lifecycle_config.py"
 
@@ -161,6 +168,7 @@ def test_empty_launch_config_mapping():
 
     run(input_file, test_name, compare_files_only=["lm_demo.json"])
 
+
 def test_custom_validation_failures():
     """
     Test that custom validation checks implemented in lifecycle_config.py are correctly identifying invalid configurations.
@@ -176,23 +184,29 @@ def test_custom_validation_failures():
 
     try:
         run(input_file, test_name)
-        raise AssertionError("Expected an error due to custom validation failures, but the mapping script executed successfully.")
+        raise AssertionError(
+            "Expected an error due to custom validation failures, but the mapping script executed successfully."
+        )
     except subprocess.CalledProcessError as e:
-        assert e.returncode == CUSTOM_VALIDATION_FAILURE, f"Expected exit code {CUSTOM_VALIDATION_FAILURE}, got {e.returncode}"
+        assert e.returncode == CUSTOM_VALIDATION_FAILURE, (
+            f"Expected exit code {CUSTOM_VALIDATION_FAILURE}, got {e.returncode}"
+        )
 
         expected_errors = [
-            "recovery RunTarget must be set to \"fallback_run_target\"",
+            'recovery RunTarget must be set to "fallback_run_target"',
             "fallback_run_target is a mandatory configuration",
-            "RunTarget name \"fallback_run_target\" is reserved",
+            'RunTarget name "fallback_run_target" is reserved',
             "initial_run_target must be configured to 'Startup'",
-            "\"Startup\" is a mandatory RunTarget"
+            '"Startup" is a mandatory RunTarget',
         ]
         actual_error_output = e.stderr
         for expected_error in expected_errors:
             if expected_error not in actual_error_output:
                 print(f"Expected error message not found: {expected_error}")
                 print(f"Actual error output: {actual_error_output}")
-                raise AssertionError(f"Expected error message not found: {expected_error}")
+                raise AssertionError(
+                    f"Expected error message not found: {expected_error}"
+                )
 
 
 def test_schema_validation_failures():
@@ -206,6 +220,10 @@ def test_schema_validation_failures():
 
     try:
         run(input_file, test_name)
-        raise AssertionError("Expected an error due to schema validation failures, but the mapping script executed successfully.")
+        raise AssertionError(
+            "Expected an error due to schema validation failures, but the mapping script executed successfully."
+        )
     except subprocess.CalledProcessError as e:
-        assert e.returncode == SCHEMA_VALIDATION_FAILURE, f"Expected exit code {SCHEMA_VALIDATION_FAILURE}, got {e.returncode}"
+        assert e.returncode == SCHEMA_VALIDATION_FAILURE, (
+            f"Expected exit code {SCHEMA_VALIDATION_FAILURE}, got {e.returncode}"
+        )

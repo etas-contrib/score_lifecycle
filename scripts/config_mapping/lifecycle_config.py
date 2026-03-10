@@ -58,8 +58,10 @@ score_defaults = json.loads("""
 }
 """)
 
+
 def report_error(message):
     print(f"Error: {message}", file=sys.stderr)
+
 
 # There are various dictionaries in the config where only a single entry is allowed.
 # We do not want to merge the defaults with the user specified values for these dictionaries.
@@ -75,6 +77,7 @@ def load_json_file(file_path: str) -> Dict[str, Any]:
 def get_recovery_process_group_state(config):
     # Existence has already been validated in the custom_validations function
     return "MainPG/fallback_run_target"
+
 
 def sec_to_ms(sec: float) -> int:
     return int(sec * 1000)
@@ -296,7 +299,9 @@ def gen_health_monitor_config(output_dir, config):
             ]
             hm_config["hmLocalSupervision"].append(local_supervision)
 
-            with open(f"{output_dir}/hmproc_{component_name}.json", "w") as process_file:
+            with open(
+                f"{output_dir}/hmproc_{component_name}.json", "w"
+            ) as process_file:
                 process_config = {}
                 process_config["versionMajor"] = HM_SCHEMA_VERSION_MAJOR
                 process_config["versionMinor"] = HM_SCHEMA_VERSION_MINOR
@@ -351,7 +356,7 @@ def gen_health_monitor_config(output_dir, config):
             )
         }
     ]
- 
+
     if watchdog_config := config.get("watchdog", {}):
         watchdog = {}
         watchdog["shortName"] = "watchdog"
@@ -600,6 +605,7 @@ def gen_launch_manager_config(output_dir, config):
     with open(f"{output_dir}/lm_demo.json", "w") as lm_file:
         json.dump(lm_config, lm_file, indent=4)
 
+
 def custom_validations(config):
     success = True
 
@@ -611,26 +617,33 @@ def custom_validations(config):
 
     if "Startup" not in config["run_targets"]:
         report_error(
-            "\"Startup\" is a mandatory RunTarget and must be defined in the configuration."
+            '"Startup" is a mandatory RunTarget and must be defined in the configuration.'
         )
         success = False
 
-    
     if "fallback_run_target" in config["run_targets"]:
         report_error(
-            "RunTarget name \"fallback_run_target\" is reserved, please choose a different name."
+            'RunTarget name "fallback_run_target" is reserved, please choose a different name.'
         )
         success = False
 
     # Check that for any switch_run_target recovery action, the run_target is set to "fallback_run_target"
     for _, run_target in config["run_targets"].items():
-        recovery_target_name = run_target.get("recovery_action", {}).get("switch_run_target", {}).get("run_target", "fallback_run_target")
+        recovery_target_name = (
+            run_target.get("recovery_action", {})
+            .get("switch_run_target", {})
+            .get("run_target", "fallback_run_target")
+        )
         if recovery_target_name != "fallback_run_target":
-            report_error("For any switch_run_target recovery action, the recovery RunTarget must be set to \"fallback_run_target\".")
+            report_error(
+                'For any switch_run_target recovery action, the recovery RunTarget must be set to "fallback_run_target".'
+            )
             success = False
 
     if "fallback_run_target" not in config:
-        report_error("fallback_run_target is a mandatory configuration but was not found in the config.")
+        report_error(
+            "fallback_run_target is a mandatory configuration but was not found in the config."
+        )
         success = False
 
     return success
@@ -640,25 +653,34 @@ def check_validation_dependency():
     try:
         import jsonschema
     except ImportError:
-        print("jsonschema library is not installed. Please install it with \"pip install jsonschema\" to enable schema validation.")
+        print(
+            'jsonschema library is not installed. Please install it with "pip install jsonschema" to enable schema validation.'
+        )
         return False
     return True
+
 
 def schema_validation(json_input, schema):
     try:
         from jsonschema import validate, ValidationError
+
         validate(json_input, schema)
         print("Schema Validation successful")
         return True
     except ValidationError as err:
-        print(f"Error: Schema validation failed with error: {err.message}", file=sys.stderr)
+        print(
+            f"Error: Schema validation failed with error: {err.message}",
+            file=sys.stderr,
+        )
         return False
+
 
 # Possible exit codes returned from this script
 SUCCESS = 0
 SCHEMA_VALIDATION_DEPENDENCY_ERROR = 1
 SCHEMA_VALIDATION_FAILURE = 2
 CUSTOM_VALIDATION_FAILURE = 3
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -676,7 +698,7 @@ def main():
     args = parser.parse_args()
 
     input_config = load_json_file(args.filename)
-  
+
     if args.schema:
         # User asked for validation explicitly, but the dependency is not installed, we should exit with an error
         if args.validate and not check_validation_dependency():
@@ -684,18 +706,22 @@ def main():
 
         # User asked not explicitly for validation, but the dependency is not installed, we should print a warning and continue without validation
         if not check_validation_dependency():
-            print("lifecycle_config.py:jsonschema library is not installed. Please install it with \"pip install jsonschema\" to enable schema validation.")
+            print(
+                'lifecycle_config.py:jsonschema library is not installed. Please install it with "pip install jsonschema" to enable schema validation.'
+            )
             print("Schema validation will be skipped.")
         else:
             json_schema = load_json_file(args.schema)
             validation_successful = schema_validation(input_config, json_schema)
             if not validation_successful:
                 exit(SCHEMA_VALIDATION_FAILURE)
-        
+
             if args.validate:
                 exit(SUCCESS)
     else:
-      print("No schema provided, skipping validation. Provide the path to the json schema with \"--schema <path>\" to enable validation.")
+        print(
+            'No schema provided, skipping validation. Provide the path to the json schema with "--schema <path>" to enable validation.'
+        )
 
     preprocessed_config = preprocess_defaults(score_defaults, input_config)
     if not custom_validations(preprocessed_config):

@@ -2,6 +2,7 @@
 from scripts.config_mapping.lifecycle_config import preprocess_defaults
 import json
 
+
 def test_preprocessing_basic():
     """
     Basic smoketest for the preprocess_defaults function, to ensure that defaults are being applied and overridden correctly.

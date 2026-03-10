@@ -1,6 +1,7 @@
 exports_files(
-    ["lifecycle_demo.json"], 
-    visibility = ["//examples:__subpackages__"])
+    ["lifecycle_demo.json"],
+    visibility = ["//examples:__subpackages__"],
+)
 
 filegroup(
     name = "lifecycle_demo_config",

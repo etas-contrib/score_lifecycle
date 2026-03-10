@@ -12,17 +12,18 @@
 # *******************************************************************************
 load("@score_lifecycle_pip//:requirements.bzl", "all_requirements")
 load("@score_tooling//:defs.bzl", "score_py_pytest")
+load("//:defs.bzl", "launch_manager_config")
 load("//config:flatbuffers_rules.bzl", "flatbuffer_json_to_bin")
 
 exports_files(
-    ["lm_demo.json"], 
-    visibility = ["//examples:__subpackages__"])
+    ["lm_demo.json"],
+    visibility = ["//examples:__subpackages__"],
+)
 
-load("//:defs.bzl", "launch_manager_config")
 launch_manager_config(
-    name ="lm_smoketest_config",
-    config="//tests/integration/smoke:lifecycle_smoketest.json",
-    flatbuffer_out_dir="etc"
+    name = "lm_smoketest_config",
+    config = "//tests/integration/smoke:lifecycle_smoketest.json",
+    flatbuffer_out_dir = "etc",
 )
 
 cc_binary(
@@ -58,8 +59,8 @@ score_py_pytest(
     data = [
         ":control_daemon_mock",
         ":gtest_process",
+        ":lm_smoketest_config",
         "//src/launch_manager_daemon:launch_manager",
-        ":lm_smoketest_config"
     ],
     tags = [
         "integration",

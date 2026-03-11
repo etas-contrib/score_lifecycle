@@ -63,7 +63,7 @@ Understanding Dependencies: How Components and Run Targets Relate
 
 A fundamental aspect of **Launch Manager** configuration involves understanding how components are assigned to a **Run Target** and how dependencies are declared.
 
-When a component is said to be assigned to a **Run Target**, it means the **Run Target**'s configuration explicitly lists the component's name within its ``depends_on`` parameter.
+When a component is said to be assigned to a **Run Target**, it means the **Run Target's** configuration explicitly lists the component's name within its ``depends_on`` parameter.
 
 Similarly, when a component depends on another component, its own ``component_properties.depends_on`` configuration parameter will list the name of the other component it requires.
 
@@ -436,7 +436,7 @@ The S-CORE standard defaults are particularly beneficial during the development 
 S-CORE Standard Defaults
 ========================
 
-The **Launch Manager** guarantees the availability of these specific default values, which are applied when no corresponding configuration is found in the explicit definition of a property (e.g., within a component's ``deployment_config``, a **Run Target**'s settings, or a root-level property) or within the user-defined ``defaults`` section.
+The **Launch Manager** guarantees the availability of these specific default values, which are applied when no corresponding configuration is found in the explicit definition of a property (e.g., within a component's ``deployment_config``, a **Run Target's** settings, or a root-level property) or within the user-defined ``defaults`` section.
 
 alive_supervision
 -----------------
@@ -543,10 +543,17 @@ The S-CORE standard provides the following default values for ``deployment_confi
       }
    }
 
+fallback_run_target
+-------------------
+
+The ``fallback_run_target`` is a critical configuration option within the **Launch Manager**. While the S-CORE standard does not currently provide official default values for the ``fallback_run_target``, its behavior when unconfigured is important to understand.
+
+If ``fallback_run_target`` is not explicitly configured by the user, the Bazel target responsible for generating configuration files will create a **Run Target** that does not depend on any component. In this specific scenario, the ``fallback_run_target`` will effectively cause all components to shut down, with the exception of the **Launch Manager** itself. Understanding this default behavior is crucial for ensuring the desired system state during operation.
+
 Inheritance Of Default Values
 =============================
 
 Given that the **Launch Manager** supports multiple levels of default values, specific rules govern their inheritance and application. The inheritance order is straightforward:
 
-1. If a configuration value is not explicitly specified at a specific location (e.g., within an individual component's definition, a **Run Target**'s definition, or a root-level property like ``alive_supervision``), the **Launch Manager** will first attempt to use the corresponding value from the user-defined ``defaults`` section.
+1. If a configuration value is not explicitly specified at a specific location (e.g., within an individual component's definition, a **Run Target's** definition, or a root-level property like ``alive_supervision``), the **Launch Manager** will first attempt to use the corresponding value from the user-defined ``defaults`` section.
 2. If the value is also not specified within the user-defined ``defaults`` section, then the **Launch Manager** will apply the S-CORE standard default value for that option.

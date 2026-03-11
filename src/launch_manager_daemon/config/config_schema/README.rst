@@ -30,11 +30,11 @@ The project is structured to provide a clear organization for the schema, defaul
 ::
 
     .
-    |-- default_values/                     # Default values for various configuration aspects, including Run Target.
-    |-- docs/                               # Comprehensive documentation for Launch Manager configuration.
-    |-- examples/                           # Illustrative example configuration files for the schema.
-    |-- s-core_launch_manager.schema.json   # The Launch Manager schema definition.
-    `-- scripts/                            # Utility scripts, including a validation tool.
+    |-- default_values/                   # Default values for various configuration aspects.
+    |-- docs/                             # Comprehensive documentation for Launch Manager configuration.
+    |-- examples/                         # Illustrative example configuration files for the schema.
+    |-- s-core_launch_manager.schema.json # The Launch Manager schema definition.
+    `-- scripts/                          # Utility scripts, including a validation tool.
 
 Quick Start
 ***********

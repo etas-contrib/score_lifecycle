@@ -65,12 +65,7 @@ score_defaults = json.loads("""
     "alive_supervision": {
         "evaluation_cycle": 0.5
     },
-    "watchdog": {
-        "device_file_path": "/dev/watchdog",
-        "max_timeout": 2.0,
-        "deactivate_on_shutdown": true,
-        "require_magic_close": false
-    }
+    "watchdog": {}
 }
 """)
 

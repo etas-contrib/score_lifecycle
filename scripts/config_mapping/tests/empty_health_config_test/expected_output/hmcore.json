@@ -1,7 +1,17 @@
 {
     "versionMajor": 3,
     "versionMinor": 0,
-    "watchdogs": [],
+    "watchdogs": [
+        {
+            "shortName": "watchdog",
+            "deviceFilePath": "/dev/watchdog",
+            "maxTimeout": 2000,
+            "deactivateOnShutdown": true,
+            "hasValueDeactivateOnShutdown": true,
+            "requireMagicClose": false,
+            "hasValueRequireMagicClose": true
+        }
+    ],
     "config": [
         {
             "periodicity": 123

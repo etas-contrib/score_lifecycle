@@ -16,8 +16,8 @@ score_defaults = json.loads("""
         "working_dir": "/tmp",
         "ready_recovery_action": {
             "restart": {
-                "number_of_attempts": 1,
-                "delay_before_restart": 0.5
+                "number_of_attempts": 0,
+                "delay_before_restart": 0
             }
         },
         "recovery_action": {
@@ -26,8 +26,8 @@ score_defaults = json.loads("""
             }
         },
         "sandbox": {
-            "uid": 0,
-            "gid": 0,
+            "uid": 1000,
+            "gid": 1000,
             "supplementary_group_ids": [],
             "security_policy": "",
             "scheduling_policy": "SCHED_OTHER",
@@ -35,26 +35,42 @@ score_defaults = json.loads("""
         }
     },
     "component_properties": {
+        "binary_name": "",
         "application_profile": {
-            "application_type": "REPORTING",
-            "is_self_terminating": false
+            "application_type": "REPORTING_AND_SUPERVISED",
+            "is_self_terminating": false,
+            "alive_supervision": {
+                "reporting_cycle": 0.5,
+                "failed_cycles_tolerance": 2,
+                "min_indications": 1,
+                "max_indications": 3
+            }
         },
+        "depends_on": [],
+        "process_arguments": [],
         "ready_condition": {
             "process_state": "Running"
         }
     },
     "run_target": {
-        "transition_timeout": 5,
+        "description": "",
+        "depends_on": [],
+        "transition_timeout": 3,
         "recovery_action": {
             "switch_run_target": {
                 "run_target": "fallback_run_target"
             }
         }
     },
-    "alive_supervision" : {
+    "alive_supervision": {
         "evaluation_cycle": 0.5
     },
-    "watchdog": {}
+    "watchdog": {
+        "device_file_path": "/dev/watchdog",
+        "max_timeout": 2.0,
+        "deactivate_on_shutdown": true,
+        "require_magic_close": false
+    }
 }
 """)
 

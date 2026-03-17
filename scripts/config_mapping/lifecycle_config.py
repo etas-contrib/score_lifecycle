@@ -37,7 +37,7 @@ score_defaults = json.loads("""
     "component_properties": {
         "binary_name": "",
         "application_profile": {
-            "application_type": "REPORTING_AND_SUPERVISED",
+            "application_type": "Reporting_And_Supervised",
             "is_self_terminating": false,
             "alive_supervision": {
                 "reporting_cycle": 0.5,

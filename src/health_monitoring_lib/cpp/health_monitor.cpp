@@ -19,6 +19,7 @@ using namespace score::hm;
 using namespace score::hm::internal;
 using namespace score::hm::deadline;
 using namespace score::hm::heartbeat;
+using namespace score::hm::logic;
 
 // Functions below must match functions defined in `crate::ffi`.
 
@@ -34,12 +35,18 @@ FFICode health_monitor_builder_add_deadline_monitor(FFIHandle health_monitor_bui
 FFICode health_monitor_builder_add_heartbeat_monitor(FFIHandle health_monitor_builder_handle,
                                                      const MonitorTag* monitor_tag,
                                                      FFIHandle heartbeat_monitor_builder_handle);
+FFICode health_monitor_builder_add_logic_monitor(FFIHandle health_monitor_builder_handle,
+                                                 const MonitorTag* monitor_tag,
+                                                 FFIHandle logic_monitor_builder_handle);
 FFICode health_monitor_get_deadline_monitor(FFIHandle health_monitor_handle,
                                             const MonitorTag* monitor_tag,
                                             FFIHandle* deadline_monitor_handle_out);
 FFICode health_monitor_get_heartbeat_monitor(FFIHandle health_monitor_handle,
                                              const MonitorTag* monitor_tag,
                                              FFIHandle* heartbeat_monitor_handle_out);
+FFICode health_monitor_get_logic_monitor(FFIHandle health_monitor_handle,
+                                         const MonitorTag* monitor_tag,
+                                         FFIHandle* logic_monitor_handle_out);
 FFICode health_monitor_start(FFIHandle health_monitor_handle);
 FFICode health_monitor_destroy(FFIHandle health_monitor_handle);
 }
@@ -92,6 +99,20 @@ HealthMonitorBuilder HealthMonitorBuilder::add_heartbeat_monitor(const MonitorTa
     return std::move(*this);
 }
 
+HealthMonitorBuilder HealthMonitorBuilder::add_logic_monitor(const MonitorTag& monitor_tag,
+                                                             LogicMonitorBuilder&& monitor) &&
+{
+    auto monitor_handle = monitor.drop_by_rust();
+    SCORE_LANGUAGE_FUTURECPP_PRECONDITION(monitor_handle.has_value());
+    SCORE_LANGUAGE_FUTURECPP_PRECONDITION(health_monitor_builder_handle_.as_rust_handle().has_value());
+
+    auto result{health_monitor_builder_add_logic_monitor(
+        health_monitor_builder_handle_.as_rust_handle().value(), &monitor_tag, monitor_handle.value())};
+    SCORE_LANGUAGE_FUTURECPP_ASSERT(result == kSuccess);
+
+    return std::move(*this);
+}
+
 HealthMonitorBuilder HealthMonitorBuilder::with_internal_processing_cycle(std::chrono::milliseconds cycle_duration) &&
 {
     internal_processing_cycle_duration_ = cycle_duration;
@@ -104,7 +125,7 @@ HealthMonitorBuilder HealthMonitorBuilder::with_supervisor_api_cycle(std::chrono
     return std::move(*this);
 }
 
-HealthMonitor HealthMonitorBuilder::build() &&
+score::cpp::expected<HealthMonitor, Error> HealthMonitorBuilder::build() &&
 {
     auto health_monitor_builder_handle = health_monitor_builder_handle_.drop_by_rust();
     SCORE_LANGUAGE_FUTURECPP_PRECONDITION(health_monitor_builder_handle.has_value());
@@ -115,9 +136,12 @@ HealthMonitor HealthMonitorBuilder::build() &&
     FFIHandle health_monitor_handle{nullptr};
     auto result{health_monitor_builder_build(
         health_monitor_builder_handle.value(), supervisor_duration_ms, internal_duration_ms, &health_monitor_handle)};
-    SCORE_LANGUAGE_FUTURECPP_ASSERT(result == kSuccess);
+    if (result != kSuccess)
+    {
+        return score::cpp::unexpected(static_cast<Error>(result));
+    }
 
-    return HealthMonitor{health_monitor_handle};
+    return score::cpp::expected<HealthMonitor, Error>(HealthMonitor{health_monitor_handle});
 }
 
 HealthMonitor::HealthMonitor(FFIHandle handle) : health_monitor_(handle)
@@ -153,6 +177,18 @@ score::cpp::expected<HeartbeatMonitor, Error> HealthMonitor::get_heartbeat_monit
     }
 
     return score::cpp::expected<HeartbeatMonitor, Error>(HeartbeatMonitor{handle});
+}
+
+score::cpp::expected<LogicMonitor, Error> HealthMonitor::get_logic_monitor(const MonitorTag& monitor_tag)
+{
+    FFIHandle handle{nullptr};
+    auto result{health_monitor_get_logic_monitor(health_monitor_, &monitor_tag, &handle)};
+    if (result != kSuccess)
+    {
+        return score::cpp::unexpected(static_cast<Error>(result));
+    }
+
+    return score::cpp::expected<LogicMonitor, Error>(LogicMonitor{handle});
 }
 
 void HealthMonitor::start()

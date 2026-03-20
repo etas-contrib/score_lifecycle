@@ -11,7 +11,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load("//:defs.bzl", "launch_manager_config")
-load(":run_examples.bzl", "run_examples")
 
 launch_manager_config(
     name = "example_config",
@@ -40,9 +39,10 @@ filegroup(
     ],
 )
 
-run_examples(
+sh_binary(
     name = "run_examples",
-    deps = [
+    srcs = ["run.sh"],
+    data = [
         ":example_apps",
         ":lm_binaries",
     ],

@@ -13,18 +13,15 @@
 #ifndef SCORE_LCM_IRECOVERYCLIENT_H_
 #define SCORE_LCM_IRECOVERYCLIENT_H_
 
-#include "score/concurrency/future/interruptible_future.h"
-#include "score/concurrency/future/interruptible_promise.h"
-#include <score/lcm/exec_error_domain.h>
+#include <optional>
 #include <score/lcm/identifier_hash.hpp>
 
 namespace score {
 namespace lcm {
 
 struct RecoveryRequest {
-    score::lcm::IdentifierHash pg_name_;
-    score::lcm::IdentifierHash pg_state_name_;
-    std::size_t promise_id_;
+    /// @brief The id of the process group the failed process is running in
+    score::lcm::IdentifierHash process_group_identifier_;
 };
 
 class IRecoveryClient {
@@ -36,13 +33,10 @@ public:
     IRecoveryClient(IRecoveryClient&&) = delete;
     IRecoveryClient& operator=(IRecoveryClient&&) = delete;
 
-    virtual score::concurrency::InterruptibleFuture<void> sendRecoveryRequest(
-        const score::lcm::IdentifierHash& pg_name, const score::lcm::IdentifierHash& pg_state) noexcept = 0;
-
-    virtual void setResponseSuccess(std::size_t promise_id) noexcept = 0;
-    virtual void setResponseError(std::size_t promise_id, score::lcm::ExecErrc errType) noexcept = 0;
-    virtual RecoveryRequest* getNextRequest() noexcept = 0;
-}; 
+    virtual bool sendRecoveryRequest(const score::lcm::IdentifierHash& process_group_identifier) noexcept = 0;
+    virtual std::optional<RecoveryRequest> getNextRequest() noexcept = 0;
+    virtual bool hasOverflow() const noexcept = 0;
+};
 } // namespace lcm
 } // namespace score
 

@@ -10,12 +10,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+import logging
 import time
 
-from score.itf.core.target.target import Target
 from score.itf.core.process.async_process import AsyncProcess
-
-import logging
+from score.itf.core.target.target import Target
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +53,11 @@ def run_until_file_deployed(
 
         exit_code, _ = target.execute(f"test -f {file_path}")
         if exit_code == 0:
-            logger.info(f"{target.execute('top')}")
-            kill_cmd = f"kill -15 {proc.pid()}"
+            kill_cmd = f"kill -9 {proc.pid()}"
             res, _ = target.execute(kill_cmd)
             assert res == 0, "Couldn't kill lcm"
             return proc
-        logger.info(f"No {file_path}")
+        logger.debug(f"Waiting for {file_path}")
 
         time.sleep(poll_interval_s)
 

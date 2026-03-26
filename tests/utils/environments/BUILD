@@ -23,7 +23,6 @@ filegroup(
 alias(
     name = "test_environment",
     actual = select({
-        "//config:x86_64-qnx": "//tests/utils/environments/x86_64-qnx:init_build",
         "//config:x86_64-linux": "//tests/utils/environments/x86_64-linux",
         "//conditions:default": ":empty_target",
     }),

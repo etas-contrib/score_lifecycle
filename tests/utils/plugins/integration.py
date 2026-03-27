@@ -30,6 +30,7 @@ def pytest_addoption(parser):
         help="Absolute remote directory path used during test execution.",
     )
 
+
 @pytest.fixture
 def remote_test_dir(request) -> Path:
     """Returns the remote directory path for the current test."""

@@ -15,13 +15,13 @@ load("@rules_python//python:defs.bzl", "py_library")
 py_library(
     name = "testing_utils",
     srcs = [
+        "run_until_file_deployed.py",
         "setup_test.py",
         "test_results.py",
-        "run_until_file_deployed.py",
-    ],
-    deps = [
-        "@score_itf//score/itf/core/target",
-        "@score_itf//score/itf/core/process",
     ],
     visibility = ["//tests:__subpackages__"],
+    deps = [
+        "@score_itf//score/itf/core/process",
+        "@score_itf//score/itf/core/target",
+    ],
 )

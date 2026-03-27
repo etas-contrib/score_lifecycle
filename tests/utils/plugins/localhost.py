@@ -45,7 +45,12 @@ def pytest_addoption(parser):
 
 
 class LocalAsyncProcess(AsyncProcess):
-    def __init__(self, process: subprocess.Popen, output_lines: List[str], output_thread: threading.Thread):
+    def __init__(
+        self,
+        process: subprocess.Popen,
+        output_lines: List[str],
+        output_thread: threading.Thread,
+    ):
         self._process = process
         self._output_lines = output_lines
         self._output_thread = output_thread
@@ -77,7 +82,9 @@ class LocalAsyncProcess(AsyncProcess):
                 if not self.is_running():
                     break
             if self.is_running():
-                logger.error(f"Process [{self._process.pid}] did not terminate, sending SIGKILL")
+                logger.error(
+                    f"Process [{self._process.pid}] did not terminate, sending SIGKILL"
+                )
                 self._process.send_signal(signal.SIGKILL)
                 self._process.wait()
         self._output_thread.join()
@@ -111,7 +118,9 @@ class LocalTarget(Target):
         Path(local_path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(remote_path, local_path)
 
-    def execute_async(self, binary_path: str, args=None, cwd: str = "/", **kwargs) -> LocalAsyncProcess:
+    def execute_async(
+        self, binary_path: str, args=None, cwd: str = "/", **kwargs
+    ) -> LocalAsyncProcess:
         cmd = ["fakeroot", "--", binary_path] + (args or [])
         cmd_logger = logging.getLogger(Path(binary_path).name)
         output_lines: List[str] = []
@@ -130,7 +139,9 @@ class LocalTarget(Target):
                     cmd_logger.info(line)
                     output_lines.append(line)
 
-        output_thread = threading.Thread(target=_async_log, args=(process,), daemon=True)
+        output_thread = threading.Thread(
+            target=_async_log, args=(process,), daemon=True
+        )
         output_thread.start()
 
         return LocalAsyncProcess(process, output_lines, output_thread)

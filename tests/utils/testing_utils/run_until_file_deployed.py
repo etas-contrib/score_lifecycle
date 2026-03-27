@@ -18,6 +18,7 @@ from score.itf.core.target.target import Target
 
 logger = logging.getLogger(__name__)
 
+
 def run_until_file_deployed(
     target: Target,
     binary_path: str,

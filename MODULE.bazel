@@ -145,8 +145,8 @@ oci = use_extension("@rules_oci//oci:extensions.bzl", "oci", dev_dependency = Tr
 oci.pull(
     name = "linux_runtime",
     image = "index.docker.io/library/debian",
-    tag = "bookworm",
     platforms = ["linux/amd64"],
+    tag = "bookworm",
 )
 use_repo(oci, "linux_runtime", "linux_runtime_linux_amd64")
 

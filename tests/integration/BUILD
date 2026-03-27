@@ -1,3 +1,5 @@
+load("@rules_python//python:pip.bzl", "compile_pip_requirements")
+
 # *******************************************************************************
 # Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
@@ -11,7 +13,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load("@score_lifecycle_pip//:requirements.bzl", "all_requirements")
-load("@rules_python//python:pip.bzl", "compile_pip_requirements")
 load("@score_tooling//python_basics:defs.bzl", "score_virtualenv")
 
 # In order to update the requirements, change the `requirements.txt` file and run:
@@ -39,4 +40,3 @@ score_virtualenv(
     reqs = all_requirements,
     venv_name = ".python_tc_venv",
 )
-

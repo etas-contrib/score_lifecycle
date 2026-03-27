@@ -39,7 +39,9 @@ def test_smoke(target, setup_test, test_output_dir, remote_test_dir):
     local_results.mkdir(exist_ok=True)
     for xml_name in ("control_daemon_mock.xml", "gtest_process.xml"):
         try:
-            target.download(str(remote_test_dir / xml_name), str(local_results / xml_name))
+            target.download(
+                str(remote_test_dir / xml_name), str(local_results / xml_name)
+            )
             target.execute(f"rm {str(remote_test_dir / xml_name)}")
         except Exception:
             pass

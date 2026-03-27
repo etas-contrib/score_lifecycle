@@ -8,8 +8,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def setup_test(request, target):
-    """ Setsup the test by uploading all the binaries to the target
-    """
+    """Setsup the test by uploading all the binaries to the target"""
 
     bin_paths = request.config.getoption("--score-test-binary-path")
     bin_paths = [Path(p) for p in bin_paths.split(" ")]
@@ -22,7 +21,9 @@ def setup_test(request, target):
         assert res != 1, f"Couldn't create directory {remote_path.parent}"
         res, _ = target.execute(f"chmod 777 -R {remote_path.parent}")
         assert res != 1, f"Couldn't chmod directory {remote_path.parent}"
-        target.upload(file.resolve(), remote_path)  # Need to resolve for https://github.com/eclipse-score/itf/pull/71
+        target.upload(
+            file.resolve(), remote_path
+        )  # Need to resolve for https://github.com/eclipse-score/itf/pull/71
 
     for path in bin_paths:
         if path.is_dir():

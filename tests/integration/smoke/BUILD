@@ -54,19 +54,19 @@ cc_binary(
 
 package_test_binaries(
     name = "smoke_binaries",
-    test_name = "smoke",
     binaries = {
         "//src/launch_manager_daemon:launch_manager": "",
         ":control_daemon_mock": "",
         ":gtest_process": "",
         ":lm_smoketest_config": "etc",
     },
+    test_name = "smoke",
 )
 
 integration_test(
     name = "smoke",
     srcs = ["smoke.py"],
+    tags = ["integration"],
     test_binaries = ":smoke_binaries",
     deps = ["//tests/utils/testing_utils"],
-    tags = ["integration"],
 )

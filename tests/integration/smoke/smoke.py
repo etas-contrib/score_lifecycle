@@ -10,11 +10,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
+import logging
 from tests.utils.testing_utils.run_until_file_deployed import run_until_file_deployed
 from tests.utils.testing_utils.setup_test import setup_test
 from tests.utils.testing_utils.test_results import check_for_failures
+from attribute_plugin import add_test_properties
 
 
+@add_test_properties(
+    partially_verifies=[],
+    test_type="interface-test",
+    derivation_technique="explorative-testing",
+)
 def test_smoke(target, setup_test, test_output_dir, remote_test_dir):
     """Smoke test for the launch manager daemon running inside a Docker container."""
     test_end_file = str(remote_test_dir.parent / "test_end")
@@ -28,8 +35,13 @@ def test_smoke(target, setup_test, test_output_dir, remote_test_dir):
     )
 
     local_results = test_output_dir / "results"
+    logging.error(local_results)
     local_results.mkdir(exist_ok=True)
     for xml_name in ("control_daemon_mock.xml", "gtest_process.xml"):
-        target.download(str(remote_test_dir / xml_name), str(local_results / xml_name))
+        try:
+            target.download(str(remote_test_dir / xml_name), str(local_results / xml_name))
+            target.execute(f"rm {str(remote_test_dir / xml_name)}")
+        except Exception:
+            pass
 
     check_for_failures(local_results, 2)

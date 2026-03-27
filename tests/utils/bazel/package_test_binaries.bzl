@@ -6,11 +6,18 @@ def _package_test_binaries_impl(ctx):
     for target, relative_location in ctx.attr.binaries.items():
         # it's possible a target is composed of multiple files so link all
         for file in target.files.to_list():
-            output_file = ctx.actions.declare_file("opt/score/tests/{test_name}/{relative_location}/{proc}".format(
-                test_name = ctx.attr.test_name,
-                relative_location = relative_location,
-                proc = file.basename,
-            ))
+            if file.is_directory:
+                dir_name = relative_location if relative_location else file.basename
+                output_file = ctx.actions.declare_directory("opt/score/tests/{test_name}/{dir_name}".format(
+                    test_name = ctx.attr.test_name,
+                    dir_name = dir_name,
+                ))
+            else:
+                output_file = ctx.actions.declare_file("opt/score/tests/{test_name}/{relative_location}/{proc}".format(
+                    test_name = ctx.attr.test_name,
+                    relative_location = relative_location,
+                    proc = file.basename,
+                ))
             output_files.append(output_file)
 
             ctx.actions.symlink(

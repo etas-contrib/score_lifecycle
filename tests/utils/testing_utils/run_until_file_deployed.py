@@ -40,6 +40,11 @@ def run_until_file_deployed(
     :raises TimeoutError: if the file does not appear within *timeout_s*.
     :raises RuntimeError: if the process exits before the file appears.
     """
+
+    exit_code, _ = target.execute(f"test -f {file_path}")
+    if exit_code == 0:
+        target.execute(f"rm {file_path}")
+
     proc = target.execute_async(binary_path, args=args, cwd=cwd)
 
     deadline = time.monotonic() + timeout_s
@@ -53,8 +58,10 @@ def run_until_file_deployed(
 
         exit_code, _ = target.execute(f"test -f {file_path}")
         if exit_code == 0:
-            kill_cmd = f"kill -9 {proc.pid()}"
+            kill_cmd = f"kill -15 {proc.pid()}"
             res, _ = target.execute(kill_cmd)
+            time.sleep(0.5)
+            assert proc.is_running() == False, "LCM still runing"
             assert res == 0, "Couldn't kill lcm"
             return proc
         logger.debug(f"Waiting for {file_path}")

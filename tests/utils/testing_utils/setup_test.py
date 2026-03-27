@@ -16,13 +16,21 @@ def setup_test(request, target):
 
     root_path_index = list(bin_paths[-1].parts).index("opt")
 
-    for file in bin_paths:
-        assert file.is_file(), f"{file} is not a file"
+    def upload_file(file):
         remote_path = Path("/", *file.parts[root_path_index:])
-
-        logger.debug(target.execute(f"mkdir -p {remote_path.parent}"))
-        logger.debug(target.execute(f"chmod 777 -R {remote_path.parent}"))
-
+        res, _ = target.execute(f"mkdir -p {remote_path.parent}")
+        assert res != 1, f"Couldn't create directory {remote_path.parent}"
+        res, _ = target.execute(f"chmod 777 -R {remote_path.parent}")
+        assert res != 1, f"Couldn't chmod directory {remote_path.parent}"
         target.upload(file.resolve(), remote_path)  # Need to resolve for https://github.com/eclipse-score/itf/pull/71
+
+    for path in bin_paths:
+        if path.is_dir():
+            for file in path.rglob("*"):
+                if file.is_file():
+                    upload_file(file)
+        else:
+            assert path.is_file(), f"{path} is not a file or directory"
+            upload_file(path)
 
     logger.info("Test case setup finished")

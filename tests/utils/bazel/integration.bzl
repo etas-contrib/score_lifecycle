@@ -12,6 +12,7 @@
 # *******************************************************************************
 load("@score_itf//:defs.bzl", "py_itf_test")
 load("//tests/utils/bazel:package_test_binaries.bzl", "package_test_binaries")
+load("@score_lifecycle_pip//:requirements.bzl", "all_requirements")
 
 def integration_test(name, srcs, test_binaries, args = [], deps = [], data = [], **kwargs):
     """Creates an integration test with test binaries available, also adds all
@@ -30,7 +31,7 @@ def integration_test(name, srcs, test_binaries, args = [], deps = [], data = [],
     py_itf_test(
         name = name,
         srcs = srcs,
-        deps = deps,
+        deps = deps + all_requirements + [ "@score_tooling//python_basics/score_pytest:attribute_plugin"],
         data = merged_data,
         args = args + [
             "--score-test-binary-path=$(locations {})".format(test_binaries),

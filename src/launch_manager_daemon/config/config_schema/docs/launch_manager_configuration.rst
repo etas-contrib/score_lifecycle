@@ -471,34 +471,28 @@ The **Launch Manager** guarantees the availability of these specific default val
 The full, canonical definitions for these S-CORE standard defaults are provided in separate JSON files. You can find links to these files below:
 
 alive_supervision (`alive_supervision_defaults.json <../default_values/alive_supervision_defaults.json>`_)
-
-    Defines default values for ``alive_supervision`` properties, governing the behavior of reporting and supervision mechanisms.
+  Defines default values for ``alive_supervision`` properties, governing the behavior of reporting and supervision mechanisms.
 
 watchdog (`watchdog_defaults.json <../default_values/watchdog_defaults.json>`_)
+  Defines default values for ``watchdog`` properties.
 
-    Defines default values for ``watchdog`` properties.
-
-    Please note that an empty object (``{}``) for ``watchdog`` signifies that the **Launch Manager** will disable watchdog functionality by default.
+  Please note that an empty object (``{}``) for ``watchdog`` signifies that the **Launch Manager** will disable watchdog functionality by default.
 
 run_target (`run_target_defaults.json <../default_values/run_target_defaults.json>`_)
-
-    Defines default values for ``run_target`` properties, including the basic structure, behavior, and recovery actions for a **Run Target**.
+  Defines default values for ``run_target`` properties, including the basic structure, behavior, and recovery actions for a **Run Target**.
 
 component_properties (`component_properties_defaults.json <../default_values/component_properties_defaults.json>`_)
-
-    Defines default values for ``component_properties``, which specify fundamental characteristics and operational parameters for individual components.
+  Defines default values for ``component_properties``, which specify fundamental characteristics and operational parameters for individual components.
 
 deployment_config (`deployment_config_defaults.json <../default_values/deployment_config_defaults.json>`_)
-
-    Defines default values for ``deployment_config``, covering aspects of how a component is deployed and managed, such as resource limits and recovery.
+  Defines default values for ``deployment_config``, covering aspects of how a component is deployed and managed, such as resource limits and recovery.
 
 fallback_run_target
+  The ``fallback_run_target`` is a critical configuration option within the **Launch Manager**.
 
-    The ``fallback_run_target`` is a critical configuration option within the **Launch Manager**.
+  While the S-CORE standard does not currently provide an official default JSON configuration for ``fallback_run_target``, its behavior when unconfigured is important to understand.
 
-    While the S-CORE standard does not currently provide an official default JSON configuration for ``fallback_run_target``, its behavior when unconfigured is important to understand.
-
-    If ``fallback_run_target`` is not explicitly configured by the user, the Bazel target responsible for generating configuration files will create a **Run Target** that does not depend on any component. In this specific scenario, the ``fallback_run_target`` will effectively cause all components to shut down, with the exception of the **Launch Manager** itself. Understanding this default behavior is crucial for ensuring the desired system state during operation.
+  If ``fallback_run_target`` is not explicitly configured by the user, the Bazel target responsible for generating configuration files will create a **Run Target** that does not depend on any component. In this specific scenario, the ``fallback_run_target`` will effectively cause all components to shut down, with the exception of the **Launch Manager** itself. Understanding this default behavior is crucial for ensuring the desired system state during operation.
 
 .. _lm_conf_inheritance_of_default_values:
 Inheritance Of Default Values

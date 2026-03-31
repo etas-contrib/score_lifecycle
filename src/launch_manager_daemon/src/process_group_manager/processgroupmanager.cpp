@@ -574,40 +574,6 @@ inline void ProcessGroupManager::recoveryActionHandler()
             pg->setRequestStartTime();
         }
     }
-
-    /*
-    if (!recovery_client_)
-    {
-        return;
-    }
-
-    if (recovery_client_->hasOverflow())
-    {
-        LM_LOG_WARN() << "recoveryActionHandler: recovery client overflow detected";
-    }
-
-    for (auto recovery_request = recovery_client_->getNextRequest(); recovery_request.has_value();
-         recovery_request = recovery_client_->getNextRequest())
-    {
-        LM_LOG_INFO() << "Triggering recovery state for process group"
-                      << recovery_request->process_group_identifier_;
-
-        auto affected_pg = getProcessGroup(recovery_request->process_group_identifier_);
-
-        if (affected_pg)
-        {
-            IdentifierHash recovery_state =
-                configuration_manager_.getNameOfRecoveryState(affected_pg->getProcessGroupName());
-            (void)affected_pg->setPendingState(recovery_state);
-            affected_pg->setRequestStartTime();
-        }
-        else
-        {
-            LM_LOG_ERROR() << "recoveryActionHandler: could not find process group "
-                          << recovery_request->process_group_identifier_;
-        }
-    }
-    */
 }
 
 inline void ProcessGroupManager::processStateTransition(ControlClientChannelP scc)

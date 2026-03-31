@@ -77,6 +77,25 @@ TEST_F(NotificationWithConfigTest, SendsRequestAndNeverTimesOut)
     EXPECT_FALSE(notification.isFinalTimeoutStateReached());
 }
 
+TEST_F(NotificationWithConfigTest, TimesOutWhenSendingRequestFails)
+{
+    RecordProperty("Description",
+                   "Notification fails to forward supervision failure to RecoveryClient "
+                   "times out.");
+
+    const NotificationConfig config = getNotificationConfig("TestProcessGroup");
+    auto mock_client = std::make_shared<MockRecoveryClient>();
+    EXPECT_CALL(*mock_client, sendRecoveryRequest(IdentifierHash("TestProcessGroup")))
+        .WillOnce(testing::Return(false));
+
+    Notification notification(config, mock_client);
+    ASSERT_TRUE(notification.initProxy());
+    notification.send(SupervisionErrorInfo{});
+    notification.cyclicTrigger();
+
+    EXPECT_TRUE(notification.isFinalTimeoutStateReached());
+}
+
 TEST_F(NotificationWithConfigTest, ProxyInitializationFails)
 {
     RecordProperty("Description",

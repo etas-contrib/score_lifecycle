@@ -74,6 +74,8 @@ bool Notification::initProxy() noexcept(false)
 
 void Notification::send(const xaap::lcm::saf::recovery::supervision::SupervisionErrorInfo& f_executionErrorInfo_r)
 {
+    static_cast<void>(f_executionErrorInfo_r); // Unused, to be removed in the future together with the Notification class
+
     if (isNotificationConfigAvailable)
     {
         if (currentState == State::kIdle)
@@ -107,13 +109,13 @@ void Notification::invokeRecoveryHandler(void)
     if (enqueued)
     {
         logger_r.LogInfo() << messageHeader << "Recovery request enqueued successfully";
+        currentState = State::kIdle;
     }
     else
     {
         logger_r.LogError() << messageHeader << "Failed to enqueue recovery request (ring buffer full)";
+        currentState = State::kTimeout;
     }
-
-    currentState = State::kIdle;
 }
 
 /* RULECHECKER_comment(1:0,2:0, check_min_instructions, "False positive", false) */

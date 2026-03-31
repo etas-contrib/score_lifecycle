@@ -34,7 +34,7 @@ public:
     MOCK_METHOD(bool, hasOverflow, (), (const, noexcept, override));
 };
 
-class NotificationTest : public ::testing::Test
+class NotificationWithConfigTest : public ::testing::Test
 {
   protected:
     void SetUp() override
@@ -42,6 +42,10 @@ class NotificationTest : public ::testing::Test
         RecordProperty("TestType", "interface-test");
         RecordProperty("DerivationTechnique", "explorative-testing ");
     }
+};
+
+class NotificationWithoutConfigTest : public NotificationWithConfigTest
+{
 };
 
 NotificationConfig getNotificationConfig(const std::string& process_group="TestProcessGroupMetaModelIdentifier")
@@ -54,7 +58,7 @@ NotificationConfig getNotificationConfig(const std::string& process_group="TestP
 
 using xaap::lcm::saf::recovery::supervision::SupervisionErrorInfo;
 
-TEST_F(NotificationTest, WithConfigSendsRequestAndNeverTimesOut)
+TEST_F(NotificationWithConfigTest, SendsRequestAndNeverTimesOut)
 {
     RecordProperty("Description",
                    "Notification created with a configuration forwards supervision failure to RecoveryClient "
@@ -73,7 +77,7 @@ TEST_F(NotificationTest, WithConfigSendsRequestAndNeverTimesOut)
     EXPECT_FALSE(notification.isFinalTimeoutStateReached());
 }
 
-TEST_F(NotificationTest, ProxyInitializationFails)
+TEST_F(NotificationWithConfigTest, ProxyInitializationFails)
 {
     RecordProperty("Description",
                    "Notification created with a configuration containing an invalid process group state "
@@ -88,7 +92,7 @@ TEST_F(NotificationTest, ProxyInitializationFails)
     ASSERT_FALSE(notification.initProxy());
 }
 
-TEST_F(NotificationTest, WatchdogNotificationGoesDirectlyToTimeout)
+TEST_F(NotificationWithoutConfigTest, WatchdogNotificationGoesDirectlyToTimeout)
 {
     RecordProperty("Description",
                    "Notifications created without any configuration will directly timeout and " 

@@ -54,6 +54,9 @@ TEST_F(RecoveryClientTest, GetNextRequest)
 
 TEST_F(RecoveryClientTest, GetNextRequestEmpty)
 {
+    RecordProperty("Description",
+                   "RecoveryClient returns no request when buffer is empty.");
+
     RecoveryClient client;
     EXPECT_FALSE(client.getNextRequest().has_value());
 }
@@ -66,8 +69,8 @@ TEST_F(RecoveryClientTest, RingBufferFull)
     RecoveryClient client;
     const IdentifierHash pg("pg_c");
 
-    // Fill the ring buffer (capacity = 128)
-    for (std::size_t i = 0U; i < 128U; ++i)
+    // Fill the ring buffer
+    for (std::size_t i = 0U; i < RecoveryClient::kBufferCapacity; ++i)
     {
         EXPECT_TRUE(client.sendRecoveryRequest(pg));
     }

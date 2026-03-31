@@ -24,6 +24,9 @@ namespace lcm {
 
 class RecoveryClient final : public IRecoveryClient {
 public:
+    /// @brief Number of requests that can be stored before overflow occurs
+    static constexpr std::size_t kBufferCapacity = 128;
+
     RecoveryClient() noexcept;
     ~RecoveryClient() noexcept = default;
     RecoveryClient(const RecoveryClient&) = delete;
@@ -36,9 +39,8 @@ public:
     bool hasOverflow() const noexcept override;
 
 private:
-    static const std::size_t capacity_ = 128;
     static const std::size_t element_size_ = sizeof(RecoveryRequest);
-    ipc_dropin::RingBuffer<RecoveryClient::capacity_, RecoveryClient::element_size_> ringBuffer_;  ///< Ring buffer to store recovery requests
+    ipc_dropin::RingBuffer<RecoveryClient::kBufferCapacity, RecoveryClient::element_size_> ringBuffer_;  ///< Ring buffer to store recovery requests
     std::atomic_bool overflow_flag_{false};
 };
 } // namespace lcm

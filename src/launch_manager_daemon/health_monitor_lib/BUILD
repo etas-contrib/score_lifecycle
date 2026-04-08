@@ -137,8 +137,8 @@ cc_library_with_common_opts(
     ],
     deps = [
         ":config",
-        "//src/launch_manager_daemon/recovery_client_lib:recovery_client",
         ":phm_logging",
+        "//src/launch_manager_daemon/recovery_client_lib:recovery_client",
         "@score_baselibs//score/mw/log",
     ],
 )

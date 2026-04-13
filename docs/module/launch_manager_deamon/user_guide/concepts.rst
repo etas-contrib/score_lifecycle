@@ -128,10 +128,10 @@ are terminated.
 When a Run Target is activated, the Launch Manager performs the
 following:
 
-- All components currently in the **Ready State** that are **not** assigned to
+- All components currently in the **active** that are **not** assigned to
   the new Run Target are terminated.
-- All components that are assigned to the new Run Target but are **not** yet in
-  the **Ready State** are started.
+- All components that are assigned to the new Run Target but are **not** yet
+  **active** are started.
 
 
 .. _lm_starting_components:
@@ -180,6 +180,17 @@ In this scenario, the name of the dependent **Run Target** is listed within the
 The most effective way to conceptualize this relationship is to imagine that
 the list of components assigned to the dependent **Run Target** is effectively
 included in the list of components of the primary **Run Target**.
+
+Dependencies in the **Launch Manager** are resolved transitively.
+When a **Run Target** is activated, the **Launch Manager** does not only start
+the components and **Run Targets** directly listed in its ``depends_on``, it
+follows the full dependency chain recursively until all dependencies are
+accounted for.
+
+This means that a component brought in by a **Run Target** dependency is
+treated as if it were directly assigned to the activating **Run Target**.
+If that component itself depends on further components, those are pulled in as
+well.
 
 .. _lm_dependency_rules:
 

@@ -30,12 +30,27 @@ bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
 
 # S-CORE process rules
 bazel_dep(name = "score_bazel_platforms", version = "0.0.4")
-bazel_dep(name = "score_docs_as_code", version = "3.0.0")
+bazel_dep(name = "score_docs_as_code", version = "4.0.1")
+
+# last baselibs_rust release is based on docs-as-code v3,
+# we need to really force v4
+single_version_override(
+    module_name = "score_docs_as_code",
+    version = "4.0.1",
+)
+
 bazel_dep(name = "score_tooling", version = "1.1.0")
 bazel_dep(name = "score_rust_policies", version = "0.0.3")
 
-bazel_dep(name = "score_process", version = "1.4.4", dev_dependency = True)
-bazel_dep(name = "score_platform", version = "0.5.3", dev_dependency = True)
+bazel_dep(name = "score_process", version = "1.5.3", dev_dependency = True)
+bazel_dep(name = "score_platform", version = "0.5.4", dev_dependency = True)
+
+# 0.5.4 is ancient, we need a newer version which is based on docs-as-code v4
+git_override(
+    module_name = "score_platform",
+    commit = "ab3b9e4a4e62b251aeebed73c465fb241e0e50a3",
+    remote = "https://github.com/eclipse-score/score.git",
+)
 
 ## Configure the C++ toolchain
 bazel_dep(name = "score_bazel_cpp_toolchains", version = "0.2.2", dev_dependency = True)

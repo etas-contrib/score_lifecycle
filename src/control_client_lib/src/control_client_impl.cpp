@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (c) 2025 Contributors to the Eclipse Foundation
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,46 +12,18 @@
  ********************************************************************************/
 
 #include <map>
-#include <optional>
-#include <cstdint>
-#include <memory>
-#include <thread>
-#include <map>
-#include <iostream>
 
 #include "score/concurrency/future/interruptible_future.h"
 #include "score/concurrency/future/interruptible_promise.h"
 #include <score/lcm/control_client.h>
-
+#include <score/lcm/control_service.h>
 #include <score/lcm/identifier_hash.hpp>
 #include <score/lcm/internal/log.hpp>
 #include "control_client_impl.hpp"
 
-// setting the mapping for both ControlClientCode and ExecErrc codes for error handling
-// This approach is used to avoid using switch-case statements
-// RULECHECKER_comment(1, 2, check_static_object_dynamic_initialization, "Map doesn't rely on any other static so this is fine", false)
-static std::map<score::lcm::internal::ControlClientCode, score::lcm::ExecErrc> scErrorMap =
-{
-    { score::lcm::internal::ControlClientCode::kSetStateInvalidArguments,
-      score::lcm::ExecErrc::kInvalidArguments },
-    { score::lcm::internal::ControlClientCode::kSetStateCancelled,
-      score::lcm::ExecErrc::kCancelled },
-    { score::lcm::internal::ControlClientCode::kSetStateFailed,
-      score::lcm::ExecErrc::kFailed },
-    { score::lcm::internal::ControlClientCode::kSetStateAlreadyInState,
-      score::lcm::ExecErrc::kAlreadyInState },
-    { score::lcm::internal::ControlClientCode::kSetStateTransitionToSameState,
-      score::lcm::ExecErrc::kInTransitionToSameState },
-    { score::lcm::internal::ControlClientCode::kFailedUnexpectedTerminationOnEnter,
-      score::lcm::ExecErrc::kFailedUnexpectedTerminationOnEnter }
-};
-
 namespace score {
 
 namespace lcm {
-
-bool ControlClientImpl::instance_created_{false};
-std::mutex ControlClientImpl::instance_creation_mutex_{};
 
 // coverity[exn_spec_violation:FALSE] SetError cannot raise an exception in this instance
 inline score::concurrency::InterruptibleFuture<void> GetErrorFuture(score::lcm::ExecErrc errType) noexcept
@@ -61,323 +33,118 @@ inline score::concurrency::InterruptibleFuture<void> GetErrorFuture(score::lcm::
     return tmp_.GetInterruptibleFuture().value();
 }
 
+// Maps ActivationResult::result_code to ExecErrc
+static const std::map<uint32_t, score::lcm::ExecErrc> kResultCodeMap =
+{
+    { 0U, score::lcm::ExecErrc::kFailed },              // should not happen, 0 = success
+    { 17U, score::lcm::ExecErrc::kInvalidArguments },    // kSetStateInvalidArguments
+    { 18U, score::lcm::ExecErrc::kCancelled },           // kSetStateCancelled
+    { 19U, score::lcm::ExecErrc::kFailed },              // kSetStateFailed
+    { 20U, score::lcm::ExecErrc::kFailed },              // kSetStateSuccess (handled separately)
+    { 21U, score::lcm::ExecErrc::kAlreadyInState },      // kSetStateAlreadyInState
+    { 22U, score::lcm::ExecErrc::kInTransitionToSameState }, // kSetStateTransitionToSameState
+    { 23U, score::lcm::ExecErrc::kFailedUnexpectedTerminationOnEnter }, // kFailedUnexpectedTerminationOnEnter
+};
 
-ControlClientImpl::ControlClientImpl(std::function<void(const score::lcm::ExecutionErrorEvent&)> undefinedStateCallback) noexcept
-:
-      undefined_state_callback_{undefinedStateCallback},
-      control_client_requests_{},
-      ipc_request_semaphore_{},
-      ipc_response_thread_(nullptr),
-      ipc_response_thread_running_{true},
-      ipc_channel_{nullptr} {
+ControlClientImpl::ControlClientImpl(const score::mw::com::InstanceSpecifier& instance_specifier) noexcept
+    : mutex_{},
+      proxy_{},
+      pending_promise_{},
+      expected_request_id_{0},
+      next_request_id_{1}
+{
+    auto find_result = ControlProxy::FindService(instance_specifier);
+    if (find_result.has_value() && !find_result.value().empty()) {
+        auto create_result = ControlProxy::Create(find_result.value().front(), {"ActivateRunTarget"});
+        if (create_result.has_value()) {
+            proxy_.emplace(std::move(create_result).value());
 
-        std::unique_lock<std::mutex> lock(instance_creation_mutex_);
-        if (instance_created_) {
-            std::cerr << "[Control Client] Only one instance of ControlClient is allowed per process." << std::endl;
-            std::abort();
+            proxy_->activation_result.Subscribe(1U);
+            proxy_->activation_result.SetReceiveHandler([this]() {
+                OnActivationResult();
+            });
         } else {
-            instance_created_ = true;
+            LM_LOG_ERROR() << "ControlClientImpl: Failed to create proxy";
         }
-
-    // initialization of control_client_requests_ is a bit more complicated...
-    // std::atomic_bool is not copyable so we can't use fill method,
-    // we will need to do this by hand
-    for (uint16_t i = 0U; i < control_client_requests_.size(); ++i) {
-        // promise_ from default constructor is good enough, so no need to change anything
-        control_client_requests_[i].in_use_ = false;
-        control_client_requests_[i].initial_machine_state_transition_request_ = false;
+    } else {
+        LM_LOG_ERROR() << "ControlClientImpl: FindService failed or no service found";
     }
-
-    ipc_channel_ = score::lcm::internal::ControlClientChannel::initializeControlClientChannel();
-
-    ipc_request_semaphore_.init(1U, false);
-    ipc_response_thread_ = std::make_unique<std::thread>(&ControlClientImpl::run, this);
 }
 
 ControlClientImpl::~ControlClientImpl() noexcept {
-    std::unique_lock<std::mutex> lock(instance_creation_mutex_);
-    instance_created_ = false;
-    ipc_response_thread_running_ = false;
-
-    if (ipc_response_thread_->joinable()) {
-        ipc_response_thread_->join();
+    if (proxy_.has_value()) {
+        proxy_->activation_result.Unsubscribe();
     }
-
-    ipc_request_semaphore_.deinit();
 }
 
-void ControlClientImpl::run() {
-    // creating a instance called msg for ControlClientMessage that will handle all the communication between LCM and ControlClientImpl
-    score::lcm::internal::ControlClientMessage msg;
+void ControlClientImpl::OnActivationResult() {
+    if (!proxy_.has_value()) {
+        return;
+    }
 
-    // This lambda function will be used to set the error of the promise.
-    // This lamdba funcitons are used to avoid code duplication.
-    auto funcSetError = [&]() {
-        control_client_requests_[msg.originating_control_client_.future_id_].promise_.SetError(
-            scErrorMap[msg.request_or_response_]);
-        control_client_requests_[msg.originating_control_client_.future_id_].in_use_ = false;
-    };
+    auto get_result = proxy_->activation_result.GetNewSamples(
+        [this](score::mw::com::SamplePtr<ActivationResult> sample) {
+            std::lock_guard<std::mutex> lock(mutex_);
+             LM_LOG_DEBUG()  << "Received new event with code" << static_cast<int>(sample->result_code);
+            if (!pending_promise_.has_value()) {
+                return;
+            }
 
-    // This lambda function will be used to set the value of the promise.
-    auto funcSetValue = [&]() {
-        control_client_requests_[msg.originating_control_client_.future_id_].promise_.SetValue();
-        control_client_requests_[msg.originating_control_client_.future_id_].in_use_ = false;
-    };
+            if (sample->request_id != expected_request_id_) {
+                 LM_LOG_WARN()  << "Received response with unexpected request_id: " << static_cast<int>(sample->request_id)
+                          << ", expected: " << static_cast<int>(expected_request_id_);
+                return;
+            }
 
-    // This lambda function will be used to set the error of the promise at unexpected termination.
-    auto funcUtermination = [&]() {
-
-        score::lcm::ExecutionErrorEvent tmp{msg.execution_error_code_,            // executionError
-                                           msg.process_group_state_.pg_name_};  // processGroup
-
-        undefined_state_callback_(tmp);
-    };
-
-    // This lambda function will be used to set the Notset and failed of the promise at state machine wrong or else failure.
-    std::function<void()> funcMcStateWrong = [&]()
-                                             {
-                                                 // we need to fulfill all active requests
-                                                 for(uint16_t i = 0U; i < control_client_requests_.size(); ++i)
-                                                 {
-                                                     if( ( true == control_client_requests_[i].in_use_ ) &&
-                                                         ( true ==
-                                                           control_client_requests_[i].
-                                                           initial_machine_state_transition_request_ ) )
-                                                     {
-                                                         control_client_requests_[i].promise_.SetError(
-                                                             score::lcm::ExecErrc::kFailed );
-                                                         control_client_requests_[i].
-                                                         initial_machine_state_transition_request_ = false;
-                                                         control_client_requests_[i].in_use_
-                                                             = false;
-                                                     }
-                                                 }
-                                             };
-
-    // This lambda function will be used to set the kInitialMachineStateSuccess of the promise at state machine success.
-    std::function<void()> funcMcStateSuccess = [&]()
-                                               {
-                                                   // we need to fulfill all active requests
-                                                   for(uint16_t i = 0U; i < control_client_requests_.size(); ++i)
-                                                   {
-                                                       if( ( true == control_client_requests_[i].in_use_ ) &&
-                                                           ( true ==
-                                                             control_client_requests_[i].
-                                                             initial_machine_state_transition_request_ ) )
-                                                       {
-                                                           control_client_requests_[i].promise_.SetValue();
-                                                           control_client_requests_[i].
-                                                           initial_machine_state_transition_request_ = false;
-                                                           control_client_requests_[i].in_use_
-                                                               = false;
-                                                       }
-                                                   }
-                                               };
-
-    // This lambda function will be used to set the error of the promise at default error for ControlClientCode kNotSet.
-    std::function<void()> funcDefaultError = [&]()
-                                             {
-                                                 if( msg.request_or_response_ !=
-                                                     score::lcm::internal::ControlClientCode::kNotSet )
-                                                 {
-                                                     LM_LOG_WARN() << "ControlClient error. Undefined message from Launch Manager:"
-                                                                 << static_cast<int>( msg.request_or_response_ );
-                                                 }
-                                             };
-
-    // there is no point for this thread to exist if there is no communication with LCM
-    // in that case, we just return from the function
-    if (nullptr != ipc_channel_) {
-        while (ipc_response_thread_running_) {
-            if (ipc_channel_->getResponse(msg)) {
-                switch (msg.request_or_response_) {
-                    case score::lcm::internal::ControlClientCode::kSetStateInvalidArguments:
-                    case score::lcm::internal::ControlClientCode::kSetStateCancelled:
-                    case score::lcm::internal::ControlClientCode::kSetStateFailed:
-                    case score::lcm::internal::ControlClientCode::kSetStateAlreadyInState:
-                    case score::lcm::internal::ControlClientCode::kSetStateTransitionToSameState:
-                    case score::lcm::internal::ControlClientCode::kFailedUnexpectedTerminationOnEnter:
-                        funcSetError();
-                        break;
-
-                    case score::lcm::internal::ControlClientCode::kSetStateSuccess:
-                        funcSetValue();
-                        break;
-
-                    case score::lcm::internal::ControlClientCode::kFailedUnexpectedTermination:
-                        funcUtermination();
-                        break;
-
-                    case score::lcm::internal::ControlClientCode::kInitialMachineStateNotSet:
-                    case score::lcm::internal::ControlClientCode::kInitialMachineStateFailed:
-                        funcMcStateWrong();
-                        break;
-
-                    case score::lcm::internal::ControlClientCode::kInitialMachineStateSuccess:
-                        funcMcStateSuccess();
-                        break;
-
-                    default:
-                        // score::lcm::internal::ControlClientCode::kNotSet is just an initialization value
-                        // not an error
-                        funcDefaultError();
-                        break;
+            // Success case
+            if (sample->result_code == 20U) {  // kSetStateSuccess
+                pending_promise_->SetValue();
+            } else {
+                auto it = kResultCodeMap.find(sample->result_code);
+                if (it != kResultCodeMap.end()) {
+                    pending_promise_->SetError(it->second);
+                } else {
+                    LM_LOG_WARN() << "ControlClient: Unexpected result_code from LaunchManager:" << static_cast<int>(sample->result_code);
+                    pending_promise_->SetError(score::lcm::ExecErrc::kFailed);
                 }
             }
-
-            std::this_thread::sleep_for(score::lcm::internal::kControlClientBgThreadSleepTime);
-        }
-    }
-}
-
-score::concurrency::InterruptibleFuture<void> ControlClientImpl::SendIpcMessage(score::lcm::internal::ControlClientMessage& msg) noexcept {
-    score::concurrency::InterruptibleFuture<void> retVal_{};
-
-    if (score::lcm::internal::osal::OsalReturnType::kSuccess ==
-        ipc_request_semaphore_.timedWait(score::lcm::internal::kControlClientMaxIpcDelay)) {
-        // first we need to check if we have empty space in control_client_requests_ array
-        uint16_t i = 0U;
-
-        for (; i < control_client_requests_.size(); ++i) {
-            bool expected = false;
-            if (control_client_requests_[i].in_use_.compare_exchange_strong(expected, true)) {
-                break;
-            }
-        }
-
-        if (i < control_client_requests_.size()) {
-            // we have empty slot so...
-            // 1) claim the slot and create a fresh promise for this request
-            control_client_requests_[i].promise_ = score::concurrency::InterruptiblePromise<void>{};
-
-            if (score::lcm::internal::ControlClientCode::kGetInitialMachineStateRequest == msg.request_or_response_) {
-                // the GetInitialMachineStateTransitionResult request is a bit special
-                // and will need special treatment in bg thread servicing response_ link
-                control_client_requests_[i].initial_machine_state_transition_request_ = true;
-            }
-
-            // 2) save promise index
-            msg.originating_control_client_.future_id_ = i;
-
-            // 3) get the future
-            retVal_ = control_client_requests_[i].promise_.GetInterruptibleFuture().value();
-
-            // 4) finally we can send the message as we are done with control_client_requests_
-            ipc_channel_->sendRequest(msg);
-
-            // 5) check the response. For errors we can get the response immediately
-            auto it = scErrorMap.find( msg.request_or_response_ );
-            if ( it != scErrorMap.end())
-            {
-                control_client_requests_[i].promise_.SetError( it->second );
-                control_client_requests_[i].in_use_ = false;
-            }
-        }
-        else
-        {
-            // no empty space for new request
-            retVal_ = GetErrorFuture(ExecErrc::kFailed);
-        }
-
-        // we definitely shouldn't forget to release semaphore
-        ipc_request_semaphore_.post();
-    }
-    else
-    {
-        retVal_ = GetErrorFuture(ExecErrc::kCommunicationError);
-    }
-
-    return retVal_;
+            pending_promise_.reset();
+        },
+        1U);
 }
 
 score::concurrency::InterruptibleFuture<void> ControlClientImpl::SetState(const IdentifierHash& pg_name, const IdentifierHash& pg_state) noexcept {
-    score::concurrency::InterruptibleFuture<void> retVal_{};
-
-    if (nullptr != ipc_channel_) {
-        score::lcm::internal::ControlClientMessage msg;
-
-        msg.request_or_response_ = score::lcm::internal::ControlClientCode::kSetStateRequest;
-        msg.process_group_state_.pg_name_ = pg_name;
-        msg.process_group_state_.pg_state_name_ = pg_state;
-
-        retVal_ = SendIpcMessage( msg );
-    }
-    else
-    {
-        retVal_ = GetErrorFuture(ExecErrc::kCommunicationError);
+    if (!proxy_.has_value()) {
+        return GetErrorFuture(ExecErrc::kCommunicationError);
     }
 
-    return retVal_;
-}
+    std::lock_guard<std::mutex> lock(mutex_);
 
-score::concurrency::InterruptibleFuture<void> ControlClientImpl::GetInitialMachineStateTransitionResult() noexcept {
-    score::concurrency::InterruptibleFuture<void> retVal_{};
-
-    if (nullptr != ipc_channel_) {
-        score::lcm::internal::ControlClientMessage msg;
-
-        msg.request_or_response_ = score::lcm::internal::ControlClientCode::kGetInitialMachineStateRequest;
-        // pg_name_ is not used by this request
-        // pg_state_name_ is not used by this request
-
-        retVal_ = SendIpcMessage( msg );
-    }
-    else
-    {
-        retVal_ = GetErrorFuture(ExecErrc::kCommunicationError);
+    // Cancel any outstanding request
+    if (pending_promise_.has_value()) {
+        pending_promise_->SetError(ExecErrc::kCancelled);
+        pending_promise_.reset();
     }
 
-    return retVal_;
-}
-
-score::Result<score::lcm::ExecutionErrorEvent> ControlClientImpl::GetExecutionError(
-    const score::lcm::IdentifierHash& processGroup) noexcept {
-    // default error (just in case)
-    score::Result<score::lcm::ExecutionErrorEvent> retVal_ {score::MakeUnexpected(score::lcm::ExecErrc::kCommunicationError)};
-
-    if (nullptr != ipc_channel_) {
-        if (score::lcm::internal::osal::OsalReturnType::kSuccess ==
-            ipc_request_semaphore_.timedWait(score::lcm::internal::kControlClientMaxIpcDelay)) {
-            // 1) prepare message for LCM
-            score::lcm::internal::ControlClientMessage msg;
-
-            // future_id_ is not used by this request
-            msg.request_or_response_ = score::lcm::internal::ControlClientCode::kGetExecutionErrorRequest;
-            msg.process_group_state_.pg_name_ = processGroup;
-            // pg_state_name_ is not used by this request
-
-            // 2) send the message
-            ipc_channel_->sendRequest(msg);
-
-            // 3) process the response from LCM as kGetExecutionErrorRequest is a synchronous call
-            switch (msg.request_or_response_) {
-                // GetExecutionError
-                case score::lcm::internal::ControlClientCode::kExecutionErrorInvalidArguments:
-                case score::lcm::internal::ControlClientCode::kExecutionErrorRequestFailed:
-                    retVal_ = score::MakeUnexpected( score::lcm::ExecErrc::kFailed );
-                    break;
-
-                case score::lcm::internal::ControlClientCode::kExecutionErrorRequestSuccess: {
-                    score::lcm::ExecutionErrorEvent tmp{msg.execution_error_code_,            // executionError
-                                                       msg.process_group_state_.pg_name_};  // processGroup
-                    retVal_.emplace(std::move(tmp));
-                } break;
-
-                default:
-                    LM_LOG_WARN() << "ControlClient error. GetExecutionError unexpected response from Launch Manager:"
-                                << static_cast<int>( msg.request_or_response_ );
-                    retVal_ = score::MakeUnexpected(score::lcm::ExecErrc::kFailed );
-                    break;
-            }
-
-            // we definitely shouldn't forget to release semaphore
-            ipc_request_semaphore_.post();
-        }
-        // else not needed as kCommunicationError is the default return value
+    // Create new promise and future
+    pending_promise_.emplace();
+    auto future_result = pending_promise_->GetInterruptibleFuture();
+    if (!future_result.has_value()) {
+        pending_promise_.reset();
+        return GetErrorFuture(ExecErrc::kFailed);
     }
-    // else not needed as kCommunicationError is the default return value
 
-    return retVal_;
+    expected_request_id_ = next_request_id_;
+    next_request_id_++;
+
+    RunTargetRequest request{};
+    request.request_id = expected_request_id_;
+    request.pg_name_hash = pg_name.data();
+    request.pg_state_hash = pg_state.data();
+
+    proxy_->activate_run_target(request);
+
+    return std::move(future_result).value();
 }
 
 }  // namespace lcm

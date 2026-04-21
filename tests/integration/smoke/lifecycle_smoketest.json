@@ -56,7 +56,9 @@
                 "ready_timeout": 1.0,
                 "shutdown_timeout": 1.0,
                 "environmental_variables": {
-                    "PROCESSIDENTIFIER": "control_daemon"
+                    "PROCESSIDENTIFIER": "control_daemon",
+                    "SCORE_LCM_INSTANCE_SPECIFIER": "StateManager/LaunchManager/Instance",
+                    "SCORE_MW_COM_CONFIG": "etc/sm_mw_com_config.json"
                 }
             }
         },

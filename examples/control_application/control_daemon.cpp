@@ -20,15 +20,18 @@
 #include <score/lcm/control_client.h>
 #include "ipc_dropin/socket.hpp"
 #include "control.hpp"
+#include "score/mw/com/runtime.h"
 
 std::atomic<bool> exitRequested{false};
 void signalHandler(int) {
     exitRequested = true;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, const char** argv) {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
+
+    score::mw::com::runtime::InitializeRuntime(argc, argv);
 
     score::lcm::LifecycleClient{}.ReportExecutionState(score::lcm::ExecutionState::kRunning);
 

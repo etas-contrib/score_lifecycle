@@ -16,7 +16,7 @@
 
 #include <atomic>
 #include <configuration_manager/configurationmanager.hpp>
-#include <score/lcm/internal/controlclientchannel.hpp>
+#include <score/lcm/internal/control_client_codes.hpp>
 
 namespace score {
 
@@ -126,18 +126,6 @@ class ProcessInfoNode final {
     /// @return  index of process in process group as set by initNode()
     uint32_t getNodeIndex() const;
 
-    /// @brief get the ControlClientChannel pointer for this process
-    /// @return the value (including possibly nullptr) of the ControlClientChannel for this process
-    ControlClientChannelP getControlClientChannel();
-
-    /// @brief Return a pointer to the next active state manager in this process group
-    /// This assumes that this process was an active state manager; Any ControlClientChannel pointer retrieved
-    /// for the node must still be checked for validity. To get the first state manager, simply check the first
-    /// node in the vector, if this does not have a control_client_channel_, call getNextStateManager().
-    /// @note this method will remove inactive (not running) state managers "on the fly". We do this rather than
-    /// removing them when a process exits as it is simpler and more efficient.
-    /// @return Pointer to the node that's next in the list as a state manager, or nullptr if there isn't one
-    std::shared_ptr<ProcessInfoNode> getNextStateManager();
 
    private:
     /// @brief Indivisibly set the state of the process and report. Only valid transitions are allowed
@@ -203,11 +191,6 @@ class ProcessInfoNode final {
     /// For a stop graph, perform a similar operation for all the process upon which we have a termination dependency.
     inline void queueTerminationSuccessorJobs();
 
-    /// @brief Initialize and configure the Control Client communication channel.
-    /// This method sets up the communication channel used by the Control Client to synchronize with other processes.
-    /// It maps the shared memory region for the Control Client communication and ensures proper initialization of semaphores
-    /// used for synchronization between processes. If any part of the setup fails, appropriate fallback actions are taken.
-    inline void setupControlClientChannel();
 
     /// @brief Process the Sucessor nodes
     /// This method is called when there is a need to process the sucessor nodes
@@ -269,12 +252,6 @@ class ProcessInfoNode final {
 
     /// @brief Pointer to the list of dependencies for this process
     const DependencyList* dependency_list_{nullptr};
-
-    /// @brief Pointer to the ControlClientChannel object if it exists
-    ControlClientChannelP control_client_channel_{nullptr};
-
-    /// @brief Pointer to the next node that is a state manager
-    std::shared_ptr<ProcessInfoNode> next_state_manager_{nullptr};
 
     /// @brief Pointer to the comms for this process
     osal::IpcCommsP sync_{nullptr};

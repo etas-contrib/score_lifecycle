@@ -115,6 +115,12 @@ class IdentifierHash final
     //     but for temporary purpose we are keeping this constructor
     IdentifierHash();
 
+    /// @brief Reconstructs an IdentifierHash from a raw hash value (e.g. received over IPC).
+    /// The hash must have been produced by a matching IdentifierHash in the sending process.
+    /// @param raw_hash The raw hash value to wrap.
+    /// @return An IdentifierHash wrapping the given raw value.
+    static IdentifierHash FromRaw(std::size_t raw_hash);
+
     /// @brief Returns the data associated with the IdentifierHash.
     /// This function returns the data stored in the IdentifierHash object.
     /// @return A constant reference to the data stored in the IdentifierHash object.
@@ -145,7 +151,8 @@ class IdentifierHash final
 /// @param os The output stream.
 /// @param id The IdentifierHash object to output.
 /// @return A reference to the output stream.
-inline std::ostream& operator<<(std::ostream& os, const IdentifierHash& id)
+template<typename stream>
+inline stream& operator<<(stream& os, const IdentifierHash& id)
 {
     const auto& reg = IdentifierHash::get_registry();
     const auto it = reg.find(id.data());

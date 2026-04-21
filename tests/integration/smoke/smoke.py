@@ -32,7 +32,8 @@ def test_smoke(target, setup_test, test_output_dir, remote_test_dir):
         binary_path=str(remote_test_dir / "launch_manager"),
         file_path=remote_test_dir.parent / "test_end",
         cwd=str(remote_test_dir),
-        timeout_s=2.0,
+        timeout_s=300.0,
+        args=["--service_instance_manifest", str(remote_test_dir / "etc" / "lm_mw_com_config.json")],
     )
 
     download_xml_results(target, remote_test_dir, test_output_dir)

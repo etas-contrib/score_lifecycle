@@ -108,6 +108,13 @@ IdentifierHash::IdentifierHash()
     get_registry()[hash_id_] = "";
 }
 
+IdentifierHash IdentifierHash::FromRaw(std::size_t raw_hash)
+{
+    IdentifierHash h;
+    h.hash_id_ = raw_hash;
+    return h;
+}
+
 std::size_t IdentifierHash::data() const
 {
     return hash_id_;

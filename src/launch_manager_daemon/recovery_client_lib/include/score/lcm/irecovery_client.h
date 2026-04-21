@@ -13,6 +13,7 @@
 #ifndef SCORE_LCM_IRECOVERYCLIENT_H_
 #define SCORE_LCM_IRECOVERYCLIENT_H_
 
+#include <functional>
 #include <optional>
 #include <score/lcm/identifier_hash.hpp>
 
@@ -52,6 +53,10 @@ public:
     /// @details Since overflow is a critical error, the flag is never reset
     /// @return True if overflow has occurred, else false.
     virtual bool hasOverflow() const noexcept = 0;
+
+    /// @brief Set a callback to be invoked when a new recovery request is enqueued.
+    /// @param callback The function to call on successful enqueue, or empty to clear.
+    virtual void setNotifyCallback(std::function<void()> callback) noexcept = 0;
 };
 } // namespace lcm
 } // namespace score

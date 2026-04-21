@@ -18,6 +18,7 @@
 
 #include <process_group_manager/ihealth_monitor_thread.hpp>
 #include <process_group_manager/processgroupmanager.hpp>
+#include <score/lcm/exec_error_domain.h>
 #include <score/lcm/internal/log.hpp>
 
 namespace score
@@ -56,12 +57,11 @@ ProcessGroupManager::ProcessGroupManager(std::unique_ptr<IHealthMonitorThread> h
       process_groups_(),
       process_state_notifier_(std::move(process_state_notifier)),
       health_monitor_thread_(std::move(health_monitor)),
-      recovery_client_(recovery_client)  //,
-                                         // ucm_polling_thread_(
-//  [this](const Message::Action act, const Message::UpdateContext updateCtx, const lib::fun::string& swc) -> bool
-//                      { return reloadConfiguration(act, updateCtx, IdentifierHash(swc.c_str())); })
+      recovery_client_(recovery_client)
 {
 }
+
+ProcessGroupManager::~ProcessGroupManager() = default;
 
 void ProcessGroupManager::setLaunchManagerConfiguration(const OsProcess* launch_manager_configuration)
 {
@@ -96,9 +96,18 @@ bool ProcessGroupManager::initialize()
     sigaction(SIGUSR2, &action, NULL);
     sigaction(SIGVTALRM, &action, NULL);
 
-    if (!initializeControlClientHandler() || !initializeProcessGroups())
+    if (!initializeProcessGroups())
     {
         return false;
+    }
+
+    // Initialize the main loop semaphore
+    main_loop_sem_.init(0U, false);
+
+    // Wire up recovery client notification callback
+    if (recovery_client_)
+    {
+        recovery_client_->setNotifyCallback([this]() { nudgeMainLoop(); });
     }
 
     LM_LOG_DEBUG() << "Process Group initialization done";
@@ -123,59 +132,15 @@ void ProcessGroupManager::deinitialize()
 {
     // ucm_polling_thread_.stopPolling();
     health_monitor_thread_->stop();
+
+    main_loop_sem_.deinit();
+
     configuration_manager_.deinitialize();
     process_groups_.clear();
 
     worker_threads_.reset();
     worker_jobs_.reset();
     process_map_.reset();
-}
-
-inline bool ProcessGroupManager::initializeControlClientHandler()
-{
-    bool result = false;
-
-    // Create shared memory for the nudge semaphore, using the specific
-    // file descriptor osal::Comms::control_client_handler_nudge_fd, and a random name.
-    // The name is removed from the file system after creation, memory
-    // is mapped and a pointer stored, the FD is kept open.
-    ControlClientChannel::nudgeControlClientHandler_ = nullptr;
-    char shm_name[static_cast<uint32_t>(score::lcm::internal::ProcessLimits::maxLocalBuffSize)];
-
-    static_cast<void>(snprintf(shm_name,
-                               static_cast<uint32_t>(score::lcm::internal::ProcessLimits::maxLocalBuffSize),
-                               "/_nudge~._.~me_"));  // random name
-    int fd = shm_open(shm_name, O_CREAT | O_EXCL | O_RDWR, 0U);
-
-    if (fd >= 0)
-    {
-        shm_unlink(shm_name);
-
-        if (0 == ftruncate(fd, static_cast<off_t>(sizeof(osal::Semaphore))))
-        {
-            int fd2 =
-                dup2(fd, osal::IpcCommsSync::control_client_handler_nudge_fd);  // always make sure we are using fd=4
-            close(fd);
-
-            if (osal::IpcCommsSync::control_client_handler_nudge_fd == fd2)
-            {
-                void* buf = mmap(NULL, sizeof(osal::Semaphore), PROT_WRITE, MAP_SHARED, fd2, 0);
-
-                // RULECHECKER_comment(1, 1, check_c_style_cast, "This is the definition provided by the OS and does a
-                // C-style cast.", true)
-                if (MAP_FAILED != buf)
-                {
-                    ControlClientChannel::nudgeControlClientHandler_ = static_cast<osal::Semaphore*>(buf);
-                    // coverity[cert_mem52_cpp_violation:FALSE] The allocated memory is checked by the containing if
-                    // statement.
-                    ControlClientChannel::nudgeControlClientHandler_->init(0U, true);
-                    result = true;
-                }
-            }
-        }
-    }
-
-    return result;
 }
 
 inline bool ProcessGroupManager::initializeProcessGroups()
@@ -223,6 +188,7 @@ inline bool ProcessGroupManager::initializeProcessGroups()
 
     if (success)
     {
+        trackers_.resize(process_groups_.size());
         LM_LOG_DEBUG() << "Process groups initialized successfully";
     }
     else
@@ -277,13 +243,20 @@ bool ProcessGroupManager::run()
     if (result)
         while (!em_cancelled.load())
         {
-            // Wait for something to happen...
-            ControlClientChannel::nudgeControlClientHandler_->timedWait(std::chrono::milliseconds(100));
-            for (auto pg : process_groups_)
+            // Wait for any event source to signal (control requests, recovery, graph completions)
+            main_loop_sem_.timedWait(std::chrono::milliseconds(100));
+
+            // Process queued activation requests (enqueued by ActivateRunTarget from any thread)
+            processTransitionRequests();
+
+            // Resolve promises for completed transitions (before starting new ones)
+            processTransitionResponses();
+
+            for (size_t i = 0; i < process_groups_.size(); ++i)
             {
-                controlClientHandler(*pg);
-                processGroupHandler(*pg);
+                processGroupHandler(*process_groups_[i], trackers_[i]);
             }
+
             recoveryActionHandler();
         }
 
@@ -381,141 +354,113 @@ inline void ProcessGroupManager::allProcessGroupsOff()
     }
 }
 
-inline void ProcessGroupManager::controlClientHandler(Graph& pg)
+inline void ProcessGroupManager::processTransitionRequests()
 {
-    controlClientRequests(pg);
-    controlClientResponses(pg);
-}
-
-inline void ProcessGroupManager::controlClientResponses(Graph& pg)
-{
-    // Are there any events to report to Control Clients for this process group?
-    ControlClientMessage msg;
-
-    msg.request_or_response_ = pg.getPendingEvent();
-
-    if (ControlClientCode::kNotSet != msg.request_or_response_)
+    while (auto req_opt = activation_queue_.tryDequeue())
     {
-        msg.process_group_state_.pg_name_ = pg.getProcessGroupName();
-        msg.process_group_state_.pg_state_name_ = pg.getProcessGroupState();
-        msg.originating_control_client_ = pg.getStateManager();
-        msg.execution_error_code_ = pg.getLastExecutionError();
+        auto& req = *req_opt;
+        auto promise = std::move(req.promise);
 
-        // Notice we leave two entries free in the message Q to allow for immediate
-        // responses, otherwise messages are left pending in the process group.
-        if (sendResponse(msg))
+        auto pg = machine_process_group_;
+        if (nullptr == pg)
         {
-            pg.clearPendingEvent(msg.request_or_response_);
+            promise.SetError(score::lcm::MakeError(score::lcm::ExecErrc::kInvalidArguments));
+            continue;
         }
-    }
-    ControlClientMessage& cancel_msg = pg.getCancelMessage();
 
-    if (ControlClientCode::kNotSet != cancel_msg.request_or_response_)
-    {
-        if (sendResponse(cancel_msg))
+        LM_LOG_DEBUG() << "ProcessGroupManager: Processing activation request for state" << req.target_state;
+
+        IdentifierHash old_state = pg->getProcessGroupState();
+        GraphState graph_state = pg->getState();
+        auto& tracker = trackers_[pg->getProcessGroupIndex()];
+
+        if (GraphState::kInTransition == graph_state)
         {
-            cancel_msg.request_or_response_ = ControlClientCode::kNotSet;
-        }
-    }
-}
-
-bool ProcessGroupManager::sendResponse(ControlClientMessage msg)
-{
-    auto pin = getProcessInfoNode(msg.originating_control_client_.process_group_index_,
-                                  msg.originating_control_client_.process_index_);
-    bool ret = true;
-
-    if (pin)
-    {
-        auto scc = pin->getControlClientChannel();
-
-        if (scc)
-        {
-            LM_LOG_DEBUG() << "ProcessGroupManager::ControlClientHandler: Sending"
-                           << scc->toString(msg.request_or_response_) << "("
-                           << static_cast<int>(msg.request_or_response_) << ") re state"
-                           << msg.process_group_state_.pg_state_name_ << "of PG" << msg.process_group_state_.pg_name_;
-            ret = scc->sendResponse(msg);
-            if (!ret)
+            if (old_state != req.target_state)
             {
-                ControlClientChannel::nudgeControlClientHandler();
-            }
-        }
-    }
-
-    return ret;
-}
-
-inline void ProcessGroupManager::controlClientRequests(Graph& pg)
-{
-    // Perform the function of Control Client handler by polling for state transition requests
-    // from any State Managers in this process group.
-    if (pg.getNodes().empty())
-    {
-        return;
-    }
-    for (auto node = pg.getNodes()[0U]; node; node = node->getNextStateManager())
-    {
-        ControlClientChannelP scc = node->getControlClientChannel();
-
-        if (scc)
-        {
-            if (scc->getRequest())
-            {
-                // Fill in some routing details
-                scc->request().originating_control_client_.process_group_index_ =
-                    static_cast<uint16_t>(pg.getProcessGroupIndex() & 0xFFFFU);
-                scc->request().originating_control_client_.process_index_ =
-                    static_cast<uint16_t>(node->getNodeIndex() & 0xFFFFU);
-
-                LM_LOG_DEBUG() << "ProcessGroupManager::ControlClientHandler: got request"
-                               << scc->toString(scc->request().request_or_response_) << "("
-                               << static_cast<int>(scc->request().request_or_response_) << ") re state"
-                               << scc->request().process_group_state_.pg_state_name_ << "of PG"
-                               << scc->request().process_group_state_.pg_name_;
-
-                // Now process the request
-                switch (scc->request().request_or_response_)
+                // Cancel existing pending promise if any
+                if (tracker.pending && tracker.pending->promise)
                 {
-                    case ControlClientCode::kSetStateRequest:
-                        processStateTransition(scc);
-                        break;
-
-                    case ControlClientCode::kGetExecutionErrorRequest:
-                        processGetExecutionError(scc);
-                        break;
-
-                    case ControlClientCode::kGetInitialMachineStateRequest:
-                        processGetInitialMachineStateTransitionResult(scc);
-                        break;
-
-                    case ControlClientCode::kValidateProcessGroupState:
-                        processValidateFunctionStateID(scc);
-                        break;
-
-                    default:  // Error, this is not a recognised request!
-                        scc->request().request_or_response_ = ControlClientCode::kInvalidRequest;
-                        break;
+                    tracker.pending->promise->SetError(score::lcm::MakeError(score::lcm::ExecErrc::kCancelled));
                 }
-                scc->acknowledgeRequest();
+                tracker.pending = TransitionContext{req.target_state, std::move(promise)};
+                pg->setRequestStartTime();
+                pg->cancel();
             }
-
-            // now process deferred requests for initial state transition results
-            if (ControlClientCode::kInitialMachineStateNotSet != initial_state_transition_result_ &&
-                scc->initial_result_count_)
+            else
             {
-                ControlClientMessage msg;
-                msg.request_or_response_ = initial_state_transition_result_;
-                msg.originating_control_client_ = scc->request().originating_control_client_;
-                if (scc->sendResponse(msg))
+                promise.SetError(score::lcm::MakeError(score::lcm::ExecErrc::kInTransitionToSameState));
+            }
+        }
+        else if (GraphState::kSuccess == graph_state && old_state == req.target_state)
+        {
+            promise.SetError(score::lcm::MakeError(score::lcm::ExecErrc::kAlreadyInState));
+        }
+        else
+        {
+            // Cancel existing pending promise if any
+            if (tracker.pending && tracker.pending->promise)
+            {
+                tracker.pending->promise->SetError(score::lcm::MakeError(score::lcm::ExecErrc::kCancelled));
+            }
+            tracker.pending = TransitionContext{req.target_state, std::move(promise)};
+            pg->setRequestStartTime();
+        }
+    }
+}
+
+static score::lcm::ExecErrc controlClientCodeToExecErrc(ControlClientCode code)
+{
+    switch (code)
+    {
+        case ControlClientCode::kSetStateInvalidArguments:
+            return score::lcm::ExecErrc::kInvalidArguments;
+        case ControlClientCode::kSetStateCancelled:
+            return score::lcm::ExecErrc::kCancelled;
+        case ControlClientCode::kSetStateFailed:
+            return score::lcm::ExecErrc::kFailed;
+        case ControlClientCode::kSetStateAlreadyInState:
+            return score::lcm::ExecErrc::kAlreadyInState;
+        case ControlClientCode::kSetStateTransitionToSameState:
+            return score::lcm::ExecErrc::kInTransitionToSameState;
+        case ControlClientCode::kFailedUnexpectedTerminationOnEnter:
+            return score::lcm::ExecErrc::kFailedUnexpectedTerminationOnEnter;
+        case ControlClientCode::kFailedUnexpectedTermination:
+            return score::lcm::ExecErrc::kFailedUnexpectedTerminationOnExit;
+        default:
+            return score::lcm::ExecErrc::kGeneralError;
+    }
+}
+
+inline void ProcessGroupManager::processTransitionResponses()
+{
+    for (size_t i = 0; i < process_groups_.size(); ++i)
+    {
+        auto& pg = process_groups_[i];
+        auto& tracker = trackers_[i];
+
+        ControlClientCode event = pg->getPendingEvent();
+
+        if (ControlClientCode::kNotSet != event)
+        {
+            if (tracker.in_flight && tracker.in_flight->promise)
+            {
+                if (ControlClientCode::kSetStateSuccess == event)
                 {
-                    scc->initial_result_count_--;
+                    tracker.in_flight->promise->SetValue();
                 }
                 else
                 {
-                    ControlClientChannel::nudgeControlClientHandler();  // will need to try again
+                    score::lcm::ExecErrc errc = controlClientCodeToExecErrc(event);
+                    tracker.in_flight->promise->SetError(score::lcm::MakeError(errc));
                 }
+
+                LM_LOG_DEBUG() << "ProcessGroupManager: Resolved promise for transition, code"
+                               << static_cast<int>(event) << "for PG" << pg->getProcessGroupName();
             }
+
+            pg->clearPendingEvent(event);
+            tracker.in_flight.reset();
         }
     }
 }
@@ -546,15 +491,16 @@ inline void ProcessGroupManager::recoveryActionHandler()
         LM_LOG_DEBUG() << "recoveryActionHandler: Processing recovery request for PG "
                        << recovery_request->process_group_identifier_ << " to state " << recovery_state;
 
+        auto& tracker = trackers_[pg->getProcessGroupIndex()];
+
         if (GraphState::kInTransition == graph_state)
         {
             if (old_state != recovery_state)
             {
-                // Cancel current transition and start new one
-                (void)pg->setPendingState(recovery_state);
+                // Cancel current transition and queue recovery
+                tracker.pending = TransitionContext{recovery_state, std::nullopt};
                 pg->setRequestStartTime();
                 pg->cancel();
-                controlClientResponses(*pg);
             }
             else
             {
@@ -570,117 +516,13 @@ inline void ProcessGroupManager::recoveryActionHandler()
         else
         {
             // Start new state transition
-            (void)pg->setPendingState(recovery_state);
+            tracker.pending = TransitionContext{recovery_state, std::nullopt};
             pg->setRequestStartTime();
         }
     }
 }
 
-inline void ProcessGroupManager::processStateTransition(ControlClientChannelP scc)
-{
-    // First of all, if the process group is not known, then return kSetStateInvalidArguments straight away
-    // Set new pending target state
-    // If the process group is in transition
-    //   if the target state is not the requested state, send a kCanceled response
-    //   to the last state manager and cancel the graph
-    // Set new state manager
-    auto pg = getProcessGroup(scc->request().process_group_state_.pg_name_);
-
-    if (nullptr == pg)
-    {
-        // Error, unknown process group
-        scc->request().request_or_response_ = ControlClientCode::kSetStateInvalidArguments;
-    }
-    else
-    {
-        IdentifierHash old_state = pg->getProcessGroupState();
-        GraphState graph_state = pg->getState();
-        scc->request().request_or_response_ = ControlClientCode::kSetStateSuccess;
-
-        if (GraphState::kInTransition == graph_state)
-        {
-            if (old_state != scc->request().process_group_state_.pg_state_name_)
-            {
-                (void)pg->setPendingState(scc->request().process_group_state_.pg_state_name_);
-                // get state transition start time stamp
-                pg->setRequestStartTime();
-                pg->cancel();
-            }
-            else
-            {
-                // already in transition to the requested state
-                // pg->cancel();
-                scc->request().request_or_response_ = ControlClientCode::kSetStateTransitionToSameState;
-            }
-        }
-        else if (GraphState::kSuccess == graph_state && old_state == scc->request().process_group_state_.pg_state_name_)
-        {
-            // Already in state
-            scc->request().request_or_response_ = ControlClientCode::kSetStateAlreadyInState;
-        }
-        else
-        {
-            (void)pg->setPendingState(scc->request().process_group_state_.pg_state_name_);
-            // get state transition start time stamp
-            pg->setRequestStartTime();
-        }
-        pg->setStateManager(scc->request().originating_control_client_);
-    }
-}
-
-inline void ProcessGroupManager::processGetExecutionError(ControlClientChannelP scc)
-{
-    // This is a synchronous call at the client side, but it's treated just like all the others,
-    // sending the response on the response channel. (The Control Client library will have to hide
-    // a future in the interface implementation)
-    std::shared_ptr<Graph> pg = getProcessGroup(scc->request().process_group_state_.pg_name_);
-
-    if (!pg)
-    {
-        // Error, unknown process group
-        scc->request().request_or_response_ = ControlClientCode::kExecutionErrorInvalidArguments;
-    }
-    else if (pg->getState() != GraphState::kUndefinedState)
-    {
-        // Error, process group not in an undefined state
-        scc->request().request_or_response_ = ControlClientCode::kExecutionErrorRequestFailed;
-    }
-    else
-    {
-        scc->request().execution_error_code_ = pg->getLastExecutionError();
-        scc->request().request_or_response_ = ControlClientCode::kExecutionErrorRequestSuccess;
-    }
-}
-
-inline void ProcessGroupManager::processGetInitialMachineStateTransitionResult(ControlClientChannelP scc)
-{
-    // If the machine process group is not valid or we have requested the result the maximum number of times
-    // we immediately return an error. Otherwise, the response is deferred until later.
-    if (!machine_process_group_ ||
-        ((1UL << (sizeof(scc->initial_result_count_) * 8UL)) - 1UL == scc->initial_result_count_))
-    {
-        // We know immediately that there is a failure
-        scc->request().request_or_response_ = ControlClientCode::kInitialMachineStateNotSet;
-    }
-    else
-    {
-        scc->initial_result_count_++;
-    }
-}
-
-inline void ProcessGroupManager::processValidateFunctionStateID(ControlClientChannelP scc)
-{
-    if (configuration_manager_.getProcessIndexesList(scc->request().process_group_state_))
-    {
-        scc->request().request_or_response_ = ControlClientCode::kValidateProcessGroupStateSuccess;
-    }
-    else
-    {
-        scc->request().request_or_response_ = ControlClientCode::kValidateProcessGroupStateFailed;
-    }
-}
-
-inline void ProcessGroupManager::processGroupHandler(Graph& pg)
+inline void ProcessGroupManager::processGroupHandler(Graph& pg, TransitionTracker& tracker)
 {
     // check to see if there is a state change request to process
     // If current pg not in transition and there is a pending request state
@@ -689,33 +531,38 @@ inline void ProcessGroupManager::processGroupHandler(Graph& pg)
 
     if (GraphState::kSuccess == graph_state || GraphState::kUndefinedState == graph_state)
     {
-        ProcessGroupStateID pgs;
-        pgs.pg_state_name_ = pg.setPendingState(IdentifierHash(""));
-
-        if ((pgs.pg_state_name_ != IdentifierHash("")) &&
-            ((pgs.pg_state_name_ != pg.getProcessGroupState()) || (GraphState::kUndefinedState == graph_state)))
+        if (tracker.pending)
         {
-            pgs.pg_name_ = pg.getProcessGroupName();
-            LM_LOG_DEBUG() << "Start transition to" << pgs.pg_state_name_ << "for PG" << pgs.pg_name_;
+            IdentifierHash target = tracker.pending->target_state;
 
-            if (!pg.startTransition(pgs))
+            if ((target != pg.getProcessGroupState()) || (GraphState::kUndefinedState == graph_state))
             {
-                pg.setPendingEvent(ControlClientCode::kSetStateInvalidArguments);
+                ProcessGroupStateID pgs;
+                pgs.pg_name_ = pg.getProcessGroupName();
+                pgs.pg_state_name_ = target;
+
+                // Move pending to in_flight before starting transition
+                tracker.in_flight = std::move(tracker.pending);
+                tracker.pending.reset();
+
+                LM_LOG_DEBUG() << "Start transition to" << pgs.pg_state_name_ << "for PG" << pgs.pg_name_;
+
+                if (!pg.startTransition(pgs))
+                {
+                    pg.setPendingEvent(ControlClientCode::kSetStateInvalidArguments);
+                }
+            }
+            else
+            {
+                // Target == current state, discard pending
+                tracker.pending.reset();
             }
         }
 
-        if (GraphState::kUndefinedState == pg.getState()) 
+        if (GraphState::kUndefinedState == pg.getState() && !tracker.pending && !tracker.in_flight)
         {
-            // at the moment graph is not running...
-            // i.e. it is not in kInTransition, kAborting or kCancelled state
-            //
-            // if there was a pending request, it was processed in the previous if statement
-            // but it resulted in ControlClientCode::kSetStateInvalidArguments error
-            //
-            // in short, graph is in an error state (kUndefinedState)
-            // and there is no valid request from outside, to change this situation...
-            //
-            // we will try to perform recovery action
+            // Graph is in an error state (kUndefinedState) and there is no valid request
+            // from outside to change this situation — perform fallback recovery
 
             ProcessGroupStateID recovery_state;
             recovery_state.pg_name_ = pg.getProcessGroupName();
@@ -723,9 +570,7 @@ inline void ProcessGroupManager::processGroupHandler(Graph& pg)
 
             LM_LOG_WARN() << "Problem discovered in PG" << recovery_state.pg_name_ << "Activating Recovery state.";
 
-            // no point checking errors here...
-            // nobody requested this transition, so there is nowhere to communicate an error
-            // if we failed and there is no external request, we will try again next time
+            tracker.in_flight = TransitionContext{recovery_state.pg_state_name_, std::nullopt};
             pg.setRequestStartTime();
             pg.startTransition(recovery_state);
         }
@@ -735,8 +580,31 @@ inline void ProcessGroupManager::processGroupHandler(Graph& pg)
 void ProcessGroupManager::setInitialStateTransitionResult(ControlClientCode result)
 {
     initial_state_transition_result_ = result;
-    ControlClientChannel::nudgeControlClientHandler();
+    nudgeMainLoop();
 }
+
+void ProcessGroupManager::nudgeMainLoop()
+{
+    main_loop_sem_.post();
+}
+
+score::concurrency::InterruptibleFuture<void> ProcessGroupManager::ActivateRunTarget(IdentifierHash target_id)
+{
+    score::concurrency::InterruptiblePromise<void> promise;
+    auto future = promise.GetInterruptibleFuture().value();
+
+    if (!activation_queue_.tryEnqueue(ActivationRequest{target_id, std::move(promise)}))
+    {
+        LM_LOG_ERROR() << "ActivateRunTarget: activation queue full, dropping request";
+    }
+    else
+    {
+        nudgeMainLoop();
+    }
+
+    return future;
+}
+
 
 std::shared_ptr<ProcessInfoNode> ProcessGroupManager::getProcessInfoNode(uint32_t pg_index, uint32_t process_index)
 {

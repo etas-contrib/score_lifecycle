@@ -53,6 +53,7 @@ mkdir -p tmp/launch_manager/etc
 cp $LM_BINARY tmp/launch_manager/launch_manager
 cp $CFG_DIR/lm_demo.bin tmp/launch_manager/etc/
 cp config/lm_logging.json tmp/launch_manager/etc/logging.json
+cp config/lm_mw_com_config.json tmp/launch_manager/etc/mw_com_config.json
 
 cp $CFG_DIR/hm_demo.bin tmp/launch_manager/etc/
 cp $CFG_DIR/hmcore.bin tmp/launch_manager/etc/
@@ -66,9 +67,10 @@ cp $DEMO_APP_WO_HM_BINARY tmp/cpp_lifecycle_app/
 
 cp $RUST_APP_BINARY tmp/supervision_demo/
 
-mkdir -p tmp/control_app
+mkdir -p tmp/control_app/etc
 cp $CONTROL_APP_BINARY tmp/control_app/
 cp $CONTROL_CLI_BINARY tmp/control_app/
+cp config/sm_mw_com_config.json tmp/control_app/etc/mw_com_config.json
 
 mkdir -p tmp/lib
 cp $BAZEL_BIN/src/launch_manager_daemon/process_state_client_lib/libprocess_state_client.so tmp/lib/

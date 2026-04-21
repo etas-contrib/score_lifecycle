@@ -38,9 +38,12 @@ build:toolchain_common --extra_toolchains=@score_toolchains_rust//toolchains/fer
 build:stub --@score_baselibs//score/mw/log/flags:KRemote_Logging=False
 build:stub --@score_logging//score/mw/log/flags:KRemote_Logging=False
 build:stub --@score_baselibs//score/json:base_library=nlohmann
+build:stub --@score_communication//score/mw/com/flags:tracing_library=@score_baselibs//score/analysis/tracing/generic_trace_library/stub_implementation
 
 # Target configuration for running integration tests on localhost
 build:host --define config=host
+build:host --config=stub
+
 
 # Target configuration for CPU:x86-64|OS:Linux build (do not use it in case of system toolchains!)
 build:x86_64-linux --config=stub
@@ -90,4 +93,4 @@ build:build_qnx8 --config=arm64-qnx
 
 ## default is a stdout logger which looks like dlt logs
 ## uncomment below to use score::mw::log instead of the stdout logger
-# build --cxxopt=-DLC_LOG_SCORE_MW_LOG
+build --cxxopt=-DLC_LOG_SCORE_MW_LOG

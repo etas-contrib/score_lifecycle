@@ -144,17 +144,38 @@ git_override(
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci", dev_dependency = True)
 oci.pull(
-    name = "debian-test-runtime",
-    digest = "sha256:f06537653ac770703bc45b4b113475bd402f451e85223f0f2837acbf89ab020a",
-    image = "index.docker.io/library/debian",
+    name = "ubuntu-test-runtime",
+    digest = "sha256:965fbcae990b0467ed5657caceaec165018ef44a4d2d46c7cdea80a9dff0d1ea",
+    image = "index.docker.io/library/ubuntu",
     platforms = ["linux/amd64"],
-    tag = "bookworm-slim",
+    tag = "22.04",
 )
-use_repo(oci, "debian-test-runtime", "debian-test-runtime_linux_amd64")
+use_repo(oci, "ubuntu-test-runtime", "ubuntu-test-runtime_linux_amd64")
 
 bazel_dep(name = "score_baselibs_rust", version = "0.1.1")
 bazel_dep(name = "score_baselibs", version = "0.2.4")
+#bazel_dep(name = "score_logging")
+#git_override(
+#    module_name = "score_logging",
+#    commit = "80feaae8ffaa2448c3872011b724e1668ad2930e",
+#    remote = "https://github.com/eclipse-score/logging.git",
+#)
 bazel_dep(name = "score_logging", version = "0.1.0")
+
+bazel_dep(name = "rules_boost", repo_name = "com_github_nelhage_rules_boost")
+archive_override(
+    module_name = "rules_boost",
+    strip_prefix = "rules_boost-master",
+    urls = ["https://github.com/nelhage/rules_boost/archive/refs/heads/master.tar.gz"],
+)
+
+bazel_dep(name = "score_communication", version = "0.2.0")
+#bazel_dep(name = "score_communication")
+#git_override(
+#    module_name = "score_communication",
+#    commit = "56448a5589a5f7d3921b873e8127b824a8c1ca95",
+#    remote = "https://github.com/eclipse-score/communication.git",
+#)
 
 # TODO: remove once inherited properly from `score_logging`.
 bazel_dep(name = "trlc", version = "0.0.0", dev_dependency = True)

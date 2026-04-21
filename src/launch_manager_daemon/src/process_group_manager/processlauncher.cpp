@@ -21,7 +21,6 @@
 #include <signal.h>
 
 #include <process_group_manager/iprocess.hpp>
-#include <score/lcm/internal/controlclientchannel.hpp>
 #include <score/lcm/internal/log.hpp>
 #include <score/lcm/internal/osal/osalipccomms.hpp>
 #include <score/lcm/internal/osal/securitypolicy.hpp>
@@ -46,16 +45,16 @@ using score::lcm::internal::osal::sysexit;
 
 void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
 {
-    // kNoComms !fd3 & !fd4
-    // kReporting  fd3 & !fd4
-    // kControlClient  fd3 & fd4
+    // kNoComms       !fd3 & !fd4
+    // kReporting      fd3 & !fd4
+    // kControlClient  fd3 & !fd4  (same as kReporting; no ControlClientChannel shared memory)
     // kLaunchManager  does not matter
     if (param.shared_block)
     {
         param.fd = dup2(param.fd, param.shared_block->sync_fd);  // always make sure we are using fd=3
         param.shared_block->pid_ = getpid();                     // Store pid for check at client end
 
-        // It must be ensured that sync_fd (f3) and control_client_handler_nudge_fd (fd4) remain open depending on
+        // It must be ensured that sync_fd (f3) remains open depending on
         // the communication type. Flag FD_CLOEXEC is cleared conditionally to ensure that the
         // respective file descriptor remains open after the execve call.
         switch (param.shared_block->comms_type_)
@@ -65,22 +64,11 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
                 // else
                 break;
             case CommsType::kReporting:
-                if (-1 == fcntl(IpcCommsSync::sync_fd, F_SETFD, 0))
-                {
-                    LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__ << "failed:" << std::strerror(errno);
-                    sysexit(EXIT_FAILURE);
-                }
-                close(IpcCommsSync::control_client_handler_nudge_fd);
-                break;
             case CommsType::kControlClient:
                 if (-1 == fcntl(IpcCommsSync::sync_fd, F_SETFD, 0))
                 {
                     LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__ << "failed:" << std::strerror(errno);
                     sysexit(EXIT_FAILURE);
-                }
-                if (-1 == fcntl(IpcCommsSync::control_client_handler_nudge_fd, F_SETFD, 0))
-                {
-                    LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__ << "failed:" << std::strerror(errno);
                 }
                 break;
             case CommsType::kLaunchManager:
@@ -96,7 +84,6 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
     else
     {  // No communications channel was requested, but still make sure fd=3 is in use
         close(IpcCommsSync::sync_fd);
-        close(IpcCommsSync::control_client_handler_nudge_fd);
         const char* shmem_name = "/ipc_secondary_shared_mem";
         param.fd = shm_open(shmem_name, O_CREAT, 0U);
 
@@ -288,11 +275,6 @@ inline bool IProcess::setupComms(IpcCommsP& block, int& fd, const OsalConfig& co
     char shm_name[static_cast<uint32_t>(score::lcm::internal::ProcessLimits::maxLocalBuffSize)];
     size_t length = sizeof(IpcCommsSync);
 
-    if (CommsType::kControlClient == config.comms_type_)
-    {
-        length += sizeof(ControlClientChannel);
-    }
-
     static_cast<void>(snprintf(shm_name,
                                static_cast<uint32_t>(score::lcm::internal::ProcessLimits::maxLocalBuffSize),
                                "/ipc_shared_mem%u",
@@ -317,14 +299,7 @@ inline bool IProcess::setupComms(IpcCommsP& block, int& fd, const OsalConfig& co
                            << "Unable to set size of shared memory file descriptor. Error:" << std::strerror(errno);
         }
 
-        if (config.comms_type_ == CommsType::kControlClient)
-        {
-            block = initializeControlClient(fd, config);
-        }
-        else
-        {
-            block = IpcCommsSync::getCommsObject(fd);
-        }
+        block = IpcCommsSync::getCommsObject(fd);
         if (block)
         {
             block->comms_type_ = config.comms_type_;
@@ -342,22 +317,6 @@ inline bool IProcess::setupComms(IpcCommsP& block, int& fd, const OsalConfig& co
     }
 
     return comms_result;
-}
-
-inline IpcCommsP IProcess::initializeControlClient(int& fd, const OsalConfig& config)
-{
-    LM_LOG_DEBUG() << "Initialize the control client for" << config.short_name_ << " process";
-    /* Initialise the control client communications */
-    IpcCommsP shared_block = nullptr;
-    ControlClientChannelP scc = ControlClientChannel::initializeControlClientChannel(fd, &shared_block);
-    if (!scc)
-    {
-        LM_LOG_ERROR() << "Failed to obtain ControlClientChannel for " << config.short_name_
-                       << ": initializeControlClientChannel returned nullptr";
-        return nullptr;  // Caller will see shared_block maybe null and treat as failure later.
-    }
-    scc->initialize();
-    return shared_block;
 }
 
 inline bool IProcess::initializeSemaphores(IpcCommsP shared_block)

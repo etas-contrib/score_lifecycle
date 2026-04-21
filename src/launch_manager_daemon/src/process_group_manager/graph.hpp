@@ -23,7 +23,7 @@
 
 #include <score/lcm/identifier_hash.hpp>
 #include <score/lcm/internal/osal/semaphore.hpp>
-#include <score/lcm/internal/controlclientchannel.hpp>
+#include <score/lcm/internal/control_client_codes.hpp>
 #include <process_group_manager/processinfonode.hpp>
 #include <process_group_manager/iprocess.hpp>
 #include <configuration_manager/configurationmanager.hpp>
@@ -255,16 +255,6 @@ class Graph final {
     /// @return NodeList
     NodeList& getNodes();
 
-    /// @brief Set the state manager for this process group
-    /// If there was a pending event, set the cancel message so the event
-    /// will be sent to the previous state manager, and clear the pending event.
-    /// @param control_client_id
-    void setStateManager(ControlClientID& control_client_id);
-
-    /// @brief Get the state manager for this process group as a single uint64
-    /// @return uint64 identifying the Control Client
-    ControlClientID getStateManager();
-
     /// @brief get the error code for the last process to cause an issue
     /// @return uint32
     uint32_t getLastExecutionError();
@@ -272,15 +262,6 @@ class Graph final {
     /// @brief set the last execution error
     /// @param code
     void setLastExecutionError(uint32_t code);
-
-    /// @brief set a new pending state for the process group, and return the old one
-    /// @param new_state to set in pending_state_
-    /// @return the previous value of pending_state_
-    IdentifierHash setPendingState(IdentifierHash new_state);
-
-    /// @brief get the value of the pending_state_
-    /// @return current value of pending_state_
-    IdentifierHash getPendingState();
 
     /// @brief get any pending event
     /// @return the event code
@@ -294,10 +275,6 @@ class Graph final {
     /// @brief set a pending event code & nudge the process group manager
     /// @param event code to store
     void setPendingEvent(ControlClientCode event);
-
-    /// @brief get the message constructed when (if) the graph was cancelled
-    /// @return a ControlClientMessage to send
-    ControlClientMessage& getCancelMessage();
 
     /// @brief A utility function that converts codes to strings for logging purposes
     /// @param state The state to convert
@@ -417,26 +394,17 @@ class Graph final {
     /// @brief Pointer to the ProcessGroupManager.
     ProcessGroupManager* pgm_;
 
-    /// @brief The last state manager to control this process group
-    ControlClientID last_state_manager_;
-
     /// @brief The last execution error set on an unexpected termination
     std::atomic_uint32_t last_execution_error_;
 
     /// @brief Set the true if this is the MainPG and this is the initial state transition
     bool is_initial_state_transition_{false};
 
-    /// @brief The pending state transition, if any
-    IdentifierHash pending_state_{""};
-
     /// @brief Any pending event to report
     std::atomic<ControlClientCode> event_{ControlClientCode::kNotSet};
 
     /// @brief Reason that tha graph was aborted
     std::atomic<ControlClientCode> abort_code_{ControlClientCode::kNotSet};
-
-    /// @brief The message to send when a transition is cancelled
-    ControlClientMessage cancel_message_;
 
     /// @brief Constant for Off state.
     IdentifierHash off_state_{};

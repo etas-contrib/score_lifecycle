@@ -401,7 +401,7 @@ class ConfigurationManager final {
     /// @param[in] node A pointer to the process configuration node from which the communication type is derived.
     /// @param[in] short_name Short name of the process
     /// @return The communication type as an enumerator of type `osal::CommsType`. Possible values are `kNoComms`,
-    /// `kReporting`, or `kControlClient`.
+    /// `kReporting`, or `kControlClient` (STATE_MANAGEMENT processes; behaves like `kReporting` at the IPC layer).
     osal::CommsType getCommsType(const LMFlatBuffer::Process* node, const char* short_name);
 
     /// @brief Determine the function cluster affiliation and update the communication type accordingly.

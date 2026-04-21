@@ -151,13 +151,6 @@ class IProcess {
     /// @return True if semaphore initialization is successful, false otherwise.
     inline bool initializeSemaphores(IpcCommsP block);
 
-    /// @brief Initializes the Control Client for communication using the shared memory block.
-    /// @param[in] shared_block Pointer to the shared memory block.
-    /// @param[in,out] fd Reference to store the file descriptor of the shared memory.
-    /// @param[in] config Pointer to the configuration for initializing the Control Client.
-    /// @return None.
-    inline IpcCommsP initializeControlClient(int& fd, const OsalConfig& config);
-
     /// @brief Handles the execution of the child process after forking.
     /// @param[in] param Reference to child process configuration.
     inline void handleChildProcess(ChildProcessConfig& param);

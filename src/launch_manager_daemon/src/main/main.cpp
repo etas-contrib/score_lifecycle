@@ -16,7 +16,9 @@
 #include <iostream>
 
 #include <score/lcm/internal/log.hpp>
+#include "score/mw/com/runtime.h"
 
+#include <control/control_server.hpp>
 #include <process_group_manager/health_monitor_thread.hpp>
 #include <process_group_manager/processgroupmanager.hpp>
 #include <score/lcm/processstatenotifier.hpp>
@@ -106,14 +108,11 @@ void reserveFD(int fd)
 // coverity[autosar_cpp14_a15_3_3_violation:FALSE] Only logging occurs outside the try-catch enclosing main().
 int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[])
 {
-    // reserve files descriptor osal::IpcCommsSync::sync_fd (fd3) and
-    // osal::IpcCommsSync::control_client_handler_nudge_fd (fd4) for communication tpyes: kNoComms !fd3 & !fd4
-    // kReporting  fd3 & !fd4
-    // kControlClient  fd3 & fd4
-    // kLaunchManager  does not matter
-    // the file descriptors are closed inside the handleComms function.
+    // reserve file descriptor osal::IpcCommsSync::sync_fd (fd3) for LifecycleClient IPC sync
     reserveFD(osal::IpcCommsSync::sync_fd);
-    reserveFD(osal::IpcCommsSync::control_client_handler_nudge_fd);
+
+    // Initialize mw::com runtime
+    score::mw::com::runtime::InitializeRuntime(argc, argv);
 
     int exit_code = EXIT_FAILURE;
 
@@ -142,10 +141,23 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[])
 
         if (initializeLCMDaemon(*process_group_manager))
         {
-            if (runLCMDaemon(*process_group_manager))
+            // Create and initialize the mw::com control service server
+            const char* instance_spec_env = getenv("SCORE_LCM_SKELETON_INSTANCE_SPECIFIER");
+            std::string_view instance_spec =
+                instance_spec_env ? instance_spec_env : "LaunchManager/StateManager/Instance";
+
+            ControlServer control_server{instance_spec, *process_group_manager};
+
+            if (!control_server.Initialize())
+            {
+                LM_LOG_ERROR() << "Failed to initialize ControlServer";
+            }
+            else if (runLCMDaemon(*process_group_manager))
             {
                 exit_code = EXIT_SUCCESS;
             }
+
+            control_server.Shutdown();
         }
 
         if (process_group_manager)
@@ -160,7 +172,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] const char* argv[])
     }
 
     close(osal::IpcCommsSync::sync_fd);
-    close(osal::IpcCommsSync::control_client_handler_nudge_fd);
 
     LM_LOG_INFO() << "Launch Manager completed with exit code value:" << exit_code;
 

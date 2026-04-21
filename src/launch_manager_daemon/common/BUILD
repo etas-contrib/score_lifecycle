@@ -88,6 +88,15 @@ cc_library(
 )
 
 cc_library(
+    name = "control_client_codes",
+    hdrs = [
+        "include/score/lcm/internal/control_client_codes.hpp",
+    ],
+    includes = ["include"],
+    visibility = ["//src:__subpackages__"],
+)
+
+cc_library(
     name = "control_client_channel",
     srcs = [
         "src/internal/controlclientchannel.cpp",

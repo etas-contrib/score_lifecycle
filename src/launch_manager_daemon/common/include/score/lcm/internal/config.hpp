@@ -54,7 +54,7 @@ enum class ControlClientLimits : uint16_t {
     kControlClientMaxInstances =
         256U,  ///< Maximum number of ControlClient instances that should be created by state manager. If state manager create more instances than kMaxInstances, those instances will always return kCommunicationError when used
     kControlClientMaxRequests =
-        512U  ///< Maximum number of active requests, for example SetState call, that ControlClient instance can send to LCM. If that number is exceeded ControlClient API will return kFailed, until one of the current requests is completed by LCM
+        10U  ///< Maximum number of active requests, for example SetState call, that ControlClient instance can send to LCM. If that number is exceeded ControlClient API will return kFailed, until one of the current requests is completed by LCM
 };
 
 extern const std::chrono::milliseconds
@@ -66,7 +66,7 @@ extern const std::chrono::milliseconds
 
 enum class ProcessLimits : std::uint32_t {
     kMaxProcesses = 1024U,    ///< Maximum number of processes allowed
-    kNumWorkerThreads = 32U,  ///< Maximum number of worker threads allowed
+    kNumWorkerThreads = 12U,  ///< Maximum number of worker threads allowed
     maxLocalBuffSize = 32U    ///< Maximum size for local buffer
 };
 

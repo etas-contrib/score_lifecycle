@@ -1,0 +1,57 @@
+Name:	control_daemon_
+Umask:	0022
+State:	S (sleeping)
+Tgid:	51
+Ngid:	0
+Pid:	51
+PPid:	27
+TracerPid:	0
+Uid:	0	0	0	0
+Gid:	0	0	0	0
+FDSize:	64
+Groups:	0 
+NStgid:	51
+NSpid:	51
+NSpgid:	51
+NSsid:	27
+VmPeak:	  141288 kB
+VmSize:	   75900 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	    6716 kB
+VmRSS:	    6716 kB
+RssAnon:	     312 kB
+RssFile:	    6392 kB
+RssShmem:	      12 kB
+VmData:	     808 kB
+VmStk:	      64 kB
+VmExe:	    3364 kB
+VmLib:	    2304 kB
+VmPTE:	      60 kB
+VmSwap:	       0 kB
+HugetlbPages:	       0 kB
+CoreDumping:	0
+THP_enabled:	1
+Threads:	5
+SigQ:	0/63958
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000000000
+SigCgt:	0000000100004002
+CapInh:	0000000000000000
+CapPrm:	00000000a80425fb
+CapEff:	00000000a80425fb
+CapBnd:	00000000a80425fb
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	2
+Seccomp_filters:	1
+Speculation_Store_Bypass:	thread vulnerable
+SpeculationIndirectBranch:	conditional enabled
+Cpus_allowed:	ffff
+Cpus_allowed_list:	0-15
+Mems_allowed:	1
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	10
+nonvoluntary_ctxt_switches:	0

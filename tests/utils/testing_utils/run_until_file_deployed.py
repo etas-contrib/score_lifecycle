@@ -46,7 +46,7 @@ def run_until_file_deployed(
     if exit_code == 0:
         target.execute(f"rm {file_path}")
 
-    proc = target.execute_async(binary_path, args=args, cwd=cwd)
+    proc = target.execute_async("ulimit -s 64 && " + binary_path, args=args, cwd=cwd)
 
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:

@@ -1,0 +1,76 @@
+{
+  "serviceTypes": [
+    {
+      "serviceTypeName": "/score/lcm/ControlService",
+      "version": {
+        "major": 1,
+        "minor": 0
+      },
+      "bindings": [
+        {
+          "binding": "SHM",
+          "serviceId": 7001,
+          "events": [
+            {
+              "eventName": "ActivationResult",
+              "eventId": 1
+            }
+          ],
+          "methods": [
+            {
+              "methodName": "ActivateRunTarget",
+              "methodId": 2
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "serviceInstances": [
+    {
+      "instanceSpecifier": "LaunchManager/StateManager/Instance",
+      "serviceTypeName": "/score/lcm/ControlService",
+      "version": {
+        "major": 1,
+        "minor": 0
+      },
+      "instances": [
+        {
+          "instanceId": 1,
+          "asil-level": "B",
+          "binding": "SHM",
+          "events": [
+            {
+              "eventName": "ActivationResult",
+              "numberOfSampleSlots": 10,
+              "maxSubscribers": 1,
+              "enforceMaxSamples": true,
+              "numberOfIpcTracingSlots": 0
+            }
+          ],
+          "methods": [
+            {
+              "methodName": "ActivateRunTarget",
+              "queueSize": 10
+            }
+          ],
+          "allowedConsumer": {
+            "B": [0]
+          },
+          "allowedProvider": {
+            "B": [0]
+          }
+        }
+      ]
+    }
+  ],
+  "global": {
+    "asil-level": "B",
+    "queue-size": {
+        "QM-receiver": 10,
+        "B-receiver": 10,
+        "B-sender": 10
+    },
+    "shm-size-calc-mode": "SIMULATION"
+  }
+}

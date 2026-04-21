@@ -36,18 +36,12 @@ Graph::Graph(uint32_t max_num_nodes, ProcessGroupManager* pgm)
       semaphore_(),
       requested_state_(),
       pgm_(pgm),
-      last_state_manager_(),
       last_execution_error_(0U),
       is_initial_state_transition_(false),
-      pending_state_(""),
       event_(ControlClientCode::kNotSet),
-      cancel_message_(),
       request_start_time_() {
     LM_LOG_DEBUG() << "Creating graph with" << max_num_nodes << "nodes";
     nodes_.reserve(max_num_nodes);
-    last_state_manager_.process_index_ = 0xFFFFU;  // an invalid state manager
-    last_state_manager_.process_group_index_ = 0xFFFFU;
-    cancel_message_.request_or_response_ = ControlClientCode::kNotSet;
 }
 
 Graph::~Graph() {
@@ -330,8 +324,6 @@ inline void Graph::handleNonTransitionExecution(GraphState current_state) {
 
         if (current_state == GraphState::kAborting) {
             setPendingEvent(abort_code_);
-        } else {
-            ControlClientChannel::nudgeControlClientHandler();
         }
     }
 }
@@ -365,18 +357,6 @@ void Graph::cancel() {
         }
         setState(GraphState::kUndefinedState);
     }
-}
-
-void Graph::setStateManager(ControlClientID& control_client_id) {
-    ControlClientCode code = getPendingEvent();
-
-    if (code != ControlClientCode::kNotSet) {
-        cancel_message_.process_group_state_ = requested_state_;
-        cancel_message_.originating_control_client_ = last_state_manager_;
-        cancel_message_.request_or_response_ = code;
-        clearPendingEvent(code);
-    }
-    last_state_manager_ = control_client_id;
 }
 
 std::shared_ptr<ProcessInfoNode> Graph::getProcessInfoNode(uint32_t process_index) {
@@ -422,33 +402,12 @@ NodeList& Graph::getNodes() {
     return nodes_;
 }
 
-ControlClientID Graph::getStateManager() {
-    return last_state_manager_;
-}
-
 uint32_t Graph::getLastExecutionError() {
     return last_execution_error_.load();
 }
 
 void Graph::setLastExecutionError(uint32_t code) {
     last_execution_error_.store(code);
-}
-
-IdentifierHash Graph::setPendingState(IdentifierHash new_state) {
-    IdentifierHash result_state = pending_state_;
-
-    pending_state_ = new_state;
-
-    if (new_state != result_state) {
-        LM_LOG_DEBUG() << "Pending state for process group" << requested_state_.pg_name_ << "changed from"
-                       << result_state << "to" << pending_state_;
-    }
-
-    return result_state;
-}
-
-IdentifierHash Graph::getPendingState() {
-    return pending_state_;
 }
 
 ControlClientCode Graph::getPendingEvent() {
@@ -461,11 +420,7 @@ void Graph::clearPendingEvent(ControlClientCode expected) {
 
 void Graph::setPendingEvent(ControlClientCode event) {
     event_.store(event);
-    ControlClientChannel::nudgeControlClientHandler();
-}
-
-ControlClientMessage& Graph::getCancelMessage() {
-    return cancel_message_;
+    pgm_->nudgeMainLoop();
 }
 
 const char* Graph::toString(GraphState state) {

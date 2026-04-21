@@ -1,5 +1,5 @@
 # *******************************************************************************
-# Copyright (c) 2025 Contributors to the Eclipse Foundation
+# Copyright (c) 2026 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -12,12 +12,24 @@
 # *******************************************************************************
 
 cc_library(
+    name = "control_service_types",
+    hdrs = ["src/score/lcm/control_service.h"],
+    includes = ["src"],
+    visibility = [
+        "//src/launch_manager_daemon:__pkg__",
+        "//tests:__subpackages__",
+    ],
+    deps = [
+        "@score_communication//score/mw/com",
+    ],
+)
+
+cc_library(
     name = "control_client_lib",
     srcs = [
         "src/control_client.cpp",
         "src/control_client_impl.cpp",
         "src/control_client_impl.hpp",
-        "src/execution_error_event.h",
     ],
     hdrs = [
         "include/score/lcm/control_client.h",
@@ -25,13 +37,12 @@ cc_library(
     includes = ["include"],
     visibility = ["//visibility:public"],
     deps = [
-        "//src/launch_manager_daemon/common",
-        "//src/launch_manager_daemon/common:control_client_channel",
+        ":control_service_types",
         "//src/launch_manager_daemon/common:identifier_hash",
         "//src/launch_manager_daemon/common:lifecycle_error",
         "//src/launch_manager_daemon/common:log",
-        "//src/launch_manager_daemon/common:osal",
         "@score_baselibs//score/concurrency/future",
         "@score_baselibs//score/mw/log",
+        "@score_communication//score/mw/com",
     ],
 )

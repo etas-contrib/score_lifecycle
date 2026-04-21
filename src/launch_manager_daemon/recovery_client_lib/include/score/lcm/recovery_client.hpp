@@ -34,6 +34,8 @@ public:
     RecoveryClient(RecoveryClient&&) = delete;
     RecoveryClient& operator=(RecoveryClient&&) = delete;
 
+    void setNotifyCallback(std::function<void()> callback) noexcept override;
+
     bool sendRecoveryRequest(const score::lcm::IdentifierHash& process_group_identifier) noexcept override;
     std::optional<RecoveryRequest> getNextRequest() noexcept override;
     bool hasOverflow() const noexcept override;
@@ -42,6 +44,7 @@ private:
     static const std::size_t element_size_ = sizeof(RecoveryRequest);
     ipc_dropin::RingBuffer<RecoveryClient::kBufferCapacity, RecoveryClient::element_size_> ringBuffer_;  ///< Ring buffer to store recovery requests
     std::atomic_bool overflow_flag_{false};
+    std::function<void()> notify_callback_;
 };
 } // namespace lcm
 } // namespace score

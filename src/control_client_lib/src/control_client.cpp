@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (c) 2025 Contributors to the Eclipse Foundation
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,10 @@
 #include <score/lcm/control_client.h>
 
 #include <score/lcm/identifier_hash.hpp>
+#include "score/mw/com/types.h"
 #include "control_client_impl.hpp"
+
+#include <cstdlib>
 
 namespace score {
 
@@ -31,9 +34,16 @@ inline score::concurrency::InterruptibleFuture<void> GetErrorFuture(score::lcm::
 }
 
 ControlClient::ControlClient() noexcept {
-    static std::function<void(const score::lcm::ExecutionErrorEvent&)> undefinedStateCallback = [](const score::lcm::ExecutionErrorEvent& event) {};
     try {
-        control_client_impl_ = std::make_unique<ControlClientImpl>(undefinedStateCallback);
+        const char* specifier_env = std::getenv("SCORE_LCM_INSTANCE_SPECIFIER");
+        std::string specifier_str = specifier_env ? specifier_env : "StateManager/LaunchManager/Instance";
+        auto specifier_result = score::mw::com::InstanceSpecifier::Create(std::move(specifier_str));
+        if (!specifier_result.has_value())
+        {
+            control_client_impl_ = nullptr;
+            return;
+        }
+        control_client_impl_ = std::make_unique<ControlClientImpl>(std::move(specifier_result.value()));
     } catch (...) {
         control_client_impl_ = nullptr;
     }

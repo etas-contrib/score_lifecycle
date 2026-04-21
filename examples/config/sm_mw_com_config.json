@@ -1,0 +1,66 @@
+{
+  "serviceTypes": [
+    {
+      "serviceTypeName": "/score/lcm/ControlService",
+      "version": {
+        "major": 1,
+        "minor": 0
+      },
+      "bindings": [
+        {
+          "binding": "SHM",
+          "serviceId": 7001,
+          "events": [
+            {
+              "eventName": "ActivationResult",
+              "eventId": 1
+            }
+          ],
+          "methods": [
+            {
+              "methodName": "ActivateRunTarget",
+              "methodId": 2
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "serviceInstances": [
+    {
+      "instanceSpecifier": "StateManager/LaunchManager/Instance",
+      "serviceTypeName": "/score/lcm/ControlService",
+      "version": {
+        "major": 1,
+        "minor": 0
+      },
+      "instances": [
+        {
+          "instanceId": 1,
+          "asil-level": "QM",
+          "binding": "SHM",
+          "events": [
+            {
+              "eventName": "ActivationResult"
+            }
+          ],
+            "methods": [
+            {
+              "methodName": "ActivateRunTarget",
+              "queueSize": 1
+            }
+          ],
+          "allowedConsumer": {
+            "QM": [0]
+          },
+          "allowedProvider": {
+            "QM": [0]
+          }
+        }
+      ]
+    }
+  ],
+  "global": {
+    "asil-level": "QM"
+  }
+}

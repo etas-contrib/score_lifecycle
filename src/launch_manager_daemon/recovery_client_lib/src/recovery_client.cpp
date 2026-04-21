@@ -20,11 +20,18 @@ RecoveryClient::RecoveryClient() noexcept : ringBuffer_{} {
     ringBuffer_.initialize();
 }
 
+void RecoveryClient::setNotifyCallback(std::function<void()> callback) noexcept {
+    notify_callback_ = std::move(callback);
+}
+
 bool RecoveryClient::sendRecoveryRequest(const score::lcm::IdentifierHash& process_group_identifier) noexcept {
     RecoveryRequest req{process_group_identifier};
     if (!ringBuffer_.tryEnqueue(req)) {
         overflow_flag_ = true;
         return false;
+    }
+    if (notify_callback_) {
+        notify_callback_();
     }
     return true;
 }

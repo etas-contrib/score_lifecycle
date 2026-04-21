@@ -217,10 +217,6 @@ void ProcessInfoNode::terminated(int32_t process_status) {
         }
     }
     static_cast<void>(setState(score::lcm::ProcessState::kTerminated));  // Cannot fail by design
-    if (control_client_channel_) {
-        control_client_channel_->releaseParentMapping();
-        control_client_channel_.reset();
-    }
     // Handle the situation where the graph is stalled waiting for a process to terminate
     if (config_->pgm_config_.is_self_terminating_ && dependent_on_terminating_.size()) {
         queueTerminationSuccessorJobs();
@@ -259,9 +255,6 @@ void ProcessInfoNode::startProcess() {
                 LM_LOG_DEBUG() << "startProcess pid" << pid_
                                << "received for process:" << config_->startup_config_.short_name_;
 
-                if (osal::CommsType::kControlClient == config_->startup_config_.comms_type_) {
-                    setupControlClientChannel();
-                }
                 handleProcessStarted(execution_error_code);
             } else {
                 setState(score::lcm::ProcessState::kTerminated);
@@ -272,20 +265,6 @@ void ProcessInfoNode::startProcess() {
     } while ((status_ != 0) && (restart_counter_-- != 0U));
     LM_LOG_DEBUG() << "startProcess for" << graph_->getProcessGroupName() << "process" << process_index_ << "("
                    << config_->startup_config_.short_name_ << ") done";
-}
-
-inline void ProcessInfoNode::setupControlClientChannel() {
-    // Make sure we store the control_client_channel before waiting for kRunning
-    std::atomic_store(&control_client_channel_,ControlClientChannel::getControlClientChannel(sync_));
-
-    if (control_client_channel_) {  // Put it at the front of the list if it's not there already
-        auto node0 = graph_->getNodes()[0U];
-
-        if (this != node0.get()) {
-            std::atomic_store(&next_state_manager_, node0->next_state_manager_);
-            std::atomic_store(&node0->next_state_manager_, graph_->getNodes()[process_index_]);
-        }
-    }
 }
 
 void ProcessInfoNode::handleProcessStillStarting(uint32_t execution_error_code) {
@@ -454,15 +433,6 @@ void ProcessInfoNode::doWork() {
     graph_->nodeExecuted();
 }
 
-std::shared_ptr<ProcessInfoNode> ProcessInfoNode::getNextStateManager() {
-    // Remove dead state managers from the list on the fly
-    while (std::atomic_load(&next_state_manager_) && !std::atomic_load(&next_state_manager_)->control_client_channel_) {
-        std::atomic_store(&next_state_manager_, next_state_manager_->next_state_manager_);
-    }
-
-    return std::atomic_load(&next_state_manager_);
-}
-
 osal::ProcessID ProcessInfoNode::getPid() const {
     return pid_;
 }
@@ -481,10 +451,6 @@ bool ProcessInfoNode::isHeadNode() const {
 
 uint32_t ProcessInfoNode::getNodeIndex() const {
     return process_index_;
-}
-
-ControlClientChannelP ProcessInfoNode::getControlClientChannel() {
-    return std::atomic_load(&control_client_channel_);
 }
 
 }  // namespace lcm

@@ -39,6 +39,7 @@ cc_binary(
         "//src/launch_manager_daemon/lifecycle_client_lib:lifecycle_client",
         "//tests/utils/test_helper",
         "@googletest//:gtest_main",
+        "@score_communication//score/mw/com",
     ],
 )
 
@@ -70,11 +71,21 @@ pkg_files(
     prefix = "tests/smoke",
 )
 
+pkg_files(
+    name = "smoke_mw_com_configs",
+    srcs = [
+        "lm_mw_com_config.json",
+        "sm_mw_com_config.json",
+    ],
+    prefix = "tests/smoke/etc",
+)
+
 pkg_tar(
     name = "smoke_binaries",
     srcs = [
         ":smoke_etc_files",
         ":smoke_main_files",
+        ":smoke_mw_com_configs",
     ],
 )
 

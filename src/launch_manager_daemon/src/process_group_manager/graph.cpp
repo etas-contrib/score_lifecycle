@@ -187,6 +187,7 @@ inline void Graph::tryQueueNode(const std::shared_ptr<ProcessInfoNode>& node) {
     while (GraphState::kInTransition == getState()) {
         if (pgm_->getWorkerJobs()->push(node, kMaxQueueDelay)) {
             markNodeInFlight();
+            break;
         }
         else{
             LM_LOG_WARN() << "Failed to queue node for execution";

@@ -21,11 +21,11 @@ namespace lcm {
 namespace internal {
 
 template <class T>
-WorkerThread<T>::WorkerThread(std::shared_ptr<JobQueue<T>> queue, uint32_t num_threads)
-    : the_job_queue_(queue), num_threads_(num_threads) {
-    worker_threads_.reserve(num_threads_);
+WorkerThread<T>::WorkerThread(std::shared_ptr<Queue> queue, uint32_t num_threads)
+    : the_job_queue_(queue) {
+    worker_threads_.reserve(num_threads);
 
-    for (uint32_t i = 0U; i < num_threads_; ++i) {
+    for (uint32_t i = 0U; i < num_threads; ++i) {
         static_cast<void>(i);
         worker_threads_.emplace_back(std::make_unique<std::thread>(&WorkerThread::run, this));
     }
@@ -33,7 +33,7 @@ WorkerThread<T>::WorkerThread(std::shared_ptr<JobQueue<T>> queue, uint32_t num_t
 
 template <class T>
 WorkerThread<T>::~WorkerThread() {
-    the_job_queue_->stopQueue(num_threads_);
+    stop();
 
     for (auto& thread : worker_threads_) {
         if (thread->joinable()) {
@@ -43,12 +43,16 @@ WorkerThread<T>::~WorkerThread() {
 }
 
 template <class T>
-void WorkerThread<T>::run() {
-    while (the_job_queue_->isRunning()) {
-        auto job = the_job_queue_->getJobFromQueue();
+void WorkerThread<T>::stop() {
+    the_job_queue_->stop();
+}
 
-        if (job) {
-            job->doWork();
+template <class T>
+void WorkerThread<T>::run() {
+    while (auto job = the_job_queue_->pop()) {
+        if(*job)
+        {
+            (*job)->doWork();
         }
     }
 }

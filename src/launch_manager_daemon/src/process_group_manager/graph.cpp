@@ -185,12 +185,11 @@ inline void Graph::queueHeadNodesForExecution() {
 
 inline void Graph::tryQueueNode(const std::shared_ptr<ProcessInfoNode>& node) {
     while (GraphState::kInTransition == getState()) {
-        if (pgm_->getWorkerJobs()->addJobToQueue(node)) {
+        if (pgm_->getWorkerJobs()->push(node, kMaxQueueDelay)) {
             markNodeInFlight();
-            break;
-        } else {
-            LM_LOG_WARN() << "Failed to add job to queue. Queue may be full or wait time too short.";
-            // Retry mechanism: continues looping until the job is queued successfully
+        }
+        else{
+            LM_LOG_WARN() << "Failed to queue node for execution";
         }
     }
 }

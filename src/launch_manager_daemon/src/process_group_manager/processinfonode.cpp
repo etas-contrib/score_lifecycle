@@ -152,9 +152,8 @@ void ProcessInfoNode::queueTerminationSuccessorJobs() {
         if (successor_node->is_included_ && successor_node->dependencies_ > 0U &&
             --successor_node->dependencies_ == 0U) {
             while (graph_->getState() == GraphState::kInTransition) {
-                if (graph_->getProcessGroupManager()->getWorkerJobs()->addJobToQueue(successor_node)) {
+                if(graph_->getProcessGroupManager()->getWorkerJobs()->push(successor_node, kMaxQueueDelay)){
                     graph_->markNodeInFlight();
-                    break;
                 }
             }
         }
@@ -379,10 +378,9 @@ void ProcessInfoNode::processSuccessorNodes() {
 
 void ProcessInfoNode::checkForEmptyDependencies(std::shared_ptr<ProcessInfoNode>& successor_node) {
     if (0U == --successor_node->dependencies_) {
-        while (graph_->getState() == GraphState::kInTransition) {
-            if (graph_->getProcessGroupManager()->getWorkerJobs()->addJobToQueue(successor_node)) {
+        if (graph_->getState() == GraphState::kInTransition) {
+            if(graph_->getProcessGroupManager()->getWorkerJobs()->push(successor_node)){
                 graph_->markNodeInFlight();
-                break;
             }
         }
     }

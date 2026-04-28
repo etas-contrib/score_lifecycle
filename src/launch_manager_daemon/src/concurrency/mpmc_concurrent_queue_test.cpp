@@ -1,0 +1,260 @@
+/********************************************************************************
+ * Copyright (c) 2025 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ********************************************************************************/
+
+#include <concurrency/mpmc_concurrent_queue.hpp>
+
+#include <gtest/gtest.h>
+#include <atomic>
+#include <chrono>
+#include <memory>
+#include <optional>
+#include <thread>
+#include <tuple>
+#include <vector>
+
+using namespace score::lcm::internal;
+
+class MPMCConcurrentQueueTest_Basic : public ::testing::Test
+{
+  protected:
+    MPMCConcurrentQueue<int, 8> queue_;
+};
+
+TEST_F(MPMCConcurrentQueueTest_Basic, PushAndPopSingleItem)
+{
+    RecordProperty("Description", "Verify that a single pushed item is returned by pop with its value intact.");
+    ASSERT_TRUE(queue_.push(42));
+    auto result = queue_.pop();
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, 42);
+}
+
+TEST_F(MPMCConcurrentQueueTest_Basic, PushAndPopPreservesOrder)
+{
+    RecordProperty("Description", "Verify that items are dequeued in FIFO order.");
+    for (int i = 0; i < 5; ++i)
+    {
+        ASSERT_TRUE(queue_.push(i));
+    }
+    for (int i = 0; i < 5; ++i)
+    {
+        auto result = queue_.pop();
+        ASSERT_TRUE(result.has_value());
+        EXPECT_EQ(*result, i);
+    }
+}
+
+TEST_F(MPMCConcurrentQueueTest_Basic, LvaluePushCopiesItem)
+{
+    RecordProperty("Description", "Verify that pushing an lvalue copies the item, leaving the source unchanged.");
+    int value = 42;
+    ASSERT_TRUE(queue_.push(value));
+    EXPECT_EQ(value, 42);
+    auto result = queue_.pop();
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, 42);
+}
+
+TEST_F(MPMCConcurrentQueueTest_Basic, RvaluePushWorksWithMoveOnlyType)
+{
+    RecordProperty("Description",
+                   "Verify that rvalue push works with a move-only type and moves the item into the queue.");
+    MPMCConcurrentQueue<std::unique_ptr<int>, 4> queue;
+    auto item = std::make_unique<int>(99);
+    ASSERT_TRUE(queue.push(std::move(item)));
+    EXPECT_EQ(item, nullptr);
+    auto result = queue.pop();
+    ASSERT_TRUE(result.has_value());
+    ASSERT_NE(*result, nullptr);
+    EXPECT_EQ(**result, 99);
+}
+
+class MPMCConcurrentQueueTest_Stop : public ::testing::Test
+{
+  protected:
+    MPMCConcurrentQueue<int, 8> queue_;
+};
+
+TEST_F(MPMCConcurrentQueueTest_Stop, PushReturnsFalseAfterStop)
+{
+    RecordProperty("Description", "Verify that push returns false once stop() has been called.");
+    queue_.stop();
+    EXPECT_FALSE(queue_.push(1));
+}
+
+TEST_F(MPMCConcurrentQueueTest_Stop, PopReturnsNulloptWhenStoppedAndEmpty)
+{
+    RecordProperty("Description", "Verify that pop returns nullopt immediately when the queue is stopped and empty.");
+    queue_.stop();
+    EXPECT_FALSE(queue_.pop().has_value());
+}
+
+TEST_F(MPMCConcurrentQueueTest_Stop, ItemsAreDroppedAfterStop)
+{
+    RecordProperty("Description", "Verify that pop() returns nullopt after stop(), dropping any remaining items.");
+    ASSERT_TRUE(queue_.push(1));
+    ASSERT_TRUE(queue_.push(2));
+    ASSERT_TRUE(queue_.push(3));
+    queue_.stop();
+
+    EXPECT_FALSE(queue_.pop().has_value());
+}
+
+class MPMCConcurrentQueueTest_Blocking : public ::testing::Test
+{
+  protected:
+    MPMCConcurrentQueue<int, 4> queue4_;
+    MPMCConcurrentQueue<int, 8> queue8_;
+};
+
+TEST_F(MPMCConcurrentQueueTest_Blocking, PopBlocksUntilItemAvailable)
+{
+    RecordProperty("Description", "Verify that pop blocks on an empty queue until a producer pushes an item.");
+    std::optional<int> result;
+
+    std::thread consumer([&] {
+        result = queue8_.pop();
+    });
+
+    EXPECT_FALSE(result.has_value());
+
+    std::ignore = queue8_.push(7);
+    consumer.join();
+
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, 7);
+}
+
+TEST_F(MPMCConcurrentQueueTest_Blocking, PushBlocksWhenFull)
+{
+    RecordProperty("Description", "Verify that push blocks when the queue is full until a consumer pops an item.");
+    for (int i = 0; i < 4; ++i)
+    {
+        ASSERT_TRUE(queue4_.push(i));
+    }
+
+    std::atomic<bool> pushed{false};
+    std::thread producer([&] {
+        pushed.store(queue4_.push(99), std::memory_order_release);
+    });
+
+    EXPECT_FALSE(pushed.load(std::memory_order_acquire));
+
+    std::ignore = queue4_.pop();
+    producer.join();
+
+    EXPECT_TRUE(pushed.load(std::memory_order_acquire));
+}
+
+TEST_F(MPMCConcurrentQueueTest_Blocking, StopUnblocksBlockedConsumer)
+{
+    RecordProperty("Description", "Verify that stop() unblocks a consumer thread waiting on an empty queue.");
+    std::optional<int> result;
+
+    std::thread consumer([&] {
+        result = queue8_.pop();
+    });
+
+    queue8_.stop();
+    consumer.join();
+
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST_F(MPMCConcurrentQueueTest_Blocking, StopUnblocksBlockedProducer)
+{
+    RecordProperty("Description", "Verify that stop() unblocks a producer thread waiting on a full queue.");
+    for (int i = 0; i < 4; ++i)
+    {
+        ASSERT_TRUE(queue4_.push(i));
+    }
+
+    bool pushed = true;
+    std::thread producer([&] {
+        pushed = queue4_.push(99);
+    });
+
+    queue4_.stop();
+    producer.join();
+
+    EXPECT_FALSE(pushed);
+}
+
+class MPMCConcurrentQueueTest_MPMC : public ::testing::Test
+{
+  protected:
+    static constexpr std::size_t kCapacity = 64U;
+    static constexpr int kItemsPerProducer = 50;
+    static constexpr std::size_t kNumProducers = 4U;
+    static constexpr std::size_t kNumConsumers = 4U;
+    static constexpr int kTotalItems = static_cast<int>(kItemsPerProducer * kNumProducers);
+
+    MPMCConcurrentQueue<int, kCapacity> queue_;
+};
+
+TEST_F(MPMCConcurrentQueueTest_MPMC, AllItemsDelivered)
+{
+    RecordProperty("Description",
+                   "Verify that all items pushed by multiple concurrent producers are received "
+                   "by multiple concurrent consumers without loss or duplication.");
+    std::atomic<int> received_count{0};
+
+    auto producer_fn = [this](int value) {
+        for (int i = 0; i < kItemsPerProducer; ++i)
+        {
+            EXPECT_TRUE(queue_.push(value));
+        }
+    };
+
+    auto consumer_fn = [this, &received_count] {
+        while (true)
+        {
+            auto item = queue_.pop();
+            if (!item.has_value())
+            {
+                break;
+            }
+            received_count.fetch_add(1, std::memory_order_relaxed);
+        }
+    };
+
+    std::vector<std::thread> producers;
+    for (std::size_t i = 0U; i < kNumProducers; ++i)
+    {
+        producers.emplace_back(producer_fn, static_cast<int>(i));
+    }
+
+    std::vector<std::thread> consumers;
+    for (std::size_t i = 0U; i < kNumConsumers; ++i)
+    {
+        consumers.emplace_back(consumer_fn);
+    }
+
+    for (auto& t : producers)
+    {
+        t.join();
+    }
+
+    while (received_count.load(std::memory_order_acquire) < kTotalItems)
+    {
+        std::this_thread::yield();
+    }
+    queue_.stop();
+
+    for (auto& t : consumers)
+    {
+        t.join();
+    }
+
+    EXPECT_EQ(received_count.load(), kTotalItems);
+}

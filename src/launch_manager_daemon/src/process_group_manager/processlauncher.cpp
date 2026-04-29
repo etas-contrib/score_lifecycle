@@ -50,51 +50,9 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
     // kReporting  fd3 & !fd4
     // kControlClient  fd3 & fd4
     // kLaunchManager  does not matter
-    if (param.shared_block)
+    if (!param.shared_block)
     {
-        param.fd = dup2(param.fd, param.shared_block->sync_fd);  // always make sure we are using fd=3
-        param.shared_block->pid_ = getpid();                     // Store pid for check at client end
-
-        // It must be ensured that sync_fd (f3) and control_client_handler_nudge_fd (fd4) remain open depending on
-        // the communication type. Flag FD_CLOEXEC is cleared conditionally to ensure that the
-        // respective file descriptor remains open after the execve call.
-        switch (param.shared_block->comms_type_)
-        {
-            case CommsType::kNoComms:
-                // in the current implementation this case means param.shared_block == nullptr and is handled in below
-                // else
-                break;
-            case CommsType::kReporting:
-                if (-1 == fcntl(IpcCommsSync::sync_fd, F_SETFD, 0))
-                {
-                    LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__ << "failed:" << std::strerror(errno);
-                    sysexit(EXIT_FAILURE);
-                }
-                close(IpcCommsSync::control_client_handler_nudge_fd);
-                break;
-            case CommsType::kControlClient:
-                if (-1 == fcntl(IpcCommsSync::sync_fd, F_SETFD, 0))
-                {
-                    LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__ << "failed:" << std::strerror(errno);
-                    sysexit(EXIT_FAILURE);
-                }
-                if (-1 == fcntl(IpcCommsSync::control_client_handler_nudge_fd, F_SETFD, 0))
-                {
-                    LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__ << "failed:" << std::strerror(errno);
-                }
-                break;
-            case CommsType::kLaunchManager:
-                // nothing to do here
-                break;
-            default:
-                LM_LOG_ERROR() << "[New process] at line" << __LINE__ << "unknown CommsType"
-                               << static_cast<std::int32_t>(param.shared_block->comms_type_);
-                sysexit(EXIT_FAILURE);
-                break;
-        }
-    }
-    else
-    {  // No communications channel was requested, but still make sure fd=3 is in use
+        // No communications channel was requested, but still make sure fd=3 is in use
         close(IpcCommsSync::sync_fd);
         close(IpcCommsSync::control_client_handler_nudge_fd);
         const char* shmem_name = "/ipc_secondary_shared_mem";
@@ -111,6 +69,48 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
             LM_LOG_ERROR() << "[New process] shm_unlink() failed:" << std::strerror(errno);
             sysexit(EXIT_FAILURE);
         }
+        return;
+    }
+
+    param.fd = dup2(param.fd, param.shared_block->sync_fd);  // always make sure we are using fd=3
+    param.shared_block->pid_ = getpid();                     // Store pid for check at client end
+
+    // It must be ensured that sync_fd (f3) and control_client_handler_nudge_fd (fd4) remain open depending on
+    // the communication type. Flag FD_CLOEXEC is cleared conditionally to ensure that the
+    // respective file descriptor remains open after the execve call.
+    switch (param.shared_block->comms_type_)
+    {
+        case CommsType::kNoComms:
+            // in the current implementation this case means param.shared_block == nullptr and is handled in below
+            // else
+            break;
+        case CommsType::kReporting:
+            if (-1 == fcntl(IpcCommsSync::sync_fd, F_SETFD, 0))
+            {
+                LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__ << "failed:" << std::strerror(errno);
+                sysexit(EXIT_FAILURE);
+            }
+            close(IpcCommsSync::control_client_handler_nudge_fd);
+            break;
+        case CommsType::kControlClient:
+            if (-1 == fcntl(IpcCommsSync::sync_fd, F_SETFD, 0))
+            {
+                LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__ << "failed:" << std::strerror(errno);
+                sysexit(EXIT_FAILURE);
+            }
+            if (-1 == fcntl(IpcCommsSync::control_client_handler_nudge_fd, F_SETFD, 0))
+            {
+                LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__ << "failed:" << std::strerror(errno);
+            }
+            break;
+        case CommsType::kLaunchManager:
+            // nothing to do here
+            break;
+        default:
+            LM_LOG_ERROR() << "[New process] at line" << __LINE__ << "unknown CommsType"
+                            << static_cast<std::int32_t>(param.shared_block->comms_type_);
+            sysexit(EXIT_FAILURE);
+            break;
     }
 }
 

@@ -14,12 +14,12 @@
 #include <concurrency/mpmc_concurrent_queue.hpp>
 
 #include <gtest/gtest.h>
+#include <pthread.h>
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <memory>
 #include <optional>
-#include <pthread.h>
 #include <thread>
 #include <tuple>
 #include <vector>
@@ -95,7 +95,7 @@ TEST_F(MPMCConcurrentQueueTest_Basic, PopReturnsNulloptOnSemaphoreWaitFailure)
     sa.sa_flags = 0;
     sigaction(SIGUSR1, &sa, nullptr);
 
-    std::optional<int> result;
+    score::Result<int> result;
     std::atomic<bool> tid_ready{false};
 
     std::thread consumer([&] {
@@ -138,7 +138,9 @@ TEST_F(MPMCConcurrentQueueTest_Timeout, PushWithTimeoutSucceedsWhenSlotAvailable
 
 TEST_F(MPMCConcurrentQueueTest_Timeout, PushWithTimeoutReturnsFalseWhenFull)
 {
-    RecordProperty("Description", "Verify that push with a non-zero timeout returns false when the queue is full and the timeout expires.");
+    RecordProperty(
+        "Description",
+        "Verify that push with a non-zero timeout returns false when the queue is full and the timeout expires.");
     for (int i = 0; i < 4; ++i)
     {
         ASSERT_TRUE(queue4_.push(i));
@@ -155,14 +157,16 @@ class MPMCConcurrentQueueTest_Stop : public ::testing::Test
 TEST_F(MPMCConcurrentQueueTest_Stop, PushReturnsFalseAfterStop)
 {
     RecordProperty("Description", "Verify that push returns false once stop() has been called.");
-    queue_.stop();
+    auto res = queue_.stop();
+    ASSERT_TRUE(res.has_value());
     EXPECT_FALSE(queue_.push(1));
 }
 
 TEST_F(MPMCConcurrentQueueTest_Stop, PopReturnsNulloptWhenStoppedAndEmpty)
 {
     RecordProperty("Description", "Verify that pop returns nullopt immediately when the queue is stopped and empty.");
-    queue_.stop();
+    auto res = queue_.stop();
+    ASSERT_TRUE(res.has_value());
     EXPECT_FALSE(queue_.pop().has_value());
 }
 
@@ -172,7 +176,8 @@ TEST_F(MPMCConcurrentQueueTest_Stop, ItemsAreDroppedAfterStop)
     ASSERT_TRUE(queue_.push(1));
     ASSERT_TRUE(queue_.push(2));
     ASSERT_TRUE(queue_.push(3));
-    queue_.stop();
+    auto res = queue_.stop();
+    ASSERT_TRUE(res.has_value());
 
     EXPECT_FALSE(queue_.pop().has_value());
 }
@@ -187,7 +192,7 @@ class MPMCConcurrentQueueTest_Blocking : public ::testing::Test
 TEST_F(MPMCConcurrentQueueTest_Blocking, PopBlocksUntilItemAvailable)
 {
     RecordProperty("Description", "Verify that pop blocks on an empty queue until a producer pushes an item.");
-    std::optional<int> result;
+    score::Result<int> result = score::MakeUnexpected(ConcurrencyErrc::kOsError);
 
     std::thread consumer([&] {
         result = queue8_.pop();
@@ -210,7 +215,8 @@ TEST_F(MPMCConcurrentQueueTest_Blocking, PushBlocksWhenFull)
         ASSERT_TRUE(queue4_.push(i));
     }
 
-    std::atomic<bool> pushed{false};
+    std::atomic<score::Result<void>> pushed{};
+    pushed.store(score::MakeUnexpected(ConcurrencyErrc::kOsError));
     std::thread producer([&] {
         pushed.store(queue4_.push(99), std::memory_order_release);
     });
@@ -226,13 +232,14 @@ TEST_F(MPMCConcurrentQueueTest_Blocking, PushBlocksWhenFull)
 TEST_F(MPMCConcurrentQueueTest_Blocking, StopUnblocksBlockedConsumer)
 {
     RecordProperty("Description", "Verify that stop() unblocks a consumer thread waiting on an empty queue.");
-    std::optional<int> result;
+    score::Result<int> result;
 
     std::thread consumer([&] {
         result = queue8_.pop();
     });
 
-    queue8_.stop();
+    auto res = queue8_.stop();
+    ASSERT_TRUE(res.has_value());
     consumer.join();
 
     EXPECT_FALSE(result.has_value());
@@ -246,12 +253,13 @@ TEST_F(MPMCConcurrentQueueTest_Blocking, StopUnblocksBlockedProducer)
         ASSERT_TRUE(queue4_.push(i));
     }
 
-    bool pushed = true;
+    score::Result<void> pushed{};
     std::thread producer([&] {
         pushed = queue4_.push(99);
     });
 
-    queue4_.stop();
+    auto res = queue4_.stop();
+    ASSERT_TRUE(res.has_value());
     producer.join();
 
     EXPECT_FALSE(pushed);
@@ -316,7 +324,8 @@ TEST_F(MPMCConcurrentQueueTest_MPMC, AllItemsDelivered)
     {
         std::this_thread::yield();
     }
-    queue_.stop();
+    auto res = queue_.stop();
+    ASSERT_TRUE(res.has_value());
 
     for (auto& t : consumers)
     {

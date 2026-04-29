@@ -22,12 +22,19 @@ cc_library(
 
 cc_library(
     name = "mpmc_concurrent_queue",
-    hdrs = ["mpmc_concurrent_queue.hpp"],
+    hdrs = ["mpmc_concurrent_queue.hpp",
+            "concurrency_error_domain.hpp"
+    ],
+
+    linkopts = [
+            "-latomic",
+    ],
     strip_include_prefix = "//src/launch_manager_daemon/src",
     visibility = ["//src:__subpackages__"],
     deps = [
         ":helgrind_annotations",
         "//src/launch_manager_daemon/common:osal",
+        "@score_baselibs//score/result",
     ],
 )
 
@@ -42,11 +49,14 @@ cc_test(
 )
 
 # Run with:
-# bazel test --run_under="valgrind --tool=helgrind" //src/launch_manager_daemon/src/concurrency:mpmc_concurrent_queue_helgrind_test --config=host --test_output=all
-# Note: This is using your host pacakges so need to install valgrind
+# bazel test --run_under="valgrind --tool=helgrind --suppressions=src/launch_manager_daemon/src/concurrency/helgrind.supp --error-exitcode=1" //src/launch_manager_daemon/src/concurrency:mpmc_concurrent_queue_helgrind_test --config=host --test_output=all
+# Note: This is using your host packages so you need to install valgrind.
+# Two tests intentionally exercise semaphore failure paths (EINTR / EAGAIN).
+# Those expected PthAPIerror reports are silenced via helgrind.supp.
 cc_test(
     name = "mpmc_concurrent_queue_helgrind_test",
     srcs = ["mpmc_concurrent_queue_test.cpp"],
+    data = ["helgrind.supp"],
     tags = [
         "helgrind",
         "manual",
@@ -67,7 +77,10 @@ cc_test(
         "-g",
     ],
     linkopts = ["-fsanitize=thread"],
-    tags = ["tsan", "no-coverage"],
+    tags = [
+        "no-coverage",  # coverage + tsan might cause problems
+        "tsan",
+    ],
     visibility = ["//tests:__subpackages__"],
     deps = [
         ":mpmc_concurrent_queue",

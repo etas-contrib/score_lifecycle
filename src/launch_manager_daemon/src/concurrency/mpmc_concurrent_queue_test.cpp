@@ -16,8 +16,10 @@
 #include <gtest/gtest.h>
 #include <atomic>
 #include <chrono>
+#include <csignal>
 #include <memory>
 #include <optional>
+#include <pthread.h>
 #include <thread>
 #include <tuple>
 #include <vector>
@@ -77,6 +79,71 @@ TEST_F(MPMCConcurrentQueueTest_Basic, RvaluePushWorksWithMoveOnlyType)
     ASSERT_TRUE(result.has_value());
     ASSERT_NE(*result, nullptr);
     EXPECT_EQ(**result, 99);
+}
+
+TEST_F(MPMCConcurrentQueueTest_Basic, PopReturnsNulloptOnSemaphoreWaitFailure)
+{
+    RecordProperty("Description",
+                   "Verify that pop returns nullopt when the internal semaphore wait is "
+                   "interrupted by a signal (sem_wait returns EINTR, triggering the kFail path).");
+
+    // Install a no-op handler without SA_RESTART so sem_wait is NOT restarted
+    // after signal delivery and returns -1 with EINTR instead.
+    struct sigaction sa{};
+    sa.sa_handler = [](int) {};
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGUSR1, &sa, nullptr);
+
+    std::optional<int> result;
+    std::atomic<bool> tid_ready{false};
+
+    std::thread consumer([&] {
+        tid_ready.store(true, std::memory_order_release);
+        result = queue_.pop();
+    });
+
+    // Obtain the pthread_t from the owning thread to avoid a cross-thread
+    // write to consumer_tid that Helgrind would flag as a data race.
+    pthread_t consumer_tid = consumer.native_handle();
+
+    while (!tid_ready.load(std::memory_order_acquire))
+    {
+        std::this_thread::yield();
+    }
+    // Allow the consumer to reach sem_wait before delivering the signal.
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    pthread_kill(consumer_tid, SIGUSR1);
+    consumer.join();
+
+    EXPECT_FALSE(result.has_value());
+
+    signal(SIGUSR1, SIG_DFL);
+}
+
+class MPMCConcurrentQueueTest_Timeout : public ::testing::Test
+{
+  protected:
+    MPMCConcurrentQueue<int, 4> queue4_;
+};
+
+TEST_F(MPMCConcurrentQueueTest_Timeout, PushWithTimeoutSucceedsWhenSlotAvailable)
+{
+    RecordProperty("Description", "Verify that push with a non-zero timeout succeeds when a slot is free.");
+    EXPECT_TRUE(queue4_.push(1, std::chrono::milliseconds{100}));
+    auto result = queue4_.pop();
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, 1);
+}
+
+TEST_F(MPMCConcurrentQueueTest_Timeout, PushWithTimeoutReturnsFalseWhenFull)
+{
+    RecordProperty("Description", "Verify that push with a non-zero timeout returns false when the queue is full and the timeout expires.");
+    for (int i = 0; i < 4; ++i)
+    {
+        ASSERT_TRUE(queue4_.push(i));
+    }
+    EXPECT_FALSE(queue4_.push(99, std::chrono::milliseconds{20}));
 }
 
 class MPMCConcurrentQueueTest_Stop : public ::testing::Test

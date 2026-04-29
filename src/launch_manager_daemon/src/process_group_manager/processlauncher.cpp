@@ -52,23 +52,7 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
     // kLaunchManager  does not matter
     if (!param.shared_block)
     {
-        // No communications channel was requested, but still make sure fd=3 is in use
-        close(IpcCommsSync::sync_fd);
-        close(IpcCommsSync::control_client_handler_nudge_fd);
-        const char* shmem_name = "/ipc_secondary_shared_mem";
-        param.fd = shm_open(shmem_name, O_CREAT, 0U);
-
-        if (-1 == param.fd)
-        {
-            LM_LOG_ERROR() << "[New process] shm_open() failed:" << std::strerror(errno);
-            sysexit(EXIT_FAILURE);
-        }
-
-        if (-1 == shm_unlink(shmem_name))
-        {
-            LM_LOG_ERROR() << "[New process] shm_unlink() failed:" << std::strerror(errno);
-            sysexit(EXIT_FAILURE);
-        }
+        // kNoComms, fds are CLOEXEC
         return;
     }
 
@@ -81,8 +65,7 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
     switch (param.shared_block->comms_type_)
     {
         case CommsType::kNoComms:
-            // in the current implementation this case means param.shared_block == nullptr and is handled in below
-            // else
+            // in the current implementation this case means param.shared_block == nullptr and is handled above
             break;
         case CommsType::kReporting:
             if (-1 == fcntl(IpcCommsSync::sync_fd, F_SETFD, 0))

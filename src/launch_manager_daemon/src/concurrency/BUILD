@@ -22,8 +22,12 @@ cc_library(
 
 cc_library(
     name = "mpmc_concurrent_queue",
-    hdrs = ["mpmc_concurrent_queue.hpp",
-            "concurrency_error_domain.hpp"
+    hdrs = [
+        "concurrency_error_domain.hpp",
+        "mpmc_concurrent_queue.hpp",
+    ],
+    linkopts = [
+        "-l:libatomic.a",
     ],
     strip_include_prefix = "//src/launch_manager_daemon/src",
     visibility = ["//src:__subpackages__"],

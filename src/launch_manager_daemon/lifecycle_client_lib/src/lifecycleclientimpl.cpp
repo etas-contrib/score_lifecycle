@@ -12,6 +12,7 @@
  ********************************************************************************/
 
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <atomic>
 #include <variant>
@@ -67,13 +68,28 @@ namespace score
             // Define necessary constants
             const int sync_fd = IpcCommsSync::sync_fd;
 
-            // coverity[autosar_cpp14_a18_5_8_violation:FALSE] sync is a shared memory object and so has to be allocated.
-            IpcCommsP sync = IpcCommsSync::getCommsObject(sync_fd);
+            struct stat stats;  // Check accessible size to avoid a crash when we do other checks
+            const bool correct_fd = fstat(sync_fd, &stats) != -1 && stats.st_size >= static_cast<off_t>(sizeof(IpcCommsSync));
 
-            if (!sync)
-            {
+            if (!correct_fd) {
+                LM_LOG_ERROR() << "[Lifecycle client] FD " << sync_fd << " is invalid for kRunning report";
+                return comms_error;
+            }
+
+            // coverity[autosar_cpp14_a18_5_8_violation:FALSE] sync is a shared memory object and so has to be allocated.
+            const IpcCommsP sync = IpcCommsSync::getCommsObject(sync_fd);
+
+            if (!sync) {
                 LM_LOG_ERROR() << "[Lifecycle Client] Failed to access communication channel with Launch Manager.";
 
+                return comms_error;
+            }
+
+            const bool correct_type = sync->comms_type_ == CommsType::kReporting || sync->comms_type_ == CommsType::kControlClient;
+
+            // This is our best safeguard against incorrect data treated as an IPCCommsSync
+            if (!correct_type || sync->pid_ != getpid()) {
+                LM_LOG_ERROR() << "[Lifecycle client] Cannot report kRunning from a non-reporting process or a process not started by Launch Manager";
                 return comms_error;
             }
 

@@ -25,7 +25,9 @@ from attribute_plugin import add_test_properties
     test_type="interface-test",
     derivation_technique="explorative-testing",
 )
-def test_incorrect_config_no_comms(target, setup_test, test_output_dir, remote_test_dir):
+def test_incorrect_config_no_comms(
+    target, setup_test, test_output_dir, remote_test_dir
+):
     """Test behavior when a non-reporting process attempts to report running"""
     run_until_file_deployed(
         target=target,

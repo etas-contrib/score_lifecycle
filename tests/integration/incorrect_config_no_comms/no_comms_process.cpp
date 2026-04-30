@@ -26,7 +26,7 @@ TEST(NoComms, Process)
     auto fd = shm_open("some_shared_memory", O_CREAT | O_RDWR, 0);
     shm_unlink("some_shared_memory");
 
-    // report kRunning
+    // Invalid kRunning report
     auto result = score::lcm::LifecycleClient{}.ReportExecutionState(score::lcm::ExecutionState::kRunning);
     EXPECT_FALSE(result.has_value()) << "client.ReportExecutionState() failed";
 

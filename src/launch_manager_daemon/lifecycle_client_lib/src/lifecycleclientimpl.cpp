@@ -100,13 +100,6 @@ namespace score
                 return comms_error;
             }
 
-            if (sync->pid_ != getpid())
-            {
-                LM_LOG_ERROR() << "[Lifecycle Client] PID mismatch.";
-
-                return comms_error;
-            }
-
             if (sync->send_sync_.post() == OsalReturnType::kFail)
             {
                 LM_LOG_ERROR() << "[Lifecycle Client] Sending kRunning to Launch Manager failed.";

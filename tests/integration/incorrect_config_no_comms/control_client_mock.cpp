@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (c) 2025 Contributors to the Eclipse Foundation
+ * Copyright (c) 2026 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ score::lcm::ControlClient client;
 
 TEST(NoComms, Daemon) {
     TEST_STEP("Control daemon report kRunning") {
-        // report kRunning
         auto result = score::lcm::LifecycleClient{}.ReportExecutionState(score::lcm::ExecutionState::kRunning);
         ASSERT_TRUE(result.has_value()) << "client.ReportExecutionState() failed: " << result.error().Message();
     }

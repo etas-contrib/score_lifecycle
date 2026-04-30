@@ -39,6 +39,16 @@ cc_library(
 )
 
 cc_test(
+    name = "concurrency_error_domain_test",
+    srcs = ["concurrency_error_domain_test.cpp"],
+    visibility = ["//tests:__subpackages__"],
+    deps = [
+        ":mpmc_concurrent_queue",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "mpmc_concurrent_queue_test",
     srcs = ["mpmc_concurrent_queue_test.cpp"],
     visibility = ["//tests:__subpackages__"],

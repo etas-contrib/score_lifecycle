@@ -29,9 +29,10 @@ enum class ConcurrencyErrc : score::result::ErrorCode
     // @brief The container has overflowed.
     kOverflow = 2,
 
-    // @brief The container has overflowed.
+    // @brief The container has stopped.
     kStopped = 3,
 
+    // @brief A timeout was triggered.
     kTimeout = 4,
 };
 
@@ -42,13 +43,16 @@ class ConcurrencyErrorDomain final : public score::result::ErrorDomain
         switch (static_cast<ConcurrencyErrc>(code))
         {
             case ConcurrencyErrc::kOsError:
-                return "Failed to initialize semaphore";
+                return "An OS call returned an error";
 
             case ConcurrencyErrc::kOverflow:
                 return "The container has overflowed";
 
             case ConcurrencyErrc::kStopped:
                 return "The container has been stopped";
+
+            case ConcurrencyErrc::kTimeout:
+                return "A timer was triggered";
 
             default:
                 return "Unknown concurrency error";

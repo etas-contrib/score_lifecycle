@@ -58,7 +58,7 @@ void WorkerThread<T>::stop()
 template <class T>
 void WorkerThread<T>::run()
 {
-    while (auto job = the_job_queue_->pop(kMaxQueueDelay))
+    while (auto job = the_job_queue_->pop())
     {
         if (job)
         {
@@ -67,10 +67,6 @@ void WorkerThread<T>::run()
         else if (job.error() == ConcurrencyErrc::kStopped)
         {
             break;
-        }
-        else if(job.error() == ConcurrencyErrc::kTimeout)
-        {
-            continue;
         }
         else
         {

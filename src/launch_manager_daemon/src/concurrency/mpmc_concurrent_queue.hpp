@@ -53,6 +53,9 @@ class MPMCConcurrentQueue
     static_assert(std::is_nothrow_move_constructible_v<T>,
                   "T must be nothrow-move-constructible to wrap into std::optional in pop()");
 
+    static_assert(std::is_move_assignable_v<T> || std::is_copy_assignable_v<T>,
+                  "T must be move-assignable or copy-assignable to be stored via push()");
+
     // optimization to work out the turns
     static_assert((Capacity & (Capacity - 1U)) == 0U, "Capacity must be a power of 2");
 
@@ -119,8 +122,7 @@ class MPMCConcurrentQueue
     ///          The turn counter ensures a slot cannot be written until the
     ///          previous consumer has finished reading it.
     /// @param timeout Maximum time to wait for a free slot. Zero means wait forever.
-    /// @return true if the item was pushed, false if stop() was called or the
-    ///         timeout expired before a slot became available (item is not enqueued).
+    /// @return Success if item was pushed, Error otherwise.
     [[nodiscard]] score::Result<void> push(const T& item,
                                            std::chrono::milliseconds timeout = std::chrono::milliseconds{0})
     {
@@ -130,7 +132,7 @@ class MPMCConcurrentQueue
     /// @brief Signals all blocked pop() callers to return with a stopped error.
     [[nodiscard]] score::Result<void> stop() noexcept
     {
-        m_stopped.store(true, std::memory_order_relaxed);
+        m_stopped.store(true, std::memory_order_release);
 
         // signal to consumers and publishers to wakeup
         if (m_items.post() != osal::OsalReturnType::kSuccess)
@@ -166,7 +168,7 @@ class MPMCConcurrentQueue
             return score::MakeUnexpected(ConcurrencyErrc::kOsError);
         }
 
-        if (m_stopped.load(std::memory_order_relaxed))
+        if (m_stopped.load(std::memory_order_acquire))
         {
             static_cast<void>(m_items.post());
             return score::MakeUnexpected(ConcurrencyErrc::kStopped);
@@ -225,7 +227,7 @@ class MPMCConcurrentQueue
             return score::MakeUnexpected(ConcurrencyErrc::kOsError);
         }
 
-        if (m_stopped.load(std::memory_order_relaxed))
+        if (m_stopped.load(std::memory_order_acquire))
         {
             // chain-wake the next blocked producer then discard the item
             static_cast<void>(m_spaces.post());

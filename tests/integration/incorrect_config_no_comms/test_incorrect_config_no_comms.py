@@ -28,7 +28,11 @@ from attribute_plugin import add_test_properties
 def test_incorrect_config_no_comms(
     target, setup_test, test_output_dir, remote_test_dir
 ):
-    """Test behavior when a non-reporting process attempts to report running"""
+    """
+     Objective: Test robustness of LifecycleClient API
+     Input: Component wrongly configured as `native` application type, acquires a file descriptor ordinarily used by LM communication, and reports the Running state to LaunchManager.
+     Expected Outcome: Reporting Running state fails, LifecycleClient API returns an error.
+    """
     run_until_file_deployed(
         target=target,
         binary_path=str(remote_test_dir / "launch_manager"),

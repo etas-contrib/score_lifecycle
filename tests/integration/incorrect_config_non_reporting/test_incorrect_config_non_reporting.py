@@ -25,7 +25,7 @@ from attribute_plugin import add_test_properties
     test_type="interface-test",
     derivation_technique="explorative-testing",
 )
-def test_incorrect_config_no_comms(
+def test_incorrect_config_non_reporting(
     target, setup_test, test_output_dir, remote_test_dir
 ):
     """

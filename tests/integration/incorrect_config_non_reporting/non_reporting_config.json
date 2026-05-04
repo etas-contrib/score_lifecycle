@@ -2,7 +2,7 @@
     "schema_version": 1,
     "defaults": {
         "deployment_config": {
-            "bin_dir": "/tmp/tests/incorrect_config_no_comms",
+            "bin_dir": "/tmp/tests/incorrect_config_non_reporting",
             "ready_timeout": 1.0,
             "shutdown_timeout": 1.0,
             "ready_recovery_action": {
@@ -42,9 +42,9 @@
         }
     },
     "components": {
-        "no_comms_process": {
+        "non_reporting_process": {
             "component_properties": {
-                "binary_name": "no_comms_process",
+                "binary_name": "non_reporting_process",
                 "application_profile": {
                     "application_type": "Native",
                     "is_self_terminating": true
@@ -60,7 +60,7 @@
     "run_targets": {
         "Startup": {
             "depends_on": [
-                "no_comms_process"
+                "non_reporting_process"
             ],
             "recovery_action": {
                 "switch_run_target": {
@@ -73,7 +73,7 @@
             "recovery_action": {
                 "switch_run_target": {
                     "run_target": "fallback_run_target"
-                
+
                 }
             }
         }

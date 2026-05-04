@@ -25,7 +25,7 @@
 
 TestRunner runner = TestRunner(__FILE__, true);
 
-TEST(NoComms, Process)
+TEST(NonReporting, Process)
 {
     using ipc = score::lcm::internal::osal::IpcCommsSync;
 

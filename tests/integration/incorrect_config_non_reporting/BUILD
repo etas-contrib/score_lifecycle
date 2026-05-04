@@ -20,14 +20,14 @@ load("//config:flatbuffers_rules.bzl", "flatbuffer_json_to_bin")
 load("//tests/utils/bazel:integration.bzl", "integration_test")
 
 launch_manager_config(
-    name = "lm_no_comms_config",
-    config = ":no_comms_config.json",
+    name = "lm_non_reporting_config",
+    config = ":non_reporting_config.json",
     flatbuffer_out_dir = "etc",
 )
 
 cc_binary(
-    name = "no_comms_process",
-    srcs = ["no_comms_process.cpp"],
+    name = "non_reporting_process",
+    srcs = ["non_reporting_process.cpp"],
     deps = [
         "//src/launch_manager_daemon/common:osal",
         "//src/launch_manager_daemon/lifecycle_client_lib:lifecycle_client",
@@ -37,33 +37,33 @@ cc_binary(
 )
 
 pkg_files(
-    name = "no_comms_main_files",
+    name = "non_reporting_main_files",
     srcs = [
-        ":no_comms_process",
+        ":non_reporting_process",
         "//src/launch_manager_daemon:launch_manager",
     ],
     attributes = pkg_attributes(mode = "0755"),
-    prefix = "tests/incorrect_config_no_comms",
+    prefix = "tests/incorrect_config_non_reporting",
 )
 
 pkg_files(
-    name = "no_comms_etc_files",
-    srcs = [":lm_no_comms_config"],
-    prefix = "tests/incorrect_config_no_comms",
+    name = "non_reporting_etc_files",
+    srcs = [":lm_non_reporting_config"],
+    prefix = "tests/incorrect_config_non_reporting",
 )
 
 pkg_tar(
-    name = "no_comms_binaries",
+    name = "non_reporting_binaries",
     srcs = [
-        ":no_comms_etc_files",
-        ":no_comms_main_files",
+        ":non_reporting_etc_files",
+        ":non_reporting_main_files",
     ],
 )
 
 integration_test(
-    name = "incorrect_config_no_comms",
-    srcs = ["test_incorrect_config_no_comms.py"],
+    name = "incorrect_config_non_reporting",
+    srcs = ["test_incorrect_config_non_reporting.py"],
     tags = ["integration"],
-    test_binaries = ":no_comms_binaries",
+    test_binaries = ":non_reporting_binaries",
     deps = ["//tests/utils/testing_utils"],
 )

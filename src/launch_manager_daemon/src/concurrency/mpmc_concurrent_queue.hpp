@@ -24,7 +24,7 @@
 #include <utility>
 
 #include "concurrency_error_domain.hpp"
-#include "score/result/result.h"
+#include <score/expected.hpp>
 #include <concurrency/helgrind_annotations.hpp>
 #include <score/lcm/internal/osal/osalreturntypes.hpp>
 #include <score/lcm/internal/osal/semaphore.hpp>
@@ -111,7 +111,8 @@ class MPMCConcurrentQueue
     /// @return Success if item was pushed, Error otherwise.
     ///         Note: If the push returns false, the object is still valid for
     ///         the user.
-    [[nodiscard]] score::Result<void> push(T&& item, std::chrono::milliseconds timeout = std::chrono::milliseconds{0})
+    [[nodiscard]] score::cpp::expected_blank<ConcurrencyErrc> push(
+        T&& item, std::chrono::milliseconds timeout = std::chrono::milliseconds{0})
     {
         return push_impl(std::move(item), timeout);
     }
@@ -123,29 +124,29 @@ class MPMCConcurrentQueue
     ///          previous consumer has finished reading it.
     /// @param timeout Maximum time to wait for a free slot. Zero means wait forever.
     /// @return Success if item was pushed, Error otherwise.
-    [[nodiscard]] score::Result<void> push(const T& item,
-                                           std::chrono::milliseconds timeout = std::chrono::milliseconds{0})
+    [[nodiscard]] score::cpp::expected_blank<ConcurrencyErrc> push(
+        const T& item, std::chrono::milliseconds timeout = std::chrono::milliseconds{0})
     {
         return push_impl(item, timeout);
     }
 
     /// @brief Signals all blocked pop() callers to return with a stopped error.
-    [[nodiscard]] score::Result<void> stop() noexcept
+    [[nodiscard]] score::cpp::expected_blank<ConcurrencyErrc> stop() noexcept
     {
         m_stopped.store(true, std::memory_order_release);
 
         // signal to consumers and publishers to wakeup
         if (m_items.post() != osal::OsalReturnType::kSuccess)
         {
-            return score::MakeUnexpected(ConcurrencyErrc::kOsError);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kOsError);
         }
 
         if (m_spaces.post() != osal::OsalReturnType::kSuccess)
         {
-            return score::MakeUnexpected(ConcurrencyErrc::kOsError);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kOsError);
         }
 
-        return {};
+        return score::cpp::blank{};
     }
 
     /// @brief Blocks until an item is available or stop() is called.
@@ -154,31 +155,32 @@ class MPMCConcurrentQueue
     ///          When stopped returns std::nullopt.
     /// @param timeout Maximum time to wait for an item. Zero means wait forever.
     /// @return The next item, or error.
-    [[nodiscard]] score::Result<T> pop(std::chrono::milliseconds timeout = std::chrono::milliseconds{0})
+    [[nodiscard]] score::cpp::expected<T, ConcurrencyErrc> pop(
+        std::chrono::milliseconds timeout = std::chrono::milliseconds{0})
     {
         const auto wait_result =
             (timeout == std::chrono::milliseconds{0}) ? m_items.wait() : m_items.timedWait(timeout);
 
         if(wait_result == osal::OsalReturnType::kTimeout)
         {
-            return score::MakeUnexpected(ConcurrencyErrc::kTimeout);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kTimeout);
         }
         else if (wait_result != osal::OsalReturnType::kSuccess)
         {
-            return score::MakeUnexpected(ConcurrencyErrc::kOsError);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kOsError);
         }
 
         if (m_stopped.load(std::memory_order_acquire))
         {
             static_cast<void>(m_items.post());
-            return score::MakeUnexpected(ConcurrencyErrc::kStopped);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kStopped);
         }
 
         T item = consume_slot(m_head.fetch_add(1, std::memory_order_relaxed));
 
         if (m_spaces.post() != osal::OsalReturnType::kSuccess)
         {
-            return score::MakeUnexpected(ConcurrencyErrc::kOsError);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kOsError);
         }
 
         return item;
@@ -213,25 +215,25 @@ class MPMCConcurrentQueue
     }
 
     template <class U>
-    [[nodiscard]] score::Result<void> push_impl(U&& item, std::chrono::milliseconds timeout)
+    [[nodiscard]] score::cpp::expected_blank<ConcurrencyErrc> push_impl(U&& item, std::chrono::milliseconds timeout)
     {
         const auto wait_result =
             (timeout == std::chrono::milliseconds{0}) ? m_spaces.wait() : m_spaces.timedWait(timeout);
 
         if(wait_result == osal::OsalReturnType::kTimeout)
         {
-            return score::MakeUnexpected(ConcurrencyErrc::kTimeout);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kTimeout);
         }
         else if (wait_result != osal::OsalReturnType::kSuccess)
         {
-            return score::MakeUnexpected(ConcurrencyErrc::kOsError);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kOsError);
         }
 
         if (m_stopped.load(std::memory_order_acquire))
         {
             // chain-wake the next blocked producer then discard the item
             static_cast<void>(m_spaces.post());
-            return score::MakeUnexpected(ConcurrencyErrc::kStopped);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kStopped);
         }
 
         const auto tail = m_tail.fetch_add(1, std::memory_order_relaxed);
@@ -256,10 +258,10 @@ class MPMCConcurrentQueue
 
         if (m_items.post() != osal::OsalReturnType::kSuccess)
         {
-            return score::MakeUnexpected(ConcurrencyErrc::kOsError);
+            return score::cpp::make_unexpected(ConcurrencyErrc::kOsError);
         }
 
-        return {};
+        return score::cpp::blank{};
     }
 
     /// @brief Underlying storage.

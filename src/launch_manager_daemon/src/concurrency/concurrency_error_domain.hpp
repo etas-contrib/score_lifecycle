@@ -14,14 +14,13 @@
 #ifndef CONCURRENCY_ERROR_DOMAIN_HPP_INCLUDED
 #define CONCURRENCY_ERROR_DOMAIN_HPP_INCLUDED
 
-#include "score/result/result.h"
-
-#include <string_view>
+#include <cstdint>
+#include <ostream>
 
 namespace score::lcm::internal
 {
 
-enum class ConcurrencyErrc : score::result::ErrorCode
+enum class ConcurrencyErrc : std::uint8_t
 {
     /// @brief An OS call returned an error.
     kOsError = 1,
@@ -36,35 +35,16 @@ enum class ConcurrencyErrc : score::result::ErrorCode
     kTimeout = 4,
 };
 
-class ConcurrencyErrorDomain final : public score::result::ErrorDomain
+inline std::ostream& operator<<(std::ostream& os, ConcurrencyErrc errc) noexcept
 {
-    [[nodiscard]] std::string_view MessageFor(const score::result::ErrorCode& code) const noexcept override
+    switch (errc)
     {
-        switch (static_cast<ConcurrencyErrc>(code))
-        {
-            case ConcurrencyErrc::kOsError:
-                return "An OS call returned an error";
-
-            case ConcurrencyErrc::kOverflow:
-                return "The container has overflowed";
-
-            case ConcurrencyErrc::kStopped:
-                return "The container has been stopped";
-
-            case ConcurrencyErrc::kTimeout:
-                return "A timer was triggered";
-
-            default:
-                return "Unknown concurrency error";
-        }
+        case ConcurrencyErrc::kOsError:  return os << "kOsError";
+        case ConcurrencyErrc::kOverflow: return os << "kOverflow";
+        case ConcurrencyErrc::kStopped:  return os << "kStopped";
+        case ConcurrencyErrc::kTimeout:  return os << "kTimeout";
+        default:                         return os << static_cast<std::uint8_t>(errc);
     }
-};
-
-constexpr ConcurrencyErrorDomain g_ConcurrencyErrorDomain{};
-
-constexpr score::result::Error MakeError(ConcurrencyErrc code, const std::string_view user_message = "") noexcept
-{
-    return score::result::Error{static_cast<score::result::ErrorCode>(code), g_ConcurrencyErrorDomain, user_message};
 }
 
 }  // namespace score::lcm::internal

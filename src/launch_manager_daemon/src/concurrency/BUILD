@@ -34,17 +34,7 @@ cc_library(
     deps = [
         ":helgrind_annotations",
         "//src/launch_manager_daemon/common:osal",
-        "@score_baselibs//score/result",
-    ],
-)
-
-cc_test(
-    name = "concurrency_error_domain_test",
-    srcs = ["concurrency_error_domain_test.cpp"],
-    visibility = ["//tests:__subpackages__"],
-    deps = [
-        ":mpmc_concurrent_queue",
-        "@googletest//:gtest_main",
+        "@score_baselibs//score/language/futurecpp",
     ],
 )
 

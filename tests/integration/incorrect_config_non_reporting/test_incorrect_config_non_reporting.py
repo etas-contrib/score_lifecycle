@@ -13,10 +13,7 @@
 import logging
 from tests.utils.testing_utils.run_until_file_deployed import run_until_file_deployed
 from tests.utils.testing_utils.setup_test import setup_test
-from tests.utils.testing_utils.test_results import (
-    check_for_failures,
-    download_xml_results,
-)
+from tests.utils.testing_utils.test_results import assert_test_results
 from attribute_plugin import add_test_properties
 
 
@@ -26,12 +23,12 @@ from attribute_plugin import add_test_properties
     derivation_technique="explorative-testing",
 )
 def test_incorrect_config_non_reporting(
-    target, setup_test, test_output_dir, remote_test_dir
+    target, setup_test, assert_test_results, remote_test_dir
 ):
     """
-     Objective: Test robustness of LifecycleClient API
-     Input: Component wrongly configured as `native` application type, acquires a file descriptor ordinarily used by LM communication, and reports the Running state to LaunchManager.
-     Expected Outcome: Reporting Running state fails, LifecycleClient API returns an error.
+    Objective: Test robustness of LifecycleClient API
+    Input: Component wrongly configured as `native` application type, acquires a file descriptor ordinarily used by LM communication, and reports the Running state to LaunchManager.
+    Expected Outcome: Reporting Running state fails, LifecycleClient API returns an error.
     """
     run_until_file_deployed(
         target=target,
@@ -41,7 +38,4 @@ def test_incorrect_config_non_reporting(
         timeout_s=2.0,
     )
 
-    download_xml_results(target, remote_test_dir, test_output_dir)
-    all_files, failing_files = check_for_failures(test_output_dir)
-    assert len(all_files) == 1, f"Didn't find the expected number of files {all_files}"
-    assert len(failing_files) == 0, f"Found failures in files {failing_files}"
+    assert_test_results(expected_xml_count=1)

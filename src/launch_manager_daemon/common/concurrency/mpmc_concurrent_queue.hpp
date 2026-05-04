@@ -22,6 +22,7 @@
 #include <limits>
 #include <type_traits>
 #include <utility>
+#include <thread>
 
 #include "concurrency_error_domain.hpp"
 #include <score/expected.hpp>
@@ -198,6 +199,7 @@ class MPMCConcurrentQueue
 
         while (slot.turn.load(std::memory_order_acquire) != expected_turn)
         {
+            std::this_thread::yield();
             // small spin, only fires if a prior producer claimed this slot but
             // was preempted before completing its write and a full turn
             // happened, should rarely happen
@@ -245,6 +247,7 @@ class MPMCConcurrentQueue
 
         while (slot.turn.load(std::memory_order_acquire) != expected_turn)
         {
+            std::this_thread::yield();
             // small spin, only fires if a prior producer claimed this slot but
             // was preempted before completing its write and a full turn
             // happened, should rarely happen

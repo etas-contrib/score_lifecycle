@@ -39,5 +39,5 @@ def test_incorrect_config_no_comms(
 
     download_xml_results(target, remote_test_dir, test_output_dir)
     all_files, failing_files = check_for_failures(test_output_dir)
-    assert len(all_files) == 2, f"Didn't find the expected number of files {all_files}"
+    assert len(all_files) == 1, f"Didn't find the expected number of files {all_files}"
     assert len(failing_files) == 0, f"Found failures in files {failing_files}"

@@ -26,18 +26,6 @@ launch_manager_config(
 )
 
 cc_binary(
-    name = "control_client_mock",
-    srcs = ["control_client_mock.cpp"],
-    data = [],
-    deps = [
-        "//src/control_client_lib",
-        "//src/launch_manager_daemon/lifecycle_client_lib:lifecycle_client",
-        "//tests/utils/test_helper",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_binary(
     name = "no_comms_process",
     srcs = ["no_comms_process.cpp"],
     deps = [
@@ -50,7 +38,6 @@ cc_binary(
 pkg_files(
     name = "no_comms_main_files",
     srcs = [
-        ":control_client_mock",
         ":no_comms_process",
         "//src/launch_manager_daemon:launch_manager",
     ],

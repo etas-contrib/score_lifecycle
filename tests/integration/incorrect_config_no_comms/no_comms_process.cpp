@@ -21,6 +21,8 @@
 #include "tests/utils/test_helper/test_helper.hpp"
 #include <csignal>
 
+TestRunner runner = TestRunner(__FILE__, true);
+
 TEST(NoComms, Process)
 {
     auto fd = shm_open("some_shared_memory", O_CREAT | O_RDWR, 0);
@@ -35,5 +37,6 @@ TEST(NoComms, Process)
 
 int main()
 {
-    return TestRunner(__FILE__).RunTests();
+    runner.exitRequested = true;
+    return runner.RunTests();
 }

@@ -29,6 +29,7 @@ cc_binary(
     name = "no_comms_process",
     srcs = ["no_comms_process.cpp"],
     deps = [
+        "//src/launch_manager_daemon/common:osal",
         "//src/launch_manager_daemon/lifecycle_client_lib:lifecycle_client",
         "//tests/utils/test_helper",
         "@googletest//:gtest_main",

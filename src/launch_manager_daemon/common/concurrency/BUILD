@@ -16,7 +16,7 @@ load("//config:common_cc.bzl", "cc_library_with_common_opts")
 cc_library(
     name = "helgrind_annotations",
     hdrs = ["helgrind_annotations.hpp"],
-    strip_include_prefix = "//src/launch_manager_daemon/src",
+    strip_include_prefix = "//src/launch_manager_daemon/common",
     visibility = ["//src:__subpackages__"],
 )
 
@@ -29,7 +29,7 @@ cc_library(
     linkopts = [
         "-l:libatomic.a",
     ],
-    strip_include_prefix = "//src/launch_manager_daemon/src",
+    strip_include_prefix = "//src/launch_manager_daemon/common",
     visibility = ["//src:__subpackages__"],
     deps = [
         ":helgrind_annotations",
@@ -49,7 +49,7 @@ cc_test(
 )
 
 # Run with:
-# bazel test --run_under="valgrind --tool=helgrind --suppressions=src/launch_manager_daemon/src/concurrency/helgrind.supp --error-exitcode=1" //src/launch_manager_daemon/src/concurrency:mpmc_concurrent_queue_helgrind_test --config=host --test_output=all
+# bazel test --run_under="valgrind --tool=helgrind --suppressions=src/launch_manager_daemon/common/concurrency/helgrind.supp --error-exitcode=1" //src/launch_manager_daemon/common/concurrency:mpmc_concurrent_queue_helgrind_test --config=host --test_output=all
 # Note: This is using your host packages so you need to install valgrind.
 # Two tests intentionally exercise semaphore failure paths (EINTR / EAGAIN).
 # Those expected PthAPIerror reports are silenced via helgrind.supp.

@@ -12,10 +12,6 @@
    # SPDX-License-Identifier: Apache-2.0
    # *******************************************************************************
 
-Release Note
-============
-
-.. note:: Document header
 
 .. document:: lifecycle Release Note
    :id: doc__lifecycle_release_note
@@ -26,27 +22,21 @@ Release Note
    :tags: 
 
 
-| **Module Name:** lifecycle
-| **Release Tag:** v0.2.0
-| **Origin Release Tag:** v0.1.0
-| **Release Date:** 2026-04-29
-
-
 Overview
-^^^^^^^^
+========
 
-This document provides an overview of the changes, improvements, and bug fixes included in the software module release version vX.Y.Z
+This document provides an overview of the changes, improvements, and bug fixes included in the software module release version vx.x.z
 as compared to the module's origin release (which is usually the previous release).
 
 Disclaimer
-----------
+==========
 
 This release note does not "release for production", as it does not come with a safety argumentation and a performed safety assessment.
 The work products compiled in the safety package are created with care according to a process satisfying standards, but the as the project,
 being a non-profit and open source organization, can not take over any liability for its content.
 
 Changes to the Module
-^^^^^^^^^^^^^^^^^^^^^
+=====================
 
 New Features
 ------------
@@ -68,9 +58,10 @@ Bug Fixes
 Other changes by Label
 ----------------------
 
+- 
 
 Compatibility
-^^^^^^^^^^^^^
+-------------
 
 - The following platforms are supported using the [bazel_cpp_toolchains](https://github.com/eclipse-score/bazel_cpp_toolchains):
   - `x86_64-unknown-linux-gnu`
@@ -79,10 +70,10 @@ Compatibility
   - `aarch64-unknown-nto-qnx800`
 
 Performed Verification
-^^^^^^^^^^^^^^^^^^^^^^
+----------------------
+
 - Build on all supported platforms
-.. This release note is based on the verification as documented in module verification report
-.. :need:`doc__module_name_verification_report`.
+- Unit test execution on all supported platforms
 
 Known Issues
 ------------
@@ -95,8 +86,8 @@ Known Vulnerabilities
 - 
 
 Upgrade Instructions
-^^^^^^^^^^^^^^^^^^^^
+--------------------
 
 - Backward compatibility with the previous release is not guaranteed.
 
-For any questions or support, please contact the [Project Team](https://github.com/orgs/eclipse-score/projects/33) or raise an issue/discussion.
+*For any questions or support, please contact the [Project Team](https://github.com/orgs/eclipse-score/projects/33) or raise an issue/discussion.*

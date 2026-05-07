@@ -15,7 +15,6 @@
 #include <grp.h>
 #include <libgen.h>
 #include <sys/mman.h>
-#include <sys/prctl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <limits.h>
@@ -27,6 +26,7 @@
 #include <score/lcm/internal/osal/osalipccomms.hpp>
 #include <score/lcm/internal/osal/securitypolicy.hpp>
 #include <score/lcm/internal/osal/setaffinity.hpp>
+#include <score/lcm/internal/osal/set_core_dumps.hpp>
 #include <score/lcm/internal/osal/setgroups.hpp>
 #include <score/lcm/internal/osal/sysexit.hpp>
 #include <cerrno>
@@ -438,9 +438,9 @@ OsalReturnType IProcess::setSchedulingAndSecurity(const OsalConfig& config)
     // setuid() clears the dumpable flag
     if (score::lcm::internal::kCoreDumps != 0U)
     {
-        if (-1 == prctl(PR_SET_DUMPABLE, 1))
+        if (-1 == score::lcm::internal::osal::setCoreDumps())
         {
-            LM_LOG_ERROR() << "prctl(PR_SET_DUMPABLE) failed:" << std::strerror(errno);
+            LM_LOG_ERROR() << "setCoreDumps() failed:" << std::strerror(errno);
             retval = OsalReturnType::kFail;
         }
     }

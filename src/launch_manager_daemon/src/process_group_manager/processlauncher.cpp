@@ -45,6 +45,37 @@ using score::lcm::internal::osal::CommsType;
 using score::lcm::internal::osal::IpcCommsSync;
 using score::lcm::internal::osal::sysexit;
 
+/// @brief Applies the given limit.
+/// @warning This will sysexit if the set is not succesful.
+void applyLimitOrDie(const int resource, const rlimit& limit) noexcept(false)
+{
+    if (::setrlimit(resource, &limit) == -1)
+    {
+        LM_LOG_FATAL() << "[New process] Failed to set rlimit "
+                       << std::strerror(errno);
+        sysexit(EXIT_FAILURE);
+    }
+}
+
+
+/// @brief Sets the limit if given a non-zero value, otherwise skips.
+/// @warning This will sysexit if the set is not succesful.
+void setLimit(const int resource, const std::size_t amount) noexcept
+{
+    if (amount == 0U)
+    {
+        return;
+    }
+
+    const struct rlimit limit {
+        .rlim_cur = amount,
+        .rlim_max = amount,
+    };
+
+    applyLimitOrDie(resource, limit);
+}
+
+
 void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
 {
     // kNoComms !fd3 & !fd4
@@ -122,65 +153,19 @@ void changeCurrentWorkingDirectory(const score::lcm::internal::osal::OsalConfig&
 
 void implementMemoryResourceLimits(const score::lcm::internal::osal::OsalConfig& config)
 {
-    rlimit limit;
-
-    if (config.resource_limits_.data_ != 0U)
-    {
-        limit.rlim_max = limit.rlim_cur = config.resource_limits_.data_;
-        if (setrlimit(RLIMIT_DATA, &limit) == -1)
-        {
-            LM_LOG_ERROR() << "[New process] setrlimit(RLIMIT_DATA," << limit.rlim_cur
-                           << ") failed:" << std::strerror(errno);
-            sysexit(EXIT_FAILURE);
-        }
-    }
-
-    if (config.resource_limits_.as_ != 0U)
-    {
-        limit.rlim_max = limit.rlim_cur = config.resource_limits_.as_;
-        if (setrlimit(RLIMIT_AS, &limit) == -1)
-        {
-            LM_LOG_ERROR() << "[New process] setrlimit(RLIMIT_AS," << limit.rlim_cur
-                           << "failed:" << std::strerror(errno);
-            sysexit(EXIT_FAILURE);
-        }
-    }
-
-    if (config.resource_limits_.stack_ != 0U)
-    {
-        limit.rlim_max = limit.rlim_cur = config.resource_limits_.stack_;
-        if (setrlimit(RLIMIT_STACK, &limit) == -1)
-        {
-            LM_LOG_ERROR() << "[New process] setrlimit(RLIMIT_STACK," << limit.rlim_cur
-                           << ") failed:" << std::strerror(errno);
-            sysexit(EXIT_FAILURE);
-        }
-    }
+    setLimit(RLIMIT_DATA, config.resource_limits_.data_);
+    setLimit(RLIMIT_AS, config.resource_limits_.as_);
+    setLimit(RLIMIT_STACK, config.resource_limits_.stack_);
 
     // Note about cpu limit:
     // Using setrlimit, this imposes a maximum time that a process will run for, which might not be
     // what you intend? Probably you'll want a maximum time in a time-slice, but you don't get that
     // with limits set by setrlimit...
-    if (config.resource_limits_.cpu_ != 0U)
-    {
-        limit.rlim_max = limit.rlim_cur = config.resource_limits_.cpu_;
-        if (setrlimit(RLIMIT_CPU, &limit) == -1)
-        {
-            LM_LOG_ERROR() << "[New process] setrlimit(RLIMIT_CPU," << limit.rlim_cur
-                           << ") failed:" << std::strerror(errno);
-            sysexit(EXIT_FAILURE);
-        }
-    }
+    setLimit(RLIMIT_CPU, config.resource_limits_.cpu_);
 
-    if (score::lcm::internal::kCoreDumps != 0U)
-    {
-        limit.rlim_max = limit.rlim_cur = RLIM_INFINITY;
-        if (setrlimit(RLIMIT_CORE, &limit) == -1)
-        {
-            LM_LOG_ERROR() << "[New process] setrlimit(RLIMIT_CORE) failed:" << std::strerror(errno);
-            sysexit(EXIT_FAILURE);
-        }
-    }
+    // just set the max limit to enable core dumps
+    struct rlimit core_limit {.rlim_max = RLIM_INFINITY};
+    applyLimitOrDie(RLIMIT_CORE, core_limit);
 }
 
 void changeSecurityPolicy(const score::lcm::internal::osal::OsalConfig& config)
@@ -436,13 +421,10 @@ OsalReturnType IProcess::setSchedulingAndSecurity(const OsalConfig& config)
     }
 
     // setuid() clears the dumpable flag
-    if (score::lcm::internal::kCoreDumps != 0U)
+    if (-1 == score::lcm::internal::osal::setCoreDumps())
     {
-        if (-1 == score::lcm::internal::osal::setCoreDumps())
-        {
-            LM_LOG_ERROR() << "setCoreDumps() failed:" << std::strerror(errno);
-            retval = OsalReturnType::kFail;
-        }
+        LM_LOG_ERROR() << "setCoreDumps() failed:" << std::strerror(errno);
+        retval = OsalReturnType::kFail;
     }
 
     return retval;

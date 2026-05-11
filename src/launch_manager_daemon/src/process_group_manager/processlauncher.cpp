@@ -47,12 +47,12 @@ using score::lcm::internal::osal::sysexit;
 
 /// @brief Applies the given limit.
 /// @warning This will sysexit if the set is not succesful.
-void applyLimitOrDie(const int resource, const rlimit& limit) noexcept(false)
+void applyLimitOrDie(const int resource, const rlimit& limit, const std::string_view rlimit_name) noexcept(false)
 {
     if (::setrlimit(resource, &limit) == -1)
     {
-        LM_LOG_FATAL() << "[New process] Failed to set rlimit "
-                       << std::strerror(errno);
+        LM_LOG_FATAL() << "[New process] Failed to set rlimit " << rlimit_name
+            << " " << std::strerror(errno);
         sysexit(EXIT_FAILURE);
     }
 }
@@ -60,7 +60,7 @@ void applyLimitOrDie(const int resource, const rlimit& limit) noexcept(false)
 
 /// @brief Sets the limit if given a non-zero value, otherwise skips.
 /// @warning This will sysexit if the set is not succesful.
-void setLimit(const int resource, const std::size_t amount) noexcept
+void setLimit(const int resource, const std::size_t amount, const std::string_view rlimit_name) noexcept
 {
     if (amount == 0U)
     {
@@ -72,7 +72,7 @@ void setLimit(const int resource, const std::size_t amount) noexcept
         .rlim_max = amount,
     };
 
-    applyLimitOrDie(resource, limit);
+    applyLimitOrDie(resource, limit, rlimit_name);
 }
 
 
@@ -153,19 +153,15 @@ void changeCurrentWorkingDirectory(const score::lcm::internal::osal::OsalConfig&
 
 void implementMemoryResourceLimits(const score::lcm::internal::osal::OsalConfig& config)
 {
-    setLimit(RLIMIT_DATA, config.resource_limits_.data_);
-    setLimit(RLIMIT_AS, config.resource_limits_.as_);
-    setLimit(RLIMIT_STACK, config.resource_limits_.stack_);
+    setLimit(RLIMIT_DATA, config.resource_limits_.data_, "RLIMIT_DATA");
+    setLimit(RLIMIT_AS, config.resource_limits_.as_, "RLIMIT_AS");
+    setLimit(RLIMIT_STACK, config.resource_limits_.stack_, "RLIMIT_STACK");
 
     // Note about cpu limit:
     // Using setrlimit, this imposes a maximum time that a process will run for, which might not be
     // what you intend? Probably you'll want a maximum time in a time-slice, but you don't get that
     // with limits set by setrlimit...
-    setLimit(RLIMIT_CPU, config.resource_limits_.cpu_);
-
-    // just set the max limit to enable core dumps
-    struct rlimit core_limit {.rlim_max = RLIM_INFINITY};
-    applyLimitOrDie(RLIMIT_CORE, core_limit);
+    setLimit(RLIMIT_CPU, config.resource_limits_.cpu_, "RLIMIT_CPU");
 }
 
 void changeSecurityPolicy(const score::lcm::internal::osal::OsalConfig& config)

@@ -129,11 +129,20 @@ class IdentifierHash final
     std::size_t hash_id_ = 0;
 };
 
-namespace detail
-{
-
-template <typename StreamT>
-inline StreamT& streamIdentifierHash(StreamT& stream, const IdentifierHash& id_hash)
+/// @brief Overloaded stream insertion operator for IdentifierHash.
+///
+/// This operator allows IdentifierHash objects to be output to an ostream.
+/// It uses the the static registry to find the string representation of the hash ID.
+///
+/// If there is no value stored in the registry for the given hash
+/// (i.e. the IdentifierHash is not constructed in this process,
+/// instead it has been transferred from another process via e.g. shared memory),
+/// it outputs an error message.
+///
+/// @param os The output stream.
+/// @param id The IdentifierHash object to output.
+/// @return A reference to the output stream.
+inline std::ostream& operator<<(std::ostream& stream, const IdentifierHash& id_hash) noexcept(false)
 {
     const auto& reg = IdentifierHash::get_registry();
     const auto it = reg.find(id_hash.data());
@@ -148,26 +157,6 @@ inline StreamT& streamIdentifierHash(StreamT& stream, const IdentifierHash& id_h
     return stream;
 }
 
-}  // namespace detail
-
-/// @brief Overloaded stream insertion operator for IdentifierHash.
-///
-/// This operator allows IdentifierHash objects to be output to an ostream.
-/// It uses the the static registry to find the string representation of the hash ID.
-///
-/// If there is no value stored in the registry for the given hash
-/// (i.e. the IdentifierHash is not constructed in this process,
-/// instead it has been transferred from another process via e.g. shared memory),
-/// it outputs an error message.
-///
-/// @param os The output stream.
-/// @param id The IdentifierHash object to output.
-/// @return A reference to the output stream.
-inline std::ostream& operator<<(std::ostream& os, const IdentifierHash& id) noexcept(false)
-{
-    return detail::streamIdentifierHash(os, id);
-}
-
 }  // namespace score::lcm
 
 #ifdef LC_LOG_SCORE_MW_LOG
@@ -176,10 +165,20 @@ inline std::ostream& operator<<(std::ostream& os, const IdentifierHash& id) noex
 namespace score::lcm
 {
 
-inline score::mw::log::LogStream& operator<<(score::mw::log::LogStream& log_stream,
-                                             const IdentifierHash& id) noexcept(false)
+inline score::mw::log::LogStream& operator<<(score::mw::log::LogStream& stream,
+                                             const IdentifierHash& id_hash) noexcept(false)
 {
-    return detail::streamIdentifierHash(log_stream, id);
+    const auto& reg = IdentifierHash::get_registry();
+    const auto it = reg.find(id_hash.data());
+    if (it != reg.end())
+    {
+        stream << it->second;
+    }
+    else
+    {
+        stream << "<Unknown IdentifierHash: " << id_hash.data() << ">";
+    }
+    return stream;
 }
 
 }  // namespace score::lcm

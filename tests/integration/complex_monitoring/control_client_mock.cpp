@@ -35,6 +35,7 @@ TEST(ComplexMonitoring, ControlClientMock)
         EXPECT_TRUE(result.has_value()) << "Activating target run_target_complex_monitoring failed: "
                                         << result.error().Message();
     }
+    // Wait for health monitoring to fail and recovery to trigger
     sleep(2);
     TEST_STEP("Verify state changed to fallback run target")
     {

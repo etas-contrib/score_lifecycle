@@ -49,7 +49,8 @@ TEST(CrashOnStartup, ControlClientMock)
         auto result = client.ActivateRunTarget("run_target_crash_on_startup_always").Get(stop_token);
         EXPECT_FALSE(result.has_value()) << "Expected run_target_crash_on_startup_always activation to fail";
     }
-
+    // Limitation: we cannot wait for the transition to fallback to complete
+    sleep(1);
     // Then, the LM should exhaust retries and trigger the fallback
     TEST_STEP("Verify fallback run target was activated")
     {

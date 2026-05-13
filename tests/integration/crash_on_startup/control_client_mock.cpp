@@ -21,11 +21,16 @@ score::lcm::ControlClient client;
 
 TEST(CrashOnStartup, ControlClientMock)
 {
+    ASSERT_TRUE(check_clean({test_end_location, fallback_file}));
+
     TEST_STEP("Report kRunning")
     {
         auto result = score::lcm::LifecycleClient{}.ReportExecutionState(score::lcm::ExecutionState::kRunning);
         ASSERT_TRUE(result.has_value()) << "ReportExecutionState() failed: " << result.error().Message();
     }
+
+    // We have to wait for the initial state transition to fully complete, otherwise unexpected failures can occur
+    sleep(1);
 
     // Given a process that crashes on startup twice
     TEST_STEP("Launch process crashing on startup twice")

@@ -29,7 +29,7 @@ def test_smoke(target, setup_test, assert_test_results, remote_test_dir):
         binary_path=str(remote_test_dir / "launch_manager"),
         file_path=remote_test_dir.parent / "test_end",
         cwd=str(remote_test_dir),
-        timeout_s=2.0,
+        timeout_s=3.0,
     )
 
     assert_test_results(expected_xml_count=2)

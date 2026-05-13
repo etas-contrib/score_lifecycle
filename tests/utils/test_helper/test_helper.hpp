@@ -118,7 +118,10 @@ class TestRunner
 
         if (signal_completion)
         {
-            static_cast<void>(touch_file(test_end_location));
+            const auto res = touch_file(test_end_location);
+            if (!res) {
+                std::cerr << res.failure_message() << std::endl;
+            }
         }
     }
 

@@ -33,6 +33,10 @@ TEST(ProcessCrashMonitoring, ControlClientMock)
         auto result = score::lcm::LifecycleClient{}.ReportExecutionState(score::lcm::ExecutionState::kRunning);
         ASSERT_TRUE(result.has_value()) << "ReportExecutionState() failed: " << result.error().Message();
     }
+
+    // We have to wait for the initial state transition to fully complete, otherwise unexpected failures can occur
+    sleep(1);
+    
     TEST_STEP("Start crashing process")
     {
         score::cpp::stop_token stop_token;

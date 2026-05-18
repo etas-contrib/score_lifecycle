@@ -102,7 +102,7 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
             if (-1 == fcntl(IpcCommsSync::sync_fd, F_SETFD, 0))
             {
                 LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__
-                               << "failed:" << std::string_view(std::strerror(errno));
+                               << "failed:" << score::lcm::internal::errno_message(errno);
                 sysexit(EXIT_FAILURE);
             }
             close(IpcCommsSync::control_client_handler_nudge_fd);
@@ -111,13 +111,13 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
             if (-1 == fcntl(IpcCommsSync::sync_fd, F_SETFD, 0))
             {
                 LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__
-                               << "failed:" << std::string_view(std::strerror(errno));
+                               << "failed:" << score::lcm::internal::errno_message(errno);
                 sysexit(EXIT_FAILURE);
             }
             if (-1 == fcntl(IpcCommsSync::control_client_handler_nudge_fd, F_SETFD, 0))
             {
                 LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__
-                               << "failed:" << std::string_view(std::strerror(errno));
+                               << "failed:" << score::lcm::internal::errno_message(errno);
             }
             break;
         case CommsType::kLaunchManager:
@@ -174,7 +174,7 @@ void changeSecurityPolicy(const score::lcm::internal::osal::OsalConfig& config)
         if (score::lcm::internal::osal::setSecurityPolicy(config.security_policy_.c_str()) != 0)
         {
             LM_LOG_ERROR() << "[New process] changeSecurityPolicy(" << config.security_policy_
-                           << ") failed:" << std::string_view{strerror(errno)};
+                           << ") failed:" << score::lcm::internal::errno_message(errno);
             sysexit(EXIT_FAILURE);
         }
     }

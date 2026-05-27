@@ -17,8 +17,6 @@
 #include <memory>
 
 #include "score/lcm/irecovery_client.h"
-#include "score/lcm/saf/common/Types.hpp"
-#include "score/lcm/saf/ifexm/ProcessState.hpp"
 #include "score/lcm/saf/timers/Timers_OsClock.hpp"
 
 namespace score
@@ -49,10 +47,6 @@ public:
     const char* cfgName_p{nullptr};
     /// Number of elements which can be stored in the checkpoint buffer
     uint16_t checkpointBufferSize{0U};
-    /// Referred Process Group States as EXM IDs
-    std::vector<common::ProcessGroupId>& refFuntionGroupStates_r;
-    /// Referred Process state objects
-    std::vector<ifexm::ProcessState*>& refProcesses_r;
 
     /// (Manifest Parameter) Alive reference cycle in [nano seconds]
     saf::timers::NanoSecondType aliveReferenceCycle{0U};
@@ -77,15 +71,12 @@ public:
     /// Default destructor
     ~AliveSupervisionCfg() = default;
 
+    /// No Default Constructor
+    AliveSupervisionCfg() = delete;
+
     /// Alive Supervision configuration constructor
     /// @param [in] f_checkpoint_r     Reference to checkpoint object
-    /// @param [in] f_refStates_r      Reference to Process Group State EXM IDs vector
-    /// @param [in] f_refProcesses_r   Reference to Process state vector
-    explicit AliveSupervisionCfg(saf::ifappl::Checkpoint& f_checkpoint_r,
-                                 std::vector<common::ProcessGroupId>& f_refStates_r,
-                                 std::vector<ifexm::ProcessState*>& f_refProcesses_r) :
-        refFuntionGroupStates_r(f_refStates_r),
-        refProcesses_r(f_refProcesses_r),
+    explicit AliveSupervisionCfg(saf::ifappl::Checkpoint& f_checkpoint_r) :
         checkpoint_r(f_checkpoint_r)
     {
     }

@@ -188,7 +188,6 @@ cc_library_with_common_opts(
     srcs = [
         "src/score/lcm/saf/supervision/Alive.cpp",
         "src/score/lcm/saf/supervision/ISupervision.cpp",
-        "src/score/lcm/saf/supervision/ProcessStateTracker.cpp",
     ],
     hdrs = glob([
         "src/score/lcm/saf/**/*.hpp",

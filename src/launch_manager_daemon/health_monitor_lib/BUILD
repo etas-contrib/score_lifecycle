@@ -60,7 +60,6 @@ cc_library_with_common_opts(
 cc_library_with_common_opts(
     name = "ifexm",
     srcs = [
-        "src/score/lcm/saf/ifexm/ProcessCfg.cpp",
         "src/score/lcm/saf/ifexm/ProcessState.cpp",
         "src/score/lcm/saf/ifexm/ProcessStateReader.cpp",
     ],

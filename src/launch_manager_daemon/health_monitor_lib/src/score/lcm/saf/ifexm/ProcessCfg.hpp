@@ -17,7 +17,6 @@
 #include <cstdint>
 
 #include <string_view>
-#include <vector>
 #include "score/lcm/saf/common/Types.hpp"
 
 namespace score
@@ -34,25 +33,11 @@ namespace ifexm
 class ProcessCfg final
 {
 public:
-    /// @brief Data type representing the ProcessExecutionError
-    using ProcessExecutionError = std::uint32_t;
-
-    /// @brief The default value to be used for ProcessExecutionError
-    // coverity[autosar_cpp14_a0_1_1_violation:FALSE] kDefaultProcessExecutionError is used
-    static constexpr ifexm::ProcessCfg::ProcessExecutionError kDefaultProcessExecutionError{1U};
-
     /// @brief Process shortname
     std::string_view processShortName;
 
     /// @brief Process Id
     common::ProcessId processId{0};
-
-    /// @brief Configured process group state Ids
-    std::vector<common::ProcessGroupId> configuredProcessGroupStates{};
-
-    /// @brief Configured process execution errors
-    /// @details Same index is used for mapping vectors of process execution errors and process group state Ids
-    std::vector<ProcessExecutionError> processExecutionErrors{};
 
     /// Process configuration constructor
     /* RULECHECKER_comment(0, 3, check_incomplete_data_member_construction, "Member processShortName is initialized \

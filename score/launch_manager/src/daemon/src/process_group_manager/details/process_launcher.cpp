@@ -80,7 +80,6 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
     // kNoComms !fd3 & !fd4
     // kReporting  fd3 & !fd4
     // kControlClient  fd3 & fd4
-    // kLaunchManager  does not matter
     if (!param.shared_block)
     {
         // kNoComms, fds are CLOEXEC
@@ -119,9 +118,6 @@ void handleComms(score::lcm::internal::osal::ChildProcessConfig& param)
                 LM_LOG_ERROR() << "[New process] fcntl() at line" << __LINE__
                                << "failed:" << score::lcm::internal::errno_message(errno);
             }
-            break;
-        case CommsType::kLaunchManager:
-            // nothing to do here
             break;
         default:
             LM_LOG_ERROR() << "[New process] at line" << __LINE__ << "unknown CommsType"
@@ -358,8 +354,8 @@ OsalReturnType IProcess::setSchedulingAndSecurity(const OsalConfig& config)
     OsalReturnType retval = OsalReturnType::kSuccess;
 
     // Set process group id to be equal to the pid
-    // setpgid will fail if called by a session lader (which LCMd is), so skip
-    if (config.comms_type_ != osal::CommsType::kLaunchManager && 0 != setpgid(0, getpid()))
+    // setpgid will fail if called by a session leader (which LCMd is), so skip
+    if (0 != setpgid(0, getpid()))
     {
         LM_LOG_ERROR() << "setpgid() failed:" << score::lcm::internal::errno_message(errno);
         retval = OsalReturnType::kFail;

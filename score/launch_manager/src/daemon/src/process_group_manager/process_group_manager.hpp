@@ -26,17 +26,18 @@
 #else
 #include "score/mw/launch_manager/configuration/configuration_manager.hpp"
 #endif
-#include "score/mw/launch_manager/process_group_manager/iprocess.hpp"
-#include "score/mw/launch_manager/process_group_manager/details/graph.hpp"
 #include "score/mw/launch_manager/common/concurrency/mpmc_concurrent_queue.hpp"
-#include "score/mw/launch_manager/process_group_manager/details/os_handler.hpp"
-#include "score/mw/launch_manager/process_state_client/iprocess_state_notifier.hpp"
-#include "score/mw/launch_manager/process_group_manager/details/process_info_node.hpp"
-#include "score/mw/launch_manager/process_group_manager/details/safe_process_map.hpp"
 #include "score/mw/launch_manager/common/concurrency/workerthread.hpp"
-#include "score/mw/launch_manager/process_group_manager/ialive_monitor_thread.hpp"
-#include "score/mw/launch_manager/recovery_client/recovery_client.hpp"
 #include "score/mw/launch_manager/common/constants.hpp"
+#include "score/mw/launch_manager/process_group_manager/details/graph.hpp"
+#include "score/mw/launch_manager/process_group_manager/details/os_handler.hpp"
+#include "score/mw/launch_manager/process_group_manager/details/process_info_node.hpp"
+#include "score/mw/launch_manager/process_group_manager/details/process_monitor.hpp"
+#include "score/mw/launch_manager/process_group_manager/details/safe_process_map.hpp"
+#include "score/mw/launch_manager/process_group_manager/ialive_monitor_thread.hpp"
+#include "score/mw/launch_manager/process_group_manager/iprocess.hpp"
+#include "score/mw/launch_manager/process_state_client/iprocess_state_notifier.hpp"
+#include "score/mw/launch_manager/recovery_client/recovery_client.hpp"
 
 namespace score::lcm::internal
 {
@@ -64,7 +65,7 @@ using ConfigurationType = ConfigurationManager;
 class ProcessGroupManager final
 {
     using WorkerQueue =
-        MPMCConcurrentQueue<std::shared_ptr<ProcessInfoNode>, static_cast<std::size_t>(ProcessLimits::kMaxProcesses)>;
+        MPMCConcurrentQueue<std::optional<Task>, static_cast<std::size_t>(ProcessLimits::kMaxProcesses)>;
 
   public:
     /// @brief Constructs a new ProcessGroupManager object.
@@ -121,7 +122,7 @@ class ProcessGroupManager final
     /// @param pg_index The index of the process group in the list of groups managed by this manager
     /// @param process_index The index of the process in the list of processes in the process group
     /// @return nullptr if the node does not exist, otherwise a pointer to the corresponding node.
-    std::shared_ptr<ProcessInfoNode> getProcessInfoNode(uint32_t pg_index, uint32_t process_index);
+    ProcessInfoNode* getProcessInfoNode(uint32_t pg_index, uint32_t process_index);
 
     /// @brief set the initial machine group state change result, called by graph when the transition completes
     /// @param result the result to save; it can only be saved once
@@ -163,9 +164,6 @@ class ProcessGroupManager final
 
     /// @brief Cancels processGroupManager main routine as though SIGTERM had been sent
     void cancel();
-
-    /// @brief Set the internal pointer for the Launch Manager ProcessInfoNode
-    void setLaunchManagerConfiguration(const OsProcess* launch_manager_config);
 
   private:
     /// @brief Perform the function of Control Client handler
@@ -282,7 +280,6 @@ class ProcessGroupManager final
     inline bool initializeProcessGroups();
 #endif
 
-
     /// @brief Creates process component objects, including the job queue and worker threads.
     inline void createProcessComponentsObjects();
 
@@ -302,7 +299,7 @@ class ProcessGroupManager final
     std::shared_ptr<SafeProcessMap> process_map_;
 
     /// @brief Unique pointer to the worker threads handling ProcessInfoNode jobs.
-    std::unique_ptr<WorkerThread<ProcessInfoNode>> worker_threads_;
+    std::unique_ptr<WorkerThread<Task>> worker_threads_;
 
     /// @brief Shared pointer to the job queue for ProcessInfoNode jobs.
     std::shared_ptr<WorkerQueue> worker_jobs_;
@@ -330,10 +327,11 @@ class ProcessGroupManager final
     /// @brief Process state notifier object used to send data to PHM
     std::unique_ptr<score::lcm::IProcessStateNotifier> process_state_notifier_;
 
-    /// @brief pointer to the configuration for Launch Manager
-    const OsProcess* launch_manager_config_{nullptr};
-
     std::unique_ptr<IAliveMonitorThread> alive_monitor_thread_;
+
+    std::unique_ptr<ProcessMonitor> process_monitor_;
+
+    std::unique_ptr<OsHandler> os_handler_;
 
     std::shared_ptr<score::lcm::IRecoveryClient> recovery_client_{};
 };

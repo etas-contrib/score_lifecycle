@@ -27,7 +27,6 @@ cc_library(
         "//score:__subpackages__",
     ],
     deps = [
-        "//externals/ipc_dropin",
         "//score/launch_manager/src/daemon/src/common:identifier_hash",
     ],
 )

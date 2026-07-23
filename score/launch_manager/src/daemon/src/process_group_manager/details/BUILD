@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 cc_library(
     name = "process_info_node",
@@ -44,7 +44,10 @@ cc_library(
     hdrs = ["graph.hpp"],
     include_prefix = "score/mw/launch_manager/process_group_manager/details",
     strip_include_prefix = "/score/launch_manager/src/daemon/src/process_group_manager/details",
-    visibility = ["//score/launch_manager/src/daemon/src/process_group_manager:__pkg__"],
+    visibility = [
+        "//score/launch_manager/src/daemon/src/process_group_manager:__pkg__",
+        "//score/launch_manager/src/daemon/src/process_group_manager/details:__pkg__",
+    ],
     deps = [
         ":process_info_node",
         ":safe_process_map",
@@ -100,6 +103,26 @@ cc_test(
         ":safe_process_map",
         "@googletest//:gtest_main",
         "@score_baselibs//score/os/mocklib:sys_wait_mock",
+    ],
+)
+
+cc_test(
+    name = "process_group_manager_UT",
+    timeout = "long",
+    srcs = ["process_group_manager_UT.cpp"],
+    defines = select({
+        "//config:lm_use_new_configuration": ["USE_NEW_CONFIGURATION"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":process_group_manager_impl",
+        "//score/launch_manager/src/daemon/src/configuration:config",
+        "//score/launch_manager/src/daemon/src/process_group_manager:ialive_monitor_thread_mock",
+        "//score/launch_manager/src/daemon/src/process_group_manager:process_group_manager_hdrs",
+        "//score/launch_manager/src/daemon/src/process_state_client:iprocess_state_notifier_mock",
+        "//score/launch_manager/src/daemon/src/recovery_client:recovery_client_mock",
+        "//score/launch_manager/src/daemon/src/watchdog:i_watchdog_if_mock",
+        "@googletest//:gtest_main",
     ],
 )
 

@@ -49,6 +49,19 @@ cc_library(
 )
 
 cc_library(
+    name = "iprocess_state_notifier_mock",
+    testonly = True,
+    hdrs = ["iprocess_state_notifier_mock.hpp"],
+    include_prefix = "score/mw/launch_manager/process_state_client",
+    strip_include_prefix = "/score/launch_manager/src/daemon/src/process_state_client",
+    visibility = ["//score:__subpackages__"],
+    deps = [
+        ":iprocess_state_notifier",
+        "@googletest//:gtest",
+    ],
+)
+
+cc_library(
     name = "process_state_notifier",
     srcs = ["process_state_notifier.cpp"],
     hdrs = ["process_state_notifier.hpp"],

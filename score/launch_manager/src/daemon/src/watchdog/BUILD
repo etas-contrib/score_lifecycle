@@ -31,3 +31,26 @@ cc_library(
         "//score/launch_manager/src/daemon/src/common:constants",
     ],
 )
+
+cc_library(
+    name = "i_watchdog_if_mock",
+    testonly = True,
+    hdrs = ["IWatchdogIfMock.hpp"],
+    include_prefix = "score/mw/launch_manager/watchdog",
+    strip_include_prefix = "/score/launch_manager/src/daemon/src/watchdog",
+    visibility = ["//score:__subpackages__"],
+    deps = [
+        ":i_watchdog_if",
+        "@googletest//:gtest",
+    ],
+)
+
+cc_library(
+    name = "device_config_factory_stub",
+    testonly = True,
+    hdrs = ["DeviceConfigFactoryStub.hpp"],
+    include_prefix = "score/mw/launch_manager/watchdog",
+    strip_include_prefix = "/score/launch_manager/src/daemon/src/watchdog",
+    visibility = ["//score:__subpackages__"],
+    deps = [":i_device_config_factory"],
+)

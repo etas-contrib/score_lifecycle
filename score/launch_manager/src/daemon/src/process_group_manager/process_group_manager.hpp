@@ -31,7 +31,7 @@
 #include "score/mw/launch_manager/common/constants.hpp"
 #include "score/mw/launch_manager/common/identifier_hash.hpp"
 #include "score/mw/launch_manager/control/control_client_channel.hpp"
-#include "score/mw/launch_manager/process_group_manager/details/component_event.hpp"
+#include "score/mw/launch_manager/process_group_manager/details/component_event_queue.hpp"
 #include "score/mw/launch_manager/process_group_manager/details/graph.hpp"
 #include "score/mw/launch_manager/process_group_manager/details/os_handler.hpp"
 #include "score/mw/launch_manager/process_group_manager/details/process_info_node.hpp"
@@ -68,7 +68,7 @@ using ConfigurationType = ConfigurationManager;
 class ProcessGroupManager final
 {
     using WorkerQueue =
-        MPMCConcurrentQueue<std::optional<Task>, static_cast<std::size_t>(ProcessLimits::kMaxProcesses)>;
+        MPMCConcurrentQueue<std::optional<ComponentTask>, static_cast<std::size_t>(ProcessLimits::kMaxProcesses)>;
 
   public:
     /// @brief Constructs a new ProcessGroupManager object.
@@ -80,9 +80,10 @@ class ProcessGroupManager final
     /// @param recovery_client A shared pointer to an IRecoveryClient instance for handling recovery operations.
     /// @param process_state_notifier A unique pointer to an IProcessStateNotifier instance for notifying the Alive
     /// Monitor thread of process state changes.
-    ProcessGroupManager(std::unique_ptr<IAliveMonitorThread> alive_monitor_thread,
-                        std::shared_ptr<IRecoveryClient> recovery_client,
-                        std::unique_ptr<score::lcm::IProcessStateNotifier> process_state_notifier);
+    ProcessGroupManager(
+        std::unique_ptr<IAliveMonitorThread> alive_monitor_thread,
+        std::shared_ptr<IRecoveryClient> recovery_client,
+        std::unique_ptr<score::lcm::IProcessStateNotifier> process_state_notifier);
 
     /// @brief Initializes the process group manager.
     /// Loads the flat configuration through ConfigurationManager.
@@ -310,7 +311,7 @@ class ProcessGroupManager final
     std::shared_ptr<SafeProcessMap> process_map_;
 
     /// @brief Unique pointer to the worker threads handling ProcessInfoNode jobs.
-    std::unique_ptr<WorkerThread<Task>> worker_threads_;
+    std::unique_ptr<WorkerThread<ComponentTask>> worker_threads_;
 
     /// @brief Shared pointer to the job queue for ProcessInfoNode jobs.
     std::shared_ptr<WorkerQueue> worker_jobs_;

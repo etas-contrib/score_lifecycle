@@ -145,7 +145,6 @@ cc_library(
     visibility = ["//score/launch_manager/src/daemon/src/process_group_manager:__pkg__"],
     deps = [
         ":icomponent",
-        ":safe_process_map",
         "//score/launch_manager/src/daemon/src/control:control_client_channel",
         "//score/launch_manager/src/daemon/src/osal:ipc_comms",
         "//score/launch_manager/src/daemon/src/osal:semaphore",
@@ -159,6 +158,18 @@ cc_library(
             "//score/launch_manager/src/daemon/src/configuration:configuration_manager",
         ],
     }),
+)
+
+cc_test(
+    name = "process_info_node_UT",
+    srcs = ["process_info_node_UT.cpp"],
+    deps = [
+        ":process_group_manager_impl",
+        ":process_info_node",
+        ":safe_process_map",
+        "//score/launch_manager/src/daemon/src/process_group_manager:mock_iprocess",
+        "@googletest//:gtest_main",
+    ],
 )
 
 cc_library(
@@ -304,6 +315,9 @@ cc_test(
 cc_library(
     name = "process_launcher",
     srcs = ["process_launcher.cpp"],
+    hdrs = ["process_launcher.hpp"],
+    include_prefix = "score/mw/launch_manager/process_group_manager/details",
+    strip_include_prefix = "/score/launch_manager/src/daemon/src/process_group_manager/details",
     visibility = ["//score/launch_manager/src/daemon/src/process_group_manager:__pkg__"],
     deps = [
         "//score/launch_manager/src/daemon/src/common:log",

@@ -135,6 +135,7 @@ cc_test(
 
 cc_library(
     name = "process_info_node",
+    srcs = ["process_info_node.cpp"],
     hdrs = ["process_info_node.hpp"],
     defines = select({
         "//config:lm_use_new_configuration": ["USE_NEW_CONFIGURATION"],
@@ -145,6 +146,7 @@ cc_library(
     visibility = ["//score/launch_manager/src/daemon/src/process_group_manager:__pkg__"],
     deps = [
         ":icomponent",
+        ":safe_process_map",
         "//score/launch_manager/src/daemon/src/control:control_client_channel",
         "//score/launch_manager/src/daemon/src/osal:ipc_comms",
         "//score/launch_manager/src/daemon/src/osal:semaphore",
@@ -164,7 +166,6 @@ cc_test(
     name = "process_info_node_UT",
     srcs = ["process_info_node_UT.cpp"],
     deps = [
-        ":process_group_manager_impl",
         ":process_info_node",
         ":safe_process_map",
         "//score/launch_manager/src/daemon/src/process_group_manager:mock_iprocess",

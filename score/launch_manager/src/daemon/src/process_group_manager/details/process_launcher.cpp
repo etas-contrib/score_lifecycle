@@ -354,7 +354,6 @@ OsalReturnType IProcess::setSchedulingAndSecurity(const OsalConfig& config)
     OsalReturnType retval = OsalReturnType::kSuccess;
 
     // Set process group id to be equal to the pid
-    // setpgid will fail if called by a session leader (which LCMd is), so skip
     if (0 != setpgid(0, getpid()))
     {
         LM_LOG_ERROR() << "setpgid() failed:" << score::lcm::internal::errno_message(errno);

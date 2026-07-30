@@ -42,8 +42,8 @@ cc_library(
     strip_include_prefix = "/score/launch_manager/src/daemon/src/process_group_manager/details",
     visibility = ["//score:__subpackages__"],
     deps = [
-        "@score_baselibs//score/language/futurecpp"
-    ]
+        "@score_baselibs//score/language/futurecpp",
+    ],
 )
 
 cc_library(
@@ -180,8 +180,8 @@ cc_library(
     visibility = ["//score/launch_manager/src/daemon/src/process_group_manager:__pkg__"],
     deps = [
         ":component_event_queue",
-        ":component_task",
         ":component_of",
+        ":component_task",
         ":dependency_graph",
         ":process_info_node",
         ":run_target",
@@ -202,7 +202,7 @@ cc_library(
     visibility = ["//score/launch_manager/src/daemon/src/process_group_manager:__pkg__"],
     deps = [
         ":dependency_graph",
-        ":reservable_queue",
+        "//score/launch_manager/src/daemon/src/common/concurrency:fixed_size_queue",
         "@score_baselibs//score/language/futurecpp",
     ],
 )
@@ -292,11 +292,12 @@ cc_test(
     name = "oshandler_UT",
     srcs = ["oshandler_UT.cpp"],
     deps = [
+        ":mock_component",
         ":mock_component_controller",
         ":os_handler",
         ":safe_process_map",
         "@googletest//:gtest_main",
-    "@score_baselibs//score/os/mocklib:sys_wait_mock",
+        "@score_baselibs//score/os/mocklib:sys_wait_mock",
     ],
 )
 
@@ -318,27 +319,14 @@ cc_library(
 
 cc_library(
     name = "dependency_graph",
+    hdrs = [
+        "dependency_graph.hpp",
+    ],
     include_prefix = "score/mw/launch_manager/process_group_manager/details",
     strip_include_prefix = "/score/launch_manager/src/daemon/src/process_group_manager/details",
-    hdrs = [
-        "dependency_graph.hpp"
-    ],
-    deps = [
-        ":reservable_queue"
-    ],
     visibility = ["//score/launch_manager/src/daemon/src/process_group_manager:__pkg__"],
-)
-
-cc_library(
-    name = "reservable_queue",
-    include_prefix = "score/mw/launch_manager/process_group_manager/details",
-    strip_include_prefix = "/score/launch_manager/src/daemon/src/process_group_manager/details",
-    hdrs = [
-        "reservable_queue.hpp"
-    ],
-    visibility = [
-        "//score/launch_manager/src/daemon/src/graph_poc:__pkg__",
-        "//score/launch_manager/src/daemon/src/process_group_manager:__pkg__",
+    deps = [
+        "//score/launch_manager/src/daemon/src/common/concurrency:fixed_size_queue",
     ],
 )
 
@@ -382,9 +370,9 @@ cc_library(
         ":component_event_queue",
         ":graph",
         ":os_handler",
-        ":process_monitor",
         ":process_info_node",
         ":process_launcher",
+        ":process_monitor",
         ":safe_process_map",
         "//score/launch_manager/src/daemon/src/common:log",
         "//score/launch_manager/src/daemon/src/common/concurrency:mpmc_concurrent_queue",

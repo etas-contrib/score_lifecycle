@@ -805,5 +805,7 @@ Configuration file
 
     The :term:`Launch Manager` shall have a means to validate the configuration offline.
 
+.. include:: comp_requirements_recovery_action.rst
+
 .. needextend:: is_external == False and "__launch_manager__" in id
    :+tags: lifecycle, launch_manager

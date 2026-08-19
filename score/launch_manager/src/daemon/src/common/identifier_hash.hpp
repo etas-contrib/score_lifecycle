@@ -170,6 +170,18 @@ inline std::ostream& operator<<(std::ostream& stream, const IdentifierHash& id_h
 
 }  // namespace score::mw::lifecycle
 
+namespace std
+{
+template <>
+struct hash<score::mw::lifecycle::IdentifierHash>
+{
+    size_t operator()(const score::mw::lifecycle::IdentifierHash& id) const
+    {
+        return id.data();
+    }
+};
+}  // namespace std
+
 #ifdef LC_LOG_SCORE_MW_LOG
 #include "score/mw/log/logger.h"
 

@@ -444,9 +444,9 @@ score::mw::lifecycle::ProcessState ProcessInfoNode::getState() const
     return process_state_.load();
 }
 
-uint32_t ProcessInfoNode::getIndex() const
+IdentifierHash ProcessInfoNode::getIndex() const
 {
-    return process_index_;
+    return IdentifierHash{config_.name};
 }
 
 ControlClientChannelP ProcessInfoNode::getControlClientChannel() const

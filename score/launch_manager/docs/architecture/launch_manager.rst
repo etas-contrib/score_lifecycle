@@ -16,21 +16,33 @@ Launch manager
 ##############
 
 The :term:`Launch Manager` is a component that provides a framework for managing
-the lifecycle of processes in the S-CORE platform. It allows for launching,
-monitoring, and controlling processes based on defined configurations and
-requirements. As such, it is a central part of the lifecycle management in
-S-CORE and knows about the state of all processes in the system.
+the lifecycle of processes in the S-CORE platform.
+It allows for launching, monitoring, and controlling processes based on defined
+configurations and requirements.
+As such, it is a central part of the lifecycle management in S-CORE and knows
+about the state of all processes in the system.
 
-It's foreseen ECU projects will need a custom state management to fulfill ECU-project specific requirements.  The S-CORE stack will offer a framework to control application lifecycle, but will not specify the State Manager.
+It's foreseen ECU projects will need a custom state management to fulfill
+ECU-project specific requirements.
+The S-CORE stack will offer a framework to control application lifecycle, but
+will not specify the State Manager.
 
 Overview
 ========
 
-The functionality of the :term:`Launch Manager` is defined by configuration data, which spawns a directed acyclic graph (DAG) of :term:`Components <Component>` and so called :term:`Run Targets <Run Target>`.
-The :term:`Run Targets <Run Target>` are virtual nodes in the DAG and represent :term:`Run States <Run State>` of the system.
-The :term:`Launch Manager` is responsible for starting and stopping the processes in the correct order, based on the dependencies defined in the configuration data.
+The functionality of the :term:`Launch Manager` is defined by configuration
+data, which spawns a directed acyclic graph (DAG) of :term:`Components
+<Component>` and so called :term:`Run Targets <Run Target>`.
+The :term:`Run Targets <Run Target>` are virtual nodes in the DAG and represent
+:term:`Run States <Run State>` of the system.
+The :term:`Launch Manager` is responsible for starting and stopping the
+processes in the correct order, based on the dependencies defined in the
+configuration data.
 
-E.g. the configuration below consists of three :term:`Run Targets <Run Target>` managing 9 components. If the user selects e.g. the :term:`Run Target` "debug" the :term:`Launch Manager` will start the components in the following order defined by the dependencies.
+E.g. the configuration below consists of three :term:`Run Targets <Run Target>`
+managing 9 components. If the user selects e.g. the :term:`Run Target` "debug"
+the :term:`Launch Manager` will start the components in the following order
+defined by the dependencies.
 
 1. flash driver
 2. filesystem

@@ -24,14 +24,20 @@ The following participants are related to the concept.
 Launch Manager
 --------------
 
-As the :term:`Launch Manager` is critical component for the system, it shall support alive monitoring of itself. This means it must implement internal health management, such as
-a worker thread, that wakes up every N milliseconds, checks if the component is in a consistent state, and send a notification to the external monitor.
+As the :term:`Launch Manager` is critical component for the system, it shall
+support alive monitoring of itself.
+This means it must implement internal health management, such as a worker
+thread, that wakes up every N milliseconds, checks if the component is in a
+consistent state, and send a notification to the external monitor.
 
 External monitor
 ----------------
 
-The aliveness of the :term:`Launch Manager` shall be monitored by an `external monitor, or a watchdog <https://en.wikipedia.org/wiki/Watchdog_timer>`_, to be able to detect "hanging" of the
-`Launch Manager`. The implementation of the external watchdog is out of scope in S-SCORE, as it is ECU and/or project specific.
+The aliveness of the :term:`Launch Manager` shall be monitored by an `external
+monitor, or a watchdog <https://en.wikipedia.org/wiki/Watchdog_timer>`_, to be
+able to detect "hanging" of the `Launch Manager`. The implementation of the
+external watchdog is out of scope in S-SCORE, as it is ECU and/or project
+specific.
 
 Watchdog Proxy
 --------------

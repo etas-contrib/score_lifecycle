@@ -21,8 +21,8 @@
    :security: YES
    :realizes: wp__sw_arch_verification[version==1]
 
-Architecture Inspection Checklist
-=================================
+Feature Architecture Inspection Checklist
+=========================================
 
 Purpose
 -------

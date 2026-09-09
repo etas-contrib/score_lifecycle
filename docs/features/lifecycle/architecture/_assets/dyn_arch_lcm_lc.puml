@@ -1,0 +1,49 @@
+' *******************************************************************************
+' Copyright (c) 2026 Contributors to the Eclipse Foundation
+'
+' See the NOTICE file(s) distributed with this work for additional
+' information regarding copyright ownership.
+'
+' This program and the accompanying materials are made available under the
+' terms of the Apache License Version 2.0 which is available at
+' https://www.apache.org/licenses/LICENSE-2.0
+'
+' SPDX-License-Identifier: Apache-2.0
+' *******************************************************************************
+
+@startuml
+
+participant "Lifecycle Manager" as lcm
+participant "Reporting App" as app
+participant "Crashing App" as capp
+
+activate lcm
+
+== Switching to a Run Target ==
+
+lcm -> app ** : Start process (pid 2000)
+activate app
+app -> app: Construct Lifecycle Client
+activate app #LightBlue
+app -> lcm : Report Running
+deactivate app
+
+lcm -> capp ** : Start process (pid 3000)
+activate capp
+
+capp -> capp: Construct Lifecycle Client
+activate capp #LightBlue
+capp -> lcm: Report Running
+note right of capp: "Random Crash"
+deactivate capp
+
+destroy capp
+OS -> lcm: pid 3000 has terminated
+
+== Switching to another Run Target ==
+
+lcm -> app: SIGTERM
+destroy app
+OS -> lcm : pid 2000 has terminated
+
+@enduml

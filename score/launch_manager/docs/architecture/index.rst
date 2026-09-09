@@ -19,5 +19,10 @@ Component Architecture
 
 .. toctree::
 
+   alive.rst
+   launch_manager.rst
+   launch_manager_configuration.rst
+   control_client.rst
+   lifecycle_client.rst
    component_architecture
    chklst_arc_inspection

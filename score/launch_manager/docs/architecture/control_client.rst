@@ -12,16 +12,24 @@
    # SPDX-License-Identifier: Apache-2.0
    # *******************************************************************************
 
-.. mod:: Lifecycle Module
-   :id: mod__lifecycle
-   :version: 1
-   :security: YES
-   :safety: ASIL_B
-   :status: valid
-   :includes: comp__health_monitor[version==1],
-              comp__lifecycle_control_client[version==1],
-              comp__lifecycle_launch_manager[version==1],
-              comp__lifecycle_lifecycle_client[version==1],
 
-Lifecycle Module
-################
+Control Client Architecture
+===========================
+
+.. comp:: Control Client
+   :id: comp__lifecycle_control_client
+   :status: valid
+   :version: 1
+   :safety: ASIL_B
+   :implements: logic_arc_int__lifecycle__controlif[version==1],
+                logic_arc_int__lifecycle__alive_if[version==1]
+   :uses: logic_arc_int__log_cpp__logging[version==1],
+          logic_arc_int__os__unistd[version==1],
+          logic_arc_int__lifecycle__lifecycle_if[version==1]
+   :security: NO
+   :belongs_to: feat__lifecycle[version==1]
+
+   .. uml:: _assets/lifecycle_state_machine.puml
+      :scale: 50
+      :align: center
+

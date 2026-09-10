@@ -8,9 +8,9 @@ requirements. Only requirements with `:status: valid` are considered.
 
 **Sources**
 
-- Feature-level requirements: [eclipse-score/score `docs/features/lifecycle/requirements/index.rst`](https://raw.githubusercontent.com/eclipse-score/score/refs/heads/main/docs/features/lifecycle/requirements/index.rst) — 32 requirements, all `valid`.
-- Component-level requirements: [score/launch_manager/docs/requirements/requirements.rst](score/launch_manager/docs/requirements/requirements.rst) — 63 requirements, all `valid`.
-- Integration tests: [tests/integration/](tests/integration/) — 21 Python test files, scanned for `fully_verifies` / `partially_verifies`.
+- Feature-level requirements: [Lifecycle feature requirements](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html) — 32 requirements, all `valid`.
+- Component-level requirements: [Launch Manager component requirements](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html) — 63 requirements, all `valid`.
+- Integration tests: [tests/integration/](https://github.com/eclipse-score/lifecycle/tree/main/tests/integration) — 21 Python test files, scanned for `fully_verifies` / `partially_verifies`.
 
 ---
 
@@ -118,90 +118,90 @@ pie showData title Component-level requirements (63 valid)
 
 | # | Feature requirement ID | Title |
 |---:|---|---|
-| 1 | `feat_req__lifecycle__running_processes` | Process adoption |
-| 2 | `feat_req__lifecycle__oci_compliant` | OCI Compliant |
-| 3 | `feat_req__lifecycle__run_target_support` | Run target support |
-| 4 | `feat_req__lifecycle__control_commands` | Control commands |
-| 5 | `feat_req__lifecycle__query_commands` | Query commands |
-| 6 | `feat_req__lifecycle__controlif_status` | Report "started/running/degraded" |
-| 7 | `feat_req__lifecycle__smart_watchdog_config` | Monitoring and recovery: watchdog support |
-| 8 | `feat_req__lifecycle__liveliness_detection` | Process liveliness detection |
-| 9 | `feat_req__lifecycle__multi_instance_support` | Multi-instance |
-| 10 | `feat_req__lifecycle__lm_self_health_check` | Launch manager self health check |
-| 11 | `feat_req__lifecycle__prog_lang` | Lifecycle programing language support |
-| 12 | `feat_req__lifecycle__hm_deadline` | Health Monitor deadline supervision |
-| 13 | `feat_req__lifecycle__hm_logical` | Health Monitor logical supervision |
-| 14 | `feat_req__lifecycle__hm_checkpoint` | Health Monitor checkpoint supervision |
-| 15 | `feat_req__lifecycle__logging_support` | Logging support |
-| 16 | `feat_req__lifecycle__config_file_support` | Configuration file support |
-| 17 | `feat_req__lifecycle__session_extension` | Updating configuration |
-| 18 | `feat_req__lifecycle__component_group_config` | Component grouping configuration |
-| 19 | `feat_req__lifecycle__deps_visualization` | Configuration Dependency view |
+| 1 | [`feat_req__lifecycle__running_processes`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__running_processes) | Process adoption |
+| 2 | [`feat_req__lifecycle__oci_compliant`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__oci_compliant) | OCI Compliant |
+| 3 | [`feat_req__lifecycle__run_target_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__run_target_support) | Run target support |
+| 4 | [`feat_req__lifecycle__control_commands`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__control_commands) | Control commands |
+| 5 | [`feat_req__lifecycle__query_commands`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__query_commands) | Query commands |
+| 6 | [`feat_req__lifecycle__controlif_status`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__controlif_status) | Report "started/running/degraded" |
+| 7 | [`feat_req__lifecycle__smart_watchdog_config`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__smart_watchdog_config) | Monitoring and recovery: watchdog support |
+| 8 | [`feat_req__lifecycle__liveliness_detection`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__liveliness_detection) | Process liveliness detection |
+| 9 | [`feat_req__lifecycle__multi_instance_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__multi_instance_support) | Multi-instance |
+| 10 | [`feat_req__lifecycle__lm_self_health_check`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__lm_self_health_check) | Launch manager self health check |
+| 11 | [`feat_req__lifecycle__prog_lang`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__prog_lang) | Lifecycle programing language support |
+| 12 | [`feat_req__lifecycle__hm_deadline`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__hm_deadline) | Health Monitor deadline supervision |
+| 13 | [`feat_req__lifecycle__hm_logical`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__hm_logical) | Health Monitor logical supervision |
+| 14 | [`feat_req__lifecycle__hm_checkpoint`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__hm_checkpoint) | Health Monitor checkpoint supervision |
+| 15 | [`feat_req__lifecycle__logging_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__logging_support) | Logging support |
+| 16 | [`feat_req__lifecycle__config_file_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__config_file_support) | Configuration file support |
+| 17 | [`feat_req__lifecycle__session_extension`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__session_extension) | Updating configuration |
+| 18 | [`feat_req__lifecycle__component_group_config`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__component_group_config) | Component grouping configuration |
+| 19 | [`feat_req__lifecycle__deps_visualization`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__deps_visualization) | Configuration Dependency view |
 
 ### Not verified component-level requirements (49)
 
 | # | Component requirement ID | Derived from (feature) |
 |---:|---|---|
-| 1 | `comp_req__launch_man__process_input_output` | `custom_cond_support` |
-| 2 | `comp_req__launch_man__debug_support` | `custom_cond_support` |
-| 3 | `comp_req__launch_man__support_held_state` | `custom_cond_support` |
-| 4 | `comp_req__launch_man__terminal_support` | `custom_cond_support` |
-| 5 | `comp_req__launch_man__std_handle_redir` | `custom_cond_support` |
-| 6 | `comp_req__launch_man__secpol_non_root` | `custom_cond_support` |
-| 7 | `comp_req__launch_man__capability_support` | `custom_cond_support` |
-| 8 | `comp_req__launch_man__fd_inheritance` | `custom_cond_support` |
-| 9 | `comp_req__launch_man__support_secpol_type` | `custom_cond_support` |
-| 10 | `comp_req__launch_man__runmask_support` | `custom_cond_support` |
-| 11 | `comp_req__launch_man__aslr_support` | `custom_cond_support` |
-| 12 | `comp_req__launch_man__process_rlimit_support` | `custom_cond_support` |
-| 13 | `comp_req__launch_man__detach_parent_process` | `custom_cond_support` |
-| 14 | `comp_req__launch_man__cond_process_start` | `conditional_startup` |
-| 15 | `comp_req__launch_man__total_wait_time_support` | `conditional_startup` |
-| 16 | `comp_req__launch_man__polling_interval` | `conditional_startup` |
-| 17 | `comp_req__launch_man__validate_conditions` | `conditional_startup` |
-| 18 | `comp_req__launch_man__validation_conditions` | `conditional_startup` |
-| 19 | `comp_req__launch_man__launcher_status_storage` | `conditional_startup` |
-| 20 | `comp_req__launch_man__condition_check_method` | `conditional_startup` |
-| 21 | `comp_req__launch_man__config_actions_cond` | `conditional_startup` |
-| 22 | `comp_req__launch_man__env_variable_cond_check` | `conditional_startup` |
-| 23 | `comp_req__launch_man__dependency_check` | `conditional_startup` |
-| 24 | `comp_req__launch_man__check_dependency_exec` | `conditional_startup` |
-| 25 | `comp_req__launch_man__define_swc_dependencies` | `conditional_startup` |
-| 26 | `comp_req__launch_man__configurable_wait_time` | `conditional_startup` |
-| 27 | `comp_req__launch_man__drop_supervsion` | `running_processes` |
-| 28 | `comp_req__launch_man__multi_start_support` | `running_processes` |
-| 29 | `comp_req__launch_man__consistent_dependencies` | `running_processes` |
-| 30 | `comp_req__launch_man__stop_process_dependents` | `running_processes` |
-| 31 | `comp_req__launch_man__stop_order_spec` | `running_processes` |
-| 32 | `comp_req__launch_man__configurable_timeout` | `switch_run_targets` |
-| 33 | `comp_req__launch_man__time_to_wait_config` | `terminationn_dependency` |
-| 34 | `comp_req__launch_man__fast_shutdown_support` | `terminationn_dependency` |
-| 35 | `comp_req__launch_man__monitoring_processes` | `liveliness_detection` |
-| 36 | `comp_req__launch_man__process_failure_react` | `liveliness_detection` |
-| 37 | `comp_req__launch_man__lm_ext_watchdog_notify` | `lm_self_health_check` |
-| 38 | `comp_req__launch_man__lm_ext_wdg_failed_test` | `lm_self_health_check` |
-| 39 | `comp_req__launch_man__lm_ext_watchdog_cfg` | `lm_self_health_check` |
-| 40 | `comp_req__launch_man__slog2_logging` | `logging_support` |
-| 41 | `comp_req__launch_man__process_logging_support` | `logging_support` |
-| 42 | `comp_req__launch_man__log_timestamp` | `logging_support` |
-| 43 | `comp_req__launch_man__dag_logging_controlif` | `logging_support` |
-| 44 | `comp_req__launch_man__dependency_visu` | `deps_visualization` |
-| 45 | `comp_req__launch_man__offline_config_valid` | `deps_visualization` |
-| 46 | `comp_req__launch_man__modular_config_support` | `config_file_support` |
-| 47 | `comp_req__launch_man__runtime_config_compat` | `config_file_support` |
-| 48 | `comp_req__launch_man__central_default_defines` | `component_group_config` |
-| 49 | `comp_req__launch_man__lazy_check` | `component_group_config` |
+| 1 | [`comp_req__launch_man__process_input_output`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__process_input_output) | `custom_cond_support` |
+| 2 | [`comp_req__launch_man__debug_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__debug_support) | `custom_cond_support` |
+| 3 | [`comp_req__launch_man__support_held_state`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__support_held_state) | `custom_cond_support` |
+| 4 | [`comp_req__launch_man__terminal_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__terminal_support) | `custom_cond_support` |
+| 5 | [`comp_req__launch_man__std_handle_redir`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__std_handle_redir) | `custom_cond_support` |
+| 6 | [`comp_req__launch_man__secpol_non_root`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__secpol_non_root) | `custom_cond_support` |
+| 7 | [`comp_req__launch_man__capability_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__capability_support) | `custom_cond_support` |
+| 8 | [`comp_req__launch_man__fd_inheritance`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__fd_inheritance) | `custom_cond_support` |
+| 9 | [`comp_req__launch_man__support_secpol_type`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__support_secpol_type) | `custom_cond_support` |
+| 10 | [`comp_req__launch_man__runmask_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__runmask_support) | `custom_cond_support` |
+| 11 | [`comp_req__launch_man__aslr_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__aslr_support) | `custom_cond_support` |
+| 12 | [`comp_req__launch_man__process_rlimit_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__process_rlimit_support) | `custom_cond_support` |
+| 13 | [`comp_req__launch_man__detach_parent_process`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__detach_parent_process) | `custom_cond_support` |
+| 14 | [`comp_req__launch_man__cond_process_start`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__cond_process_start) | `conditional_startup` |
+| 15 | [`comp_req__launch_man__total_wait_time_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__total_wait_time_support) | `conditional_startup` |
+| 16 | [`comp_req__launch_man__polling_interval`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__polling_interval) | `conditional_startup` |
+| 17 | [`comp_req__launch_man__validate_conditions`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__validate_conditions) | `conditional_startup` |
+| 18 | [`comp_req__launch_man__validation_conditions`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__validation_conditions) | `conditional_startup` |
+| 19 | [`comp_req__launch_man__launcher_status_storage`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__launcher_status_storage) | `conditional_startup` |
+| 20 | [`comp_req__launch_man__condition_check_method`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__condition_check_method) | `conditional_startup` |
+| 21 | [`comp_req__launch_man__config_actions_cond`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__config_actions_cond) | `conditional_startup` |
+| 22 | [`comp_req__launch_man__env_variable_cond_check`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__env_variable_cond_check) | `conditional_startup` |
+| 23 | [`comp_req__launch_man__dependency_check`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__dependency_check) | `conditional_startup` |
+| 24 | [`comp_req__launch_man__check_dependency_exec`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__check_dependency_exec) | `conditional_startup` |
+| 25 | [`comp_req__launch_man__define_swc_dependencies`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__define_swc_dependencies) | `conditional_startup` |
+| 26 | [`comp_req__launch_man__configurable_wait_time`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__configurable_wait_time) | `conditional_startup` |
+| 27 | [`comp_req__launch_man__drop_supervsion`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__drop_supervsion) | `running_processes` |
+| 28 | [`comp_req__launch_man__multi_start_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__multi_start_support) | `running_processes` |
+| 29 | [`comp_req__launch_man__consistent_dependencies`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__consistent_dependencies) | `running_processes` |
+| 30 | [`comp_req__launch_man__stop_process_dependents`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__stop_process_dependents) | `running_processes` |
+| 31 | [`comp_req__launch_man__stop_order_spec`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__stop_order_spec) | `running_processes` |
+| 32 | [`comp_req__launch_man__configurable_timeout`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__configurable_timeout) | `switch_run_targets` |
+| 33 | [`comp_req__launch_man__time_to_wait_config`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__time_to_wait_config) | `terminationn_dependency` |
+| 34 | [`comp_req__launch_man__fast_shutdown_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__fast_shutdown_support) | `terminationn_dependency` |
+| 35 | [`comp_req__launch_man__monitoring_processes`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__monitoring_processes) | `liveliness_detection` |
+| 36 | [`comp_req__launch_man__process_failure_react`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__process_failure_react) | `liveliness_detection` |
+| 37 | [`comp_req__launch_man__lm_ext_watchdog_notify`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__lm_ext_watchdog_notify) | `lm_self_health_check` |
+| 38 | [`comp_req__launch_man__lm_ext_wdg_failed_test`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__lm_ext_wdg_failed_test) | `lm_self_health_check` |
+| 39 | [`comp_req__launch_man__lm_ext_watchdog_cfg`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__lm_ext_watchdog_cfg) | `lm_self_health_check` |
+| 40 | [`comp_req__launch_man__slog2_logging`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__slog2_logging) | `logging_support` |
+| 41 | [`comp_req__launch_man__process_logging_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__process_logging_support) | `logging_support` |
+| 42 | [`comp_req__launch_man__log_timestamp`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__log_timestamp) | `logging_support` |
+| 43 | [`comp_req__launch_man__dag_logging_controlif`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__dag_logging_controlif) | `logging_support` |
+| 44 | [`comp_req__launch_man__dependency_visu`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__dependency_visu) | `deps_visualization` |
+| 45 | [`comp_req__launch_man__offline_config_valid`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__offline_config_valid) | `deps_visualization` |
+| 46 | [`comp_req__launch_man__modular_config_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__modular_config_support) | `config_file_support` |
+| 47 | [`comp_req__launch_man__runtime_config_compat`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__runtime_config_compat) | `config_file_support` |
+| 48 | [`comp_req__launch_man__central_default_defines`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__central_default_defines) | `component_group_config` |
+| 49 | [`comp_req__launch_man__lazy_check`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__lazy_check) | `component_group_config` |
 
 ### Integration tests that do not link any requirement (6)
 
 | # | Test file |
 |---:|---|
-| 1 | [smoke](tests/integration/smoke/smoke.py) |
-| 2 | [process_fd_leak](tests/integration/process_fd_leak/process_fd_leak.py) |
-| 3 | [fallback_to_same_target_restarts](tests/integration/fallback_to_same_target_restarts/fallback_to_same_target_restarts.py) |
-| 4 | [crash_ignores_dependents](tests/integration/crash_ignores_dependents/crash_ignores_dependents.py) |
-| 5 | [process_wrong_binary_failure](tests/integration/process_wrong_binary_failure/process_wrong_binary_failure.py) |
-| 6 | [incorrect_config_non_reporting](tests/integration/incorrect_config_non_reporting/test_incorrect_config_non_reporting.py) |
+| 1 | [smoke](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/smoke/smoke.py) |
+| 2 | [process_fd_leak](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_fd_leak/process_fd_leak.py) |
+| 3 | [fallback_to_same_target_restarts](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/fallback_to_same_target_restarts/fallback_to_same_target_restarts.py) |
+| 4 | [crash_ignores_dependents](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/crash_ignores_dependents/crash_ignores_dependents.py) |
+| 5 | [process_wrong_binary_failure](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_wrong_binary_failure/process_wrong_binary_failure.py) |
+| 6 | [incorrect_config_non_reporting](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/incorrect_config_non_reporting/test_incorrect_config_non_reporting.py) |
 
 ---
 
@@ -209,26 +209,26 @@ pie showData title Component-level requirements (63 valid)
 
 | Test file | Fully verifies | Partially verifies |
 |---|---|---|
-| [parallel_launch](tests/integration/parallel_launch/parallel_launch.py) | `feat__parallel_launch_support` | — |
-| [process_crash_monitoring](tests/integration/process_crash_monitoring/process_crash_monitoring.py) | `feat__monitor_abnormal_term` | — |
-| [switch_run_target](tests/integration/switch_run_target/switch_run_target.py) | `feat__request_run_target_start`, `feat__switch_run_targets`, `feat__process_termination`, `feat__terminationn_dependency`, `feat__process_ordering`, `comp__process_state_comm`, `comp__launch_manager_shutdown` | — |
-| [process_launch_args](tests/integration/process_launch_args/process_launch_args.py) | `feat__start_named_run_target`, `feat__launch_support`, `comp__process_state_comm`, `comp__process_launch_args` | — |
-| [crash_on_startup](tests/integration/crash_on_startup/crash_on_startup.py) | `comp__failure_detect`, `comp__retries_configurable`, `feat__recov_run_target_switch` | `feat__recovery_action_support` |
-| [sandbox_options](tests/integration/sandbox_options/sandbox_options.py) | `comp__uid_gid_support`, `comp__launch_priority_support`, `comp__scheduling_policy`, `comp__cwd_support`, `comp__supplementary_groups` | — |
-| [shutdown_signal](tests/integration/shutdown_signal/shutdown_signal.py) | `comp__shutdown_signal` | — |
-| [process_simple_rep_failure](tests/integration/process_simple_rep_failure/process_simple_rep_failure.py) | `comp__failure_detect` | `feat__recov_run_target_switch`, `feat__recovery_action_support` |
-| [process_complex_rep_failure](tests/integration/process_complex_rep_failure/process_complex_rep_failure.py) | `comp__failure_detect` | `feat__recov_run_target_switch`, `feat__recovery_action_support` |
-| [rt_running_when_process_exits](tests/integration/rt_running_when_process_exits/rt_running_when_process_exits.py) | — | `feat__start_named_run_target`, `feat__launch_support`, `comp__process_state_comm` |
-| [lm_shutdown_during_switch_to_off](tests/integration/lm_shutdown_during_switch_to_off/lm_shutdown_during_switch_to_off.py) | — | `comp__launcher_exit_shutdown` |
-| [lm_shutdown_during_rt_switch](tests/integration/lm_shutdown_during_rt_switch/lm_shutdown_during_rt_switch.py) | — | `comp__launcher_exit_shutdown` |
-| [complex_monitoring](tests/integration/complex_monitoring/complex_monitoring.py) | — | `comp__ext_monitor_notify` |
-| [ready_conditions/.../exists](tests/integration/ready_conditions/file_state/exists/ready_condition_file.py) | — | `comp__path_condition_check` |
-| [ready_conditions/.../not_existing](tests/integration/ready_conditions/file_state/not_existing/ready_condition_file_not_existing.py) | — | `comp__path_condition_check` |
-| [smoke](tests/integration/smoke/smoke.py) | — | — |
-| [process_fd_leak](tests/integration/process_fd_leak/process_fd_leak.py) | — | — |
-| [fallback_to_same_target_restarts](tests/integration/fallback_to_same_target_restarts/fallback_to_same_target_restarts.py) | — | — |
-| [crash_ignores_dependents](tests/integration/crash_ignores_dependents/crash_ignores_dependents.py) | — | — |
-| [process_wrong_binary_failure](tests/integration/process_wrong_binary_failure/process_wrong_binary_failure.py) | — | — |
-| [incorrect_config_non_reporting](tests/integration/incorrect_config_non_reporting/test_incorrect_config_non_reporting.py) | — | — |
+| [parallel_launch](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/parallel_launch/parallel_launch.py) | `feat__parallel_launch_support` | — |
+| [process_crash_monitoring](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_crash_monitoring/process_crash_monitoring.py) | `feat__monitor_abnormal_term` | — |
+| [switch_run_target](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/switch_run_target/switch_run_target.py) | `feat__request_run_target_start`, `feat__switch_run_targets`, `feat__process_termination`, `feat__terminationn_dependency`, `feat__process_ordering`, `comp__process_state_comm`, `comp__launch_manager_shutdown` | — |
+| [process_launch_args](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_launch_args/process_launch_args.py) | `feat__start_named_run_target`, `feat__launch_support`, `comp__process_state_comm`, `comp__process_launch_args` | — |
+| [crash_on_startup](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/crash_on_startup/crash_on_startup.py) | `comp__failure_detect`, `comp__retries_configurable`, `feat__recov_run_target_switch` | `feat__recovery_action_support` |
+| [sandbox_options](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/sandbox_options/sandbox_options.py) | `comp__uid_gid_support`, `comp__launch_priority_support`, `comp__scheduling_policy`, `comp__cwd_support`, `comp__supplementary_groups` | — |
+| [shutdown_signal](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/shutdown_signal/shutdown_signal.py) | `comp__shutdown_signal` | — |
+| [process_simple_rep_failure](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_simple_rep_failure/process_simple_rep_failure.py) | `comp__failure_detect` | `feat__recov_run_target_switch`, `feat__recovery_action_support` |
+| [process_complex_rep_failure](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_complex_rep_failure/process_complex_rep_failure.py) | `comp__failure_detect` | `feat__recov_run_target_switch`, `feat__recovery_action_support` |
+| [rt_running_when_process_exits](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/rt_running_when_process_exits/rt_running_when_process_exits.py) | — | `feat__start_named_run_target`, `feat__launch_support`, `comp__process_state_comm` |
+| [lm_shutdown_during_switch_to_off](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/lm_shutdown_during_switch_to_off/lm_shutdown_during_switch_to_off.py) | — | `comp__launcher_exit_shutdown` |
+| [lm_shutdown_during_rt_switch](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/lm_shutdown_during_rt_switch/lm_shutdown_during_rt_switch.py) | — | `comp__launcher_exit_shutdown` |
+| [complex_monitoring](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/complex_monitoring/complex_monitoring.py) | — | `comp__ext_monitor_notify` |
+| [ready_conditions/.../exists](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/ready_conditions/file_state/exists/ready_condition_file.py) | — | `comp__path_condition_check` |
+| [ready_conditions/.../not_existing](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/ready_conditions/file_state/not_existing/ready_condition_file_not_existing.py) | — | `comp__path_condition_check` |
+| [smoke](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/smoke/smoke.py) | — | — |
+| [process_fd_leak](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_fd_leak/process_fd_leak.py) | — | — |
+| [fallback_to_same_target_restarts](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/fallback_to_same_target_restarts/fallback_to_same_target_restarts.py) | — | — |
+| [crash_ignores_dependents](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/crash_ignores_dependents/crash_ignores_dependents.py) | — | — |
+| [process_wrong_binary_failure](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_wrong_binary_failure/process_wrong_binary_failure.py) | — | — |
+| [incorrect_config_non_reporting](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/incorrect_config_non_reporting/test_incorrect_config_non_reporting.py) | — | — |
 
 _(IDs abbreviated: `feat__` = `feat_req__lifecycle__`, `comp__` = `comp_req__launch_man__`.)_

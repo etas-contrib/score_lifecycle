@@ -51,6 +51,7 @@ The requirements for the feature architecture are defined in the `requirements` 
 Rationale Behind Architecture Decomposition
 *******************************************
 
+
 Mandatory: A motivation for the decomposition
 
 .. note:: Common decisions across features / cross cutting concepts is at the high level.
@@ -81,47 +82,14 @@ Static Architecture
 Dynamic Architecture
 --------------------
 
-feat_req__lifecycle__component_group_config
+The following sup-pages describe the interaction between components.
 
-.. feat_arc_dyn:: Lifecycle Client to Launch Manager Interaction
-    :id: feat_arc_dyn__lifecycle__lc_lcm
-    :security: YES
-    :safety: ASIL_B
-    :version: 1
-    :status: invalid
-    :fulfils: feat_req__lifecycle__conditional_startup[version==1],
-              feat_req__lifecycle__custom_cond_support[version==1],
-              feat_req__lifecycle__launch_support[version==1],
-              feat_req__lifecycle__monitor_abnormal_term[version==1],
-              feat_req__lifecycle__multi_instance_support[version==1],
-              feat_req__lifecycle__parallel_launch_support[version==1],
-              feat_req__lifecycle__process_ordering[version==1],
-              feat_req__lifecycle__process_termination[version==1],
-              feat_req__lifecycle__prog_lang[version==1],
-    :belongs_to: feat__lifecycle
+.. toctree::
+   :maxdepth: 1
+   :glob:
 
-    .. uml:: _assets//dyn_arch_lcm_lc.puml
-       :scale: 50
-       :align: center
+   dynamic_architecture/*
 
-
-.. feat_arc_dyn:: Control Client to Licecycle Manager Interaction
-    :id: feat_arc_dyn__lifecycle__dv_cc_lcm
-    :security: YES
-    :safety: ASIL_B
-    :version: 1
-    :status: invalid
-    :fulfils: feat_req__lifecycle__control_commands[version==1],
-              feat_req__lifecycle__launch_support[version==1],
-              feat_req__lifecycle__request_run_target_start[version==1],
-              feat_req__lifecycle__run_target_support[version==1],
-              feat_req__lifecycle__start_named_run_target[version==1],
-              feat_req__lifecycle__switch_run_targets[version==1],
-    :belongs_to: feat__lifecycle
-
-    .. uml:: _assets//dyn_arch_lcm_cc.puml
-       :scale: 50
-       :align: center
 
 Logical Interfaces
 ------------------
@@ -151,12 +119,3 @@ Module Viewpoint
       NativeApplication --> posix_signals : implements
       comp__lifecycle_launch_manager --> posix_signals : use
 
-Components Details
-------------------
-
-.. toctree::
-   :maxdepth: 1
-   :glob:
-
-   ./health_monitor
-   ./external_monitoring

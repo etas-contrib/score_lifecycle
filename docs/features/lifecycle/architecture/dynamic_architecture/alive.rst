@@ -12,15 +12,8 @@
    # SPDX-License-Identifier: Apache-2.0
    # *******************************************************************************
 
-.. _component_architecture_template:
 
-Component Architecture
-======================
+Alive
+#####
 
-.. toctree::
-
-   alive.rst
-   control_client.rst
-   lifecycle_client.rst
-   component_architecture
-   chklst_arc_inspection
+TODO

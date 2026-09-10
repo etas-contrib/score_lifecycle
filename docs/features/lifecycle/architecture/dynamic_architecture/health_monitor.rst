@@ -15,8 +15,9 @@
 Health Monitor
 ##############
 
-The :term:`Health Monitor` is a library, that together with the :term:`Launch Manager` provide a way to monitor
-the application health in similar fashion as the AUTOSAR `Platform Health Manager` (PHM).
+The :term:`Health Monitor` is a library, that together with the :term:`Launch
+Manager` provide a way to monitor the application health in similar fashion as
+the AUTOSAR `Platform Health Manager` (PHM).
 
 The main features of the :term:`Health Monitor` are the following monitoring functions:
 

@@ -16,6 +16,21 @@
 Control Client Architecture
 ===========================
 
+This interface provides control functionality for activating and managing run
+targets.It allows users to trigger execution of configured :term:`Run targets
+<Run target>` through a standardized activation mechanism.
+
+Interface
+---------
+
+The control interface is defined here:
+:need:`logic_arc_int__lifecycle__controlif`
+The :term:`Launch Manager` provides an interface, which allows an external
+State Manager application to request the :term:`Launch Manager` to start, stop
+or restart applications or groups of applications, which allows the
+implementation of a state management applications to support dynamic state
+control.
+
 .. comp:: Control Client
    :id: comp__lifecycle_control_client
    :status: valid
@@ -29,7 +44,4 @@ Control Client Architecture
    :security: NO
    :belongs_to: feat__lifecycle[version==1]
 
-   .. uml:: _assets/lifecycle_state_machine.puml
-      :scale: 50
-      :align: center
-
+   TODO

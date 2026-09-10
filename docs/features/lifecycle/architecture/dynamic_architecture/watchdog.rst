@@ -1,6 +1,6 @@
 ..
    # *******************************************************************************
-   # Copyright (c) 2024 Contributors to the Eclipse Foundation
+   # Copyright (c) 2026 Contributors to the Eclipse Foundation
    #
    # See the NOTICE file(s) distributed with this work for additional
    # information regarding copyright ownership.
@@ -12,9 +12,9 @@
    # SPDX-License-Identifier: Apache-2.0
    # *******************************************************************************
 
-External Monitoring
-###################
-
+########
+Watchdog
+########
 
 .. uml:: _assets/external_monitoring_static.puml
    :alt: External monitoring static Architecture
@@ -57,31 +57,37 @@ Requirements related to the external monitoring
 - :need:`feat_req__lifecycle__lm_self_health_check`
 
 
-Dynamic Architecture
-====================
+.. feat_arc_dyn:: Lifecycle Manager Watchdog Interaction
+    :id: feat_arc_dyn__lifecycle__dv_lcm_watch
+    :security: YES
+    :safety: ASIL_B
+    :version: 1
+    :status: invalid
+    :fulfils: feat_req__lifecycle__lm_self_health_check[version==1],
+    :belongs_to: feat__lifecycle
 
-.. uml:: _assets/external_monitoring_sequence.puml
-   :alt: External monitoring static arch
+    .. uml:: _assets/external_monitoring_sequence.puml
+       :alt: External monitoring static arch
 
-The most important interactions are the following:
+    The most important interactions are the following:
 
-.. list-table:: Sequence diagram Description
-   :widths: 10 90
-   :header-rows: 1
+    .. list-table:: Sequence diagram Description
+       :widths: 10 90
+       :header-rows: 1
 
-   * - Sequence number
-     - Description
-   * - 001
-     - The configuration. (notification interval, startup grace period, etc.) Additionally, if a watchdog interface is used, the used interface name (eg. /dev/watchdog) must be configurable.
-   * - 002
-     - If the :term:`Launch Manager` provides a client library implementation, the library must connect and attach to the :term:`Launch Manager`
-   * - 006
-     - Check the internal status and trigger alive notification (007)
-   * - 007
-     - Send the alive notification to the external monitor. (UART/SPI/GPIO/etc.)
-   * - 009
-     - Watchdog to check if the notification fits the expected window
-   * - 018
-     - If the status check fails, do not trigger alive notification (or :term:`Launch Manager` has crashed)
-   * - 019
-     - If there is no alive notification, trigger watchdog error reaction
+       * - Sequence number
+         - Description
+       * - 001
+         - The configuration. (notification interval, startup grace period, etc.) Additionally, if a watchdog interface is used, the used interface name (eg. /dev/watchdog) must be configurable.
+       * - 002
+         - If the :term:`Launch Manager` provides a client library implementation, the library must connect and attach to the :term:`Launch Manager`
+       * - 006
+         - Check the internal status and trigger alive notification (007)
+       * - 007
+         - Send the alive notification to the external monitor. (UART/SPI/GPIO/etc.)
+       * - 009
+         - Watchdog to check if the notification fits the expected window
+       * - 018
+         - If the status check fails, do not trigger alive notification (or :term:`Launch Manager` has crashed)
+       * - 019
+         - If there is no alive notification, trigger watchdog error reaction

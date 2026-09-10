@@ -136,12 +136,6 @@ alias(
 
 docs_bundle(
     name = "docs",
-    bundles = [
-        {
-            "bundle": "//score/launch_manager/src/lifecycle_client:docs",
-            "mount_at": "subcomponents/lifecycle_client",
-        },
-    ],
     code_targets = [
         ":launch_manager",
     ],

@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@score_docs_as_code//:docs.bzl", "docs_bundle")
 
 cc_library(
     name = "control_client",
@@ -27,4 +28,13 @@ cc_library(
         "//score/launch_manager/src/control_client/src/details:control_client_impl",
         "//score/launch_manager/src/daemon/src/common:identifier_hash",
     ],
+)
+
+docs_bundle(
+    name = "docs",
+    code_targets = [
+        ":control_client",
+    ],
+    source_dir = "docs",
+    visibility = ["//visibility:public"],
 )

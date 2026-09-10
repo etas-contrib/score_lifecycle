@@ -130,6 +130,14 @@ docs(
             "bundle": "//score/health_monitor:docs",
             "mount_at": "components/health_monitor",
         },
+        {
+            "bundle": "//score/launch_manager/src/control_client:docs",
+            "mount_at": "components/control_client",
+        },
+        {
+            "bundle": "//score/launch_manager/src/lifecycle_client:docs",
+            "mount_at": "components/lifecycle_client",
+        },
     ],
     external_needs = [
         "@score_platform//:needs_json",  # This allows linking to feature requirements.

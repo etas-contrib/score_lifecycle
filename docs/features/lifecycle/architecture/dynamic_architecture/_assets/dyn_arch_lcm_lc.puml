@@ -12,6 +12,7 @@
 ' *******************************************************************************
 
 @startuml
+autonumber "<b>[000]"
 
 participant "Lifecycle Manager" as lcm
 participant "Reporting App" as app
@@ -34,8 +35,8 @@ activate capp
 capp -> capp: Construct Lifecycle Client
 activate capp #LightBlue
 capp -> lcm: Report Running
-note right of capp: "Random Crash"
 deactivate capp
+capp -> capp: Random Crash
 
 destroy capp
 OS -> lcm: pid 3000 has terminated

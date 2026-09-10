@@ -19,8 +19,5 @@ Component Architecture
 
 .. toctree::
 
-   alive.rst
-   control_client.rst
-   lifecycle_client.rst
    component_architecture
    chklst_arc_inspection

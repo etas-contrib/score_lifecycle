@@ -13,8 +13,8 @@
    # *******************************************************************************
 
 
-Control Client Architecture
-===========================
+Control Client
+##############
 
 This interface provides control functionality for activating and managing run
 targets.It allows users to trigger execution of configured :term:`Run targets
@@ -37,7 +37,6 @@ control.
    :version: 1
    :safety: ASIL_B
    :implements: logic_arc_int__lifecycle__controlif[version==1],
-                logic_arc_int__lifecycle__alive_if[version==1]
    :uses: logic_arc_int__log_cpp__logging[version==1],
           logic_arc_int__os__unistd[version==1],
           logic_arc_int__lifecycle__lifecycle_if[version==1]

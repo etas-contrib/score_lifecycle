@@ -51,10 +51,14 @@ The requirements for the feature architecture are defined in the `requirements` 
 Rationale Behind Architecture Decomposition
 *******************************************
 
+The components are speperated such that a user has the ability to link against
+libraries that the given application requires, meaning we are not forcing
+dead code in the users application.
 
-Mandatory: A motivation for the decomposition
+- Lifecycle Client - Only required if a user applications has to report.
+- Health Monitor - Only required if a user applications shall have its health supervised.
+- Control Client - Only required if a user application shall act as a State Manager.
 
-.. note:: Common decisions across features / cross cutting concepts is at the high level.
 
 Static Architecture
 -------------------

@@ -243,3 +243,70 @@ pie showData title Component-level requirements (63 valid)
 | [incorrect_config_non_reporting](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/incorrect_config_non_reporting/test_incorrect_config_non_reporting.py) | — | — |
 
 _(IDs abbreviated: `feat__` = `feat_req__lifecycle__`, `comp__` = `comp_req__launch_man__`.)_
+
+---
+
+## Appendix B — Features directly fully verified by a test *and* having derived component requirements
+
+These feature requirements are named in a test's `fully_verifies` list, yet they also have
+component requirements `derived_from` them. They are the cases where the feature-level status
+depends on the interplay between the direct test annotation and the derived component coverage
+(see the Methodology note about `terminationn_dependency` and `monitor_abnormal_term`).
+
+| Feature requirement | Verifying test (`fully_verifies`) | Derived component requirements (status) |
+|---|---|---|
+| [`feat_req__lifecycle__switch_run_targets`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__switch_run_targets) | [switch_run_target](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/switch_run_target/switch_run_target.py) | [`process_state_comm`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__process_state_comm) (fully), [`configurable_timeout`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__configurable_timeout) (not verified), [`failure_detect`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__failure_detect) (fully) |
+| [`feat_req__lifecycle__terminationn_dependency`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__terminationn_dependency) | [switch_run_target](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/switch_run_target/switch_run_target.py) | [`time_to_wait_config`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__time_to_wait_config) (not verified), [`launch_manager_shutdown`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__launch_manager_shutdown) (fully), [`fast_shutdown_support`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__fast_shutdown_support) (not verified), [`launcher_exit_shutdown`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__launcher_exit_shutdown) (partially), [`shutdown_signal`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__shutdown_signal) (fully) |
+| [`feat_req__lifecycle__monitor_abnormal_term`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__monitor_abnormal_term) | [process_crash_monitoring](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_crash_monitoring/process_crash_monitoring.py) | [`ext_monitor_notify`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__ext_monitor_notify) (partially) |
+
+_All other directly `fully_verifies`-annotated features (`launch_support`, `process_ordering`,
+`parallel_launch_support`, `start_named_run_target`, `process_termination`,
+`request_run_target_start`, `recov_run_target_switch`) have no derived component requirements._
+
+---
+
+## Appendix C — Feature requirements with no derived component requirement (20)
+
+These feature requirements have no `comp_req__launch_man__*` requirement `derived_from` them,
+so their verification status rests entirely on tests that reference the feature directly.
+
+| # | Feature requirement | Title | Status |
+|---:|---|---|---|
+| 1 | [`feat_req__lifecycle__launch_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__launch_support) | Support for launching processes | Fully verified |
+| 2 | [`feat_req__lifecycle__process_ordering`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__process_ordering) | Process dependency handling | Fully verified |
+| 3 | [`feat_req__lifecycle__parallel_launch_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__parallel_launch_support) | Launching processes in parallel | Fully verified |
+| 4 | [`feat_req__lifecycle__start_named_run_target`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__start_named_run_target) | Launching run target | Fully verified |
+| 5 | [`feat_req__lifecycle__process_termination`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__process_termination) | Terminating process | Fully verified |
+| 6 | [`feat_req__lifecycle__request_run_target_start`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__request_run_target_start) | Request run target launch | Fully verified |
+| 7 | [`feat_req__lifecycle__recov_run_target_switch`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__recov_run_target_switch) | Run target switch as recovery action | Fully verified |
+| 8 | [`feat_req__lifecycle__recovery_action_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__recovery_action_support) | Recovery action | Partially verified |
+| 9 | [`feat_req__lifecycle__oci_compliant`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__oci_compliant) | OCI Compliant | Not verified |
+| 10 | [`feat_req__lifecycle__run_target_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__run_target_support) | Run target support | Not verified |
+| 11 | [`feat_req__lifecycle__control_commands`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__control_commands) | Control commands | Not verified |
+| 12 | [`feat_req__lifecycle__query_commands`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__query_commands) | Query commands | Not verified |
+| 13 | [`feat_req__lifecycle__controlif_status`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__controlif_status) | Report "started/running/degraded" | Not verified |
+| 14 | [`feat_req__lifecycle__smart_watchdog_config`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__smart_watchdog_config) | Monitoring and recovery: watchdog support | Not verified |
+| 15 | [`feat_req__lifecycle__multi_instance_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__multi_instance_support) | Multi-instance | Not verified |
+| 16 | [`feat_req__lifecycle__prog_lang`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__prog_lang) | Lifecycle programing language support | Not verified |
+| 17 | [`feat_req__lifecycle__hm_deadline`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__hm_deadline) | Health Monitor deadline supervision | Not verified |
+| 18 | [`feat_req__lifecycle__hm_logical`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__hm_logical) | Health Monitor logical supervision | Not verified |
+| 19 | [`feat_req__lifecycle__hm_checkpoint`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__hm_checkpoint) | Health Monitor checkpoint supervision | Not verified |
+| 20 | [`feat_req__lifecycle__session_extension`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__session_extension) | Updating configuration | Not verified |
+
+---
+
+## Appendix D — Requirements fully verified by one test but with additional test links
+
+If a requirement is already **fully verified** by one test, having further tests link to it
+(as another `fully_verifies` or as a `partially_verifies`) is redundant and usually a sign that
+one of the annotations is wrong — a partial link to an already-fully-verified requirement adds
+nothing, and two independent "fully verifies" claims are worth double-checking. The requirements
+below each have such extra links and should be reviewed.
+
+| Requirement | Fully verified by | Additional (redundant) links |
+|---|---|---|
+| [`comp_req__launch_man__failure_detect`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__failure_detect) | [crash_on_startup](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/crash_on_startup/crash_on_startup.py) | [process_simple_rep_failure](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_simple_rep_failure/process_simple_rep_failure.py) (also fully verifies), [process_complex_rep_failure](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_complex_rep_failure/process_complex_rep_failure.py) (also fully verifies) |
+| [`comp_req__launch_man__process_state_comm`](https://eclipse-score.github.io/lifecycle/main/components/launch_manager/requirements/requirements.html#comp_req__launch_man__process_state_comm) | [switch_run_target](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/switch_run_target/switch_run_target.py) | [process_launch_args](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_launch_args/process_launch_args.py) (also fully verifies), [rt_running_when_process_exits](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/rt_running_when_process_exits/rt_running_when_process_exits.py) (partially verifies) |
+| [`feat_req__lifecycle__recov_run_target_switch`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__recov_run_target_switch) | [crash_on_startup](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/crash_on_startup/crash_on_startup.py) | [process_simple_rep_failure](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_simple_rep_failure/process_simple_rep_failure.py) (partially verifies), [process_complex_rep_failure](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_complex_rep_failure/process_complex_rep_failure.py) (partially verifies) |
+| [`feat_req__lifecycle__launch_support`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__launch_support) | [process_launch_args](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_launch_args/process_launch_args.py) | [rt_running_when_process_exits](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/rt_running_when_process_exits/rt_running_when_process_exits.py) (partially verifies) |
+| [`feat_req__lifecycle__start_named_run_target`](https://eclipse-score.github.io/score/main/features/lifecycle/requirements/index.html#feat_req__lifecycle__start_named_run_target) | [process_launch_args](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/process_launch_args/process_launch_args.py) | [rt_running_when_process_exits](https://github.com/eclipse-score/lifecycle/blob/main/tests/integration/rt_running_when_process_exits/rt_running_when_process_exits.py) (partially verifies) |

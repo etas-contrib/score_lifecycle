@@ -28,7 +28,7 @@ Alive::Alive(
     const IdentifierHash id,
     const ComponentAliveSupervision& f_aliveCfg_r,
     const std::shared_ptr<IRecoveryClient> recovery_client,
-    saf::ifappl::Checkpoint& checkpoint_r,
+    saf::ifappl::MonitorIfDaemon& interface,
     const uint16_t bufferSize)
     : ISupervision(id),
       k_aliveReferenceCycle(
@@ -42,7 +42,7 @@ Alive::Alive(
       processIdentifier_(id),
       timeSortingUpdateEventBuffer(common::TimeSortingBuffer<TimeSortedUpdateEvent>(bufferSize))
 {
-    checkpoint_r.attachObserver(*this);
+    interface.attachObserver(*this);
     SCORE_LANGUAGE_FUTURECPP_PRECONDITION_PRD_MESSAGE(
         (k_aliveReferenceCycle.count() != 0U), "k_aliveReferenceCycle=0 causes infinite loop during evaluation.");
 
@@ -56,9 +56,9 @@ Alive::Alive(
 // coverity[exn_spec_violation:FALSE] std::length_error is not thrown from push() which uses fixed-size-vector
 void Alive::updateData(const score::mw::lifecycle::internal::saf::ifappl::Checkpoint& f_observable_r) noexcept(true)
 {
-    std::chrono::nanoseconds timestamp{f_observable_r.getTimestamp()};
+    std::chrono::nanoseconds timestamp{f_observable_r.timestamp};
 
-    if (f_observable_r.getDataLossEvent())
+    if (f_observable_r.isDataLossEvent)
     {
         dataLossReason = EDataLossReason::kSharedMemory;
         // If clock error is detected, last syncTimestamp is used as event timestamp.
@@ -66,7 +66,7 @@ void Alive::updateData(const score::mw::lifecycle::internal::saf::ifappl::Checkp
     }
     else
     {
-        CheckpointSnapshot checkpointSnapshot{&f_observable_r, timestamp};
+        CheckpointSnapshot checkpointSnapshot{timestamp};
         if (!timeSortingUpdateEventBuffer.push(checkpointSnapshot, timestamp))
         {
             dataLossReason = EDataLossReason::kBufferFull;
@@ -447,7 +447,7 @@ void Alive::switchToDeactivated(void) noexcept(true)
 
     LM_LOG_DEBUG() << "Alive Supervision (" << getConfigName() << ") switched to DEACTIVATED.";
 
-    pushResultToObservers();
+    pushResultToObservers(*this);
 }
 
 void Alive::switchToOk(void) noexcept(true)
@@ -455,7 +455,7 @@ void Alive::switchToOk(void) noexcept(true)
     aliveStatus = EStatus::kOk;
     failedSupervisionCycles = 0U;
     LM_LOG_INFO() << "Alive Supervision (" << getConfigName() << ") switched to OK.";
-    pushResultToObservers();
+    pushResultToObservers(*this);
 }
 
 void Alive::switchToFailed(void) noexcept(true)
@@ -466,7 +466,7 @@ void Alive::switchToFailed(void) noexcept(true)
     failedSupervisionCycles++;
 
     logExpiredFailedStateDetails();
-    pushResultToObservers();
+    pushResultToObservers(*this);
     setNextCycle();
 }
 
@@ -528,7 +528,7 @@ void Alive::switchToExpired(Alive::EReason reason) noexcept(true)
         recoveryEnqueueFailed_ = true;
     }
 
-    pushResultToObservers();
+    pushResultToObservers(*this);
 }
 
 bool Alive::hasRecoveryEnqueueFailed(void) const noexcept

@@ -73,7 +73,7 @@ class MonitorIfDaemon : public common::Observer<ifexm::ObservableEvent>
 
     /// @brief Get interface Name
     /// @return     Interface name as string
-    const std::string& getInterfaceName(void) const noexcept(true);
+    IdentifierHash getIdentifier() const noexcept(true) override;
 
     /// @brief Attach checkpoint
     /// @details Attaches a checkpoint observer to the Alive interface
@@ -139,7 +139,7 @@ class MonitorIfDaemon : public common::Observer<ifexm::ObservableEvent>
     bool isProcessRestarted{false};
 
     /// Interface name
-    const std::string k_interfaceName;
+    const IdentifierHash k_interfaceName;
 
     /// Array of checkpoint observers attached to the Alive interface
     std::vector<Checkpoint*> checkpointObservers{};

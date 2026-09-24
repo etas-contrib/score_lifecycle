@@ -28,6 +28,10 @@ from attribute_plugin import add_test_properties
         "feat_req__lifecycle__terminationn_dependency",
         "comp_req__launch_man__launch_manager_shutdown",
         "comp_req__launch_man__process_state_comm",
+        "comp_req__launch_man__rt_comp_dep",
+    ],
+    partially_verifies=[
+        "comp_req__launch_man__central_default_defines",
     ],
     test_type="requirements-based",
     derivation_technique="requirements-analysis",

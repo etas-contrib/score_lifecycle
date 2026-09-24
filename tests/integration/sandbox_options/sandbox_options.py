@@ -123,8 +123,13 @@ def require_realtime_scheduling(request, target):
         "comp_req__launch_man__scheduling_policy",
         "comp_req__launch_man__cwd_support",
         "comp_req__launch_man__supplementary_groups",
+        "comp_req__launch_man__condition_check_method",
+        "comp_req__launch_man__rt_comp_dep",
     ],
-    partially_verifies=[],
+    partially_verifies=[
+        "comp_req__launch_man__process_launch_args",
+        "comp_req__launch_man__central_default_defines",
+    ],
     test_type="requirements-based",
     derivation_technique="requirements-analysis",
 )

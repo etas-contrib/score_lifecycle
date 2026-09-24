@@ -17,10 +17,16 @@ from attribute_plugin import add_test_properties
 
 
 @add_test_properties(
+    fully_verifies=[
+        "comp_req__launch_man__rc_lifecycle",
+        "comp_req__launch_man__condition_check_method",
+        "comp_req__launch_man__rt_comp_dep",
+    ],
     partially_verifies=[
         "feat_req__lifecycle__start_named_run_target",
         "feat_req__lifecycle__launch_support",
         "comp_req__launch_man__process_state_comm",
+        "comp_req__launch_man__central_default_defines",
     ],
     test_type="requirements-based",
     derivation_technique="requirements-analysis",

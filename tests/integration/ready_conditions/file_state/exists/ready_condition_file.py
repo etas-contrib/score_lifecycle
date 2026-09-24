@@ -17,7 +17,16 @@ from attribute_plugin import add_test_properties
 
 
 @add_test_properties(
-    partially_verifies=["comp_req__launch_man__path_condition_check"],
+    fully_verifies=[
+        "comp_req__launch_man__rc_lifecycle",
+        "comp_req__launch_man__condition_check_method",
+        "comp_req__launch_man__rt_comp_dep",
+    ],
+    partially_verifies=[
+        "comp_req__launch_man__rc_file_state",
+        "comp_req__launch_man__path_condition_check",
+        "comp_req__launch_man__central_default_defines",
+    ],
     test_type="requirements-based",
     derivation_technique="requirements-analysis",
 )

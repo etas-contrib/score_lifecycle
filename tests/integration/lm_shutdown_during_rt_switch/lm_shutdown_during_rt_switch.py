@@ -17,9 +17,12 @@ from attribute_plugin import add_test_properties
 
 
 @add_test_properties(
-    fully_verifies=[],
+    fully_verifies=[
+        "comp_req__launch_man__rt_comp_dep",
+    ],
     partially_verifies=[
         "comp_req__launch_man__launcher_exit_shutdown",
+        "comp_req__launch_man__central_default_defines",
     ],
     test_type="requirements-based",
     derivation_technique="requirements-analysis",

@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <cstdint>
 #include <limits>
+#include <string>
 #include <vector>
 
 namespace score::mw::lifecycle::internal::configuration
@@ -719,6 +720,52 @@ TEST_F(ConverterTest, ConvertSandboxWithoutAffinityMaskHasNoValue)
     EXPECT_THAT(result->affinity_mask.has_value(), IsFalse());
 }
 
+TEST_F(ConverterTest, ClampSchedulingPriorityKeepsInRangeValue)
+{
+    RecordProperty("Description", "A scheduling priority within the policy's range is not changed.");
+    const int32_t min_priority = sched_get_priority_min(SCHED_FIFO);
+    const int32_t max_priority = sched_get_priority_max(SCHED_FIFO);
+
+    EXPECT_THAT(clampSchedulingPriority(SCHED_FIFO, min_priority), Eq(min_priority));
+    EXPECT_THAT(clampSchedulingPriority(SCHED_FIFO, max_priority), Eq(max_priority));
+}
+
+TEST_F(ConverterTest, ClampSchedulingPriorityClampsToMaximum)
+{
+    RecordProperty("Description", "A scheduling priority above the policy's maximum is set to the maximum.");
+    const int32_t max_priority = sched_get_priority_max(SCHED_RR);
+
+    EXPECT_THAT(clampSchedulingPriority(SCHED_RR, max_priority + 1), Eq(max_priority));
+}
+
+TEST_F(ConverterTest, ClampSchedulingPriorityClampsToMinimum)
+{
+    RecordProperty("Description", "A scheduling priority below the policy's minimum is set to the minimum.");
+    const int32_t min_priority = sched_get_priority_min(SCHED_RR);
+
+    EXPECT_THAT(clampSchedulingPriority(SCHED_RR, min_priority - 1), Eq(min_priority));
+}
+
+TEST_F(ConverterTest, ConvertSandboxClampsSchedulingPriority)
+{
+    RecordProperty("Description", "convertSandbox clamps the scheduling priority to the range of the policy.");
+    ::flatbuffers::FlatBufferBuilder fbb;
+    auto sandbox = fb::CreateSandbox(
+        fbb,
+        0 /*uid*/,
+        0 /*gid*/,
+        0 /*supplementary_group_ids*/,
+        0 /*security_policy*/,
+        fb::SchedulingPolicy::FIFO,
+        1000 /*scheduling_priority*/);
+    fbb.Finish(sandbox);
+    const auto* ptr = ::flatbuffers::GetRoot<fb::Sandbox>(fbb.GetBufferPointer());
+
+    auto result = convertSandbox(ptr);
+    ASSERT_THAT(result.has_value(), IsTrue());
+    EXPECT_THAT(result->scheduling_priority, Eq(sched_get_priority_max(SCHED_FIFO)));
+}
+
 // ============================================================================
 // RlimitResource / Rlimit conversion tests
 // ============================================================================
@@ -925,11 +972,12 @@ TEST_F(ConverterTest, ConvertDeploymentConfigValid)
     fbb.Finish(deploy);
     const auto* ptr = ::flatbuffers::GetRoot<fb::DeploymentConfig>(fbb.GetBufferPointer());
 
-    auto result = convertDeploymentConfig(ptr, "my_binary");
+    auto result = convertDeploymentConfig(ptr, "my_binary", {"--flag"});
     ASSERT_THAT(result.has_value(), IsTrue());
     EXPECT_THAT(result->ready_timeout_ms, Eq(1500U));
     EXPECT_THAT(result->shutdown_timeout_ms, Eq(2500U));
-    EXPECT_THAT(result->executable_path, Eq("/opt/bin/my_binary"));
+    EXPECT_THAT(result->process_command.executablePath(), Eq("/opt/bin/my_binary"));
+    EXPECT_THAT(result->process_command.arguments(), Eq(std::vector<std::string>{"--flag"}));
     EXPECT_THAT(result->working_dir, Eq("/tmp"));
     EXPECT_THAT(result->ready_recovery_action.has_value(), IsFalse());
     EXPECT_THAT(result->recovery_action.has_value(), IsFalse());
@@ -955,7 +1003,7 @@ TEST_F(ConverterTest, ConvertDeploymentConfigMissingReadyTimeoutReturnsError)
     fbb.Finish(deploy);
     const auto* ptr = ::flatbuffers::GetRoot<fb::DeploymentConfig>(fbb.GetBufferPointer());
 
-    auto result = convertDeploymentConfig(ptr, "my_binary");
+    auto result = convertDeploymentConfig(ptr, "my_binary", {"--flag"});
     ASSERT_THAT(result.has_value(), IsFalse());
     EXPECT_THAT(result.error(), Eq(IConfigLoader::Error::InvalidFormat));
 }
@@ -980,7 +1028,7 @@ TEST_F(ConverterTest, ConvertDeploymentConfigMissingShutdownTimeoutReturnsError)
     fbb.Finish(deploy);
     const auto* ptr = ::flatbuffers::GetRoot<fb::DeploymentConfig>(fbb.GetBufferPointer());
 
-    auto result = convertDeploymentConfig(ptr, "my_binary");
+    auto result = convertDeploymentConfig(ptr, "my_binary", {"--flag"});
     ASSERT_THAT(result.has_value(), IsFalse());
     EXPECT_THAT(result.error(), Eq(IConfigLoader::Error::InvalidFormat));
 }
@@ -993,8 +1041,9 @@ TEST_F(ConverterTest, ConvertComponentValid)
     auto app_profile = fb::CreateApplicationProfile(fbb, fb::ApplicationType::Native, false /*is_self_terminating*/);
     auto bin_name = fbb.CreateString("my_binary");
     auto ready_cond = fb::CreateReadyCondition(fbb, fb::ProcessState::Running);
-    auto comp_props = fb::CreateComponentProperties(
-        fbb, bin_name, app_profile, 0 /*depends_on*/, 0 /*process_arguments*/, ready_cond);
+    auto process_args = fbb.CreateVectorOfStrings(std::vector<std::string>{"-v", "--config=x"});
+    auto comp_props =
+        fb::CreateComponentProperties(fbb, bin_name, app_profile, 0 /*depends_on*/, process_args, ready_cond);
 
     auto bin_dir = fbb.CreateString("/opt");
     auto work_dir = fbb.CreateString("/tmp");
@@ -1021,8 +1070,15 @@ TEST_F(ConverterTest, ConvertComponentValid)
     EXPECT_THAT(result->name, Eq("TestComp"));
     EXPECT_THAT(result->description, Eq("A test component"));
     EXPECT_THAT(result->component_properties.binary_name, Eq("my_binary"));
-    EXPECT_THAT(result->deployment_config.executable_path, Eq("/opt/my_binary"));
+    EXPECT_THAT(result->deployment_config.process_command.executablePath(), Eq("/opt/my_binary"));
     EXPECT_THAT(result->deployment_config.ready_timeout_ms, Eq(1000U));
+    EXPECT_THAT(
+        result->deployment_config.process_command.arguments(), Eq(std::vector<std::string>{"-v", "--config=x"}));
+    char* const* argv = result->deployment_config.process_command.argv();
+    EXPECT_STREQ(argv[0], "/opt/my_binary");
+    EXPECT_STREQ(argv[1], "-v");
+    EXPECT_STREQ(argv[2], "--config=x");
+    EXPECT_EQ(argv[3], nullptr);
 }
 
 TEST_F(ConverterTest, ConvertComponentsValid)

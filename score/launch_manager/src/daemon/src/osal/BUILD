@@ -121,24 +121,6 @@ cc_library(
 )
 
 cc_library(
-    name = "security_policy",
-    srcs = select({
-        "@platforms//os:linux": ["details/linux/security_policy.cpp"],
-        "@platforms//os:qnx": ["details/qnx/security_policy.cpp"],
-    }),
-    hdrs = ["security_policy.hpp"],
-    include_prefix = "score/mw/launch_manager/osal",
-    linkopts = select({
-        "@platforms//os:qnx": [
-            "-lsecpol",
-        ],
-        "//conditions:default": [],
-    }),
-    strip_include_prefix = "/score/launch_manager/src/daemon/src/osal",
-    visibility = ["//score:__subpackages__"],
-)
-
-cc_library(
     name = "set_affinity",
     srcs = select({
         "@platforms//os:linux": ["details/linux/set_affinity.cpp"],
@@ -180,16 +162,112 @@ cc_library(
 )
 
 cc_library(
+    name = "start_process",
+    srcs = select({
+        "@platforms//os:linux": ["details/linux/start_process.cpp"],
+        "@platforms//os:qnx": ["details/qnx/start_process.cpp"],
+    }),
+    hdrs = ["start_process.hpp"],
+    include_prefix = "score/mw/launch_manager/osal",
+    linkopts = select({
+        "@platforms//os:qnx": [
+            "-lsecpol",
+        ],
+        "//conditions:default": [],
+    }),
+    strip_include_prefix = "/score/launch_manager/src/daemon/src/osal",
+    visibility = ["//score:__subpackages__"],
+    deps = [
+        ":ipc_comms",
+        ":return_types",
+        ":set_affinity",
+        ":set_groups",
+        ":sys_exit",
+        "//score/launch_manager/src/daemon/src/common:log",
+        "//score/launch_manager/src/daemon/src/common:signal_safe_log",
+        "//score/launch_manager/src/daemon/src/configuration:component_config",
+    ],
+)
+
+lm_cc_test(
+    name = "start_process_linux_UT",
+    srcs = ["details/linux/start_process_UT.cpp"],
+    linkopts = [
+        "-Wl,--wrap=fork",
+        "-Wl,--wrap=execve",
+        "-Wl,--wrap=kill",
+        "-Wl,--wrap=wait",
+        "-Wl,--wrap=access",
+        "-Wl,--wrap=shm_open",
+        "-Wl,--wrap=ftruncate",
+        "-Wl,--wrap=shm_unlink",
+        "-Wl,--wrap=mmap",
+        "-Wl,--wrap=munmap",
+        "-Wl,--wrap=setpgid",
+        "-Wl,--wrap=setgid",
+        "-Wl,--wrap=setuid",
+        "-Wl,--wrap=sched_setscheduler",
+        "-Wl,--wrap=chdir",
+        "-Wl,--wrap=setrlimit",
+        "-Wl,--wrap=getpid",
+        "-Wl,--wrap=fcntl",
+        "-Wl,--wrap=sem_destroy",
+        "-Wl,--wrap=msync",
+        "-Wl,--wrap=close",
+        "-Wl,--wrap=fstat",
+    ],
+    linkstatic = True,
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":start_process",
+        "//tests/utils/mocks:mock_syscalls",
+        "@googletest//:gtest_main",
+    ],
+)
+
+lm_cc_test(
+    name = "start_process_qnx_UT",
+    srcs = ["details/qnx/start_process_UT.cpp"],
+    linkopts = [
+        "-Wl,--wrap=posix_spawn",
+        "-Wl,--wrap=posix_spawn_file_actions_adddup2",
+        "-Wl,--wrap=secpol_posix_spawnattr_settypeid",
+        "-Wl,--wrap=setgroupspid",
+        "-Wl,--wrap=prlimit",
+        "-Wl,--wrap=kill",
+    ],
+    linkstatic = True,
+    target_compatible_with = ["@platforms//os:qnx"],
+    deps = [
+        ":start_process",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "mock_start_process",
+    testonly = True,
+    hdrs = ["mock_start_process.hpp"],
+    include_prefix = "score/mw/launch_manager/osal",
+    strip_include_prefix = "/score/launch_manager/src/daemon/src/osal",
+    visibility = ["//score:__subpackages__"],
+    deps = [
+        ":start_process",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "osal",
     visibility = ["//score:__subpackages__"],
     deps = [
         ":ipc_comms",
         ":num_cores",
         ":return_types",
-        ":security_policy",
         ":semaphore",
         ":set_affinity",
         ":set_groups",
+        ":start_process",
         ":sys_exit",
         ":wait_for_file",
     ],

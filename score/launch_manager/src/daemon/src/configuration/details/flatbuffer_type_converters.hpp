@@ -71,6 +71,9 @@ score::cpp::expected<TargetT, IConfigLoader::Error> validateRange(int64_t value,
 [[nodiscard]] FileExistenceState convertFileExistenceState(fb::FileExistenceState fb_state);
 /// @brief Converts a FlatBuffer SchedulingPolicy enum to a POSIX scheduling policy constant.
 [[nodiscard]] score::cpp::expected<int32_t, IConfigLoader::Error> convertSchedulingPolicy(fb::SchedulingPolicy policy);
+/// @brief Clamps @p priority to the valid range of the POSIX scheduling @p policy.
+/// @details Logs a warning if the priority was adjusted.
+[[nodiscard]] int32_t clampSchedulingPriority(int32_t policy, int32_t priority);
 /// @brief Returns the platform's RLIMIT_* constant for the given flatbuffer rlimit enum value.
 [[nodiscard]] int toPlatformResource(fb::RlimitResource fb_resource);
 /// @brief Converts a FlatBuffer vector of Rlimit tables to a vector of ResourceLimit, resolving
@@ -121,9 +124,11 @@ score::cpp::expected<TargetT, IConfigLoader::Error> validateRange(int64_t value,
 [[nodiscard]] score::cpp::expected<Sandbox, IConfigLoader::Error> convertSandbox(const fb::Sandbox* fb_sb);
 /// @brief Converts a FlatBuffer DeploymentConfig to the config equivalent.
 /// @param binary_name Executable name relative to the configured bin_dir.
+/// @param process_arguments Arguments passed to the executable, excluding the executable path.
 [[nodiscard]] score::cpp::expected<DeploymentConfig, IConfigLoader::Error> convertDeploymentConfig(
     const fb::DeploymentConfig* fb_dc,
-    std::string_view binary_name);
+    std::string_view binary_name,
+    const std::vector<std::string>& process_arguments);
 /// @brief Converts a single FlatBuffer Component to a ComponentConfig.
 [[nodiscard]] score::cpp::expected<ComponentConfig, IConfigLoader::Error> convertComponent(
     const fb::Component* fb_comp);

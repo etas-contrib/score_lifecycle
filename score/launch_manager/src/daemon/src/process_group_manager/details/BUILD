@@ -471,10 +471,7 @@ cc_library(
         "//score/launch_manager/src/daemon/src/common:log",
         "//score/launch_manager/src/daemon/src/common:signal_safe_log",
         "//score/launch_manager/src/daemon/src/osal:ipc_comms",
-        "//score/launch_manager/src/daemon/src/osal:security_policy",
-        "//score/launch_manager/src/daemon/src/osal:set_affinity",
-        "//score/launch_manager/src/daemon/src/osal:set_groups",
-        "//score/launch_manager/src/daemon/src/osal:sys_exit",
+        "//score/launch_manager/src/daemon/src/osal:start_process",
         "//score/launch_manager/src/daemon/src/process_group_manager:iprocess",
     ],
 )
@@ -509,6 +506,7 @@ lm_cc_test(
     linkstatic = True,
     deps = [
         ":process_launcher",
+        "//score/launch_manager/src/daemon/src/osal:mock_start_process",
         "//tests/utils/mocks:mock_syscalls",
         "@googletest//:gtest_main",
         "@score_baselibs//score/os/mocklib:semaphore_mock",

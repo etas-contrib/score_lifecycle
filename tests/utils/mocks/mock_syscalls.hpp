@@ -55,7 +55,6 @@ class SyscallMock
     MOCK_METHOD(int, sched_setscheduler, (pid_t __pid, int __policy, const struct sched_param*), ());
     MOCK_METHOD(int, chdir, (const char* __path), ());
     MOCK_METHOD(int, setrlimit, (int __resource, const struct rlimit* __rlimits), ());
-    MOCK_METHOD(int, setSecurityPolicy, (const char* policy), ());
     MOCK_METHOD(std::int32_t, setaffinity, (std::uint64_t cpumask), ());
     MOCK_METHOD(pid_t, getpid, (), ());
     MOCK_METHOD(int, fcntl, (int __fd, int __cmd, void* arg), ());
@@ -364,11 +363,6 @@ namespace score::mw::lifecycle::internal::osal
 void sysexit(int status)
 {
     g_syscall_mock->sysexit(status);
-}
-
-int setSecurityPolicy(const char* policy)
-{
-    return g_syscall_mock->setSecurityPolicy(policy);
 }
 
 int setgroups(size_t n, const gid_t* groups)

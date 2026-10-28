@@ -20,7 +20,7 @@
 namespace score::mw::lifecycle::internal::osal
 {
 
-/// @brief POSIX implementation of IProcess, managing child processes via fork/exec.
+/// @brief POSIX implementation of IProcess, managing child processes started via osal::startProcess().
 class ProcessLauncher final : public IProcess
 {
   public:
@@ -52,16 +52,6 @@ class ProcessLauncher final : public IProcess
     /// @return True if shared memory creation and initialization are successful, false otherwise.
     bool
     setupComms(IpcCommsP& sync, int& fd, const score::mw::lifecycle::internal::configuration::ComponentConfig& config);
-
-    /// @brief Handles the execution of the child process after forking.
-    /// @param[in] param Reference to child process configuration.
-    void handleChildProcess(ChildProcessConfig& param);
-
-    /// @brief Sets up all the scheduling and security parameters described in the config, for the current process.
-    /// @param config the configuration to use
-    /// @return kFail if any operation fails, kSuccess otherwise
-    static OsalReturnType setSchedulingAndSecurity(
-        const score::mw::lifecycle::internal::configuration::Sandbox& config);
 
     ///@brief Atomic counter for shared memory names
     std::atomic_uint32_t shm_name_counter = {0};

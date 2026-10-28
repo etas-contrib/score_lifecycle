@@ -29,15 +29,6 @@
 namespace score::mw::lifecycle::internal::osal
 {
 
-/// @brief Struct to hold configuration parameters for the child process.
-struct ChildProcessConfig
-{
-    const score::mw::lifecycle::internal::configuration::ComponentConfig&
-        config;              ///< child process startup configurations
-    int fd;                  ///< fd File descriptor of the shared memory segment.
-    IpcCommsP shared_block;  ///< sync Pointer to the shared memory block.
-};
-
 ///@brief This interface provides functionality that is needed to manage child processes.
 /// The `IProcess` interface provides functionality for child process management, which is required by Launch
 /// Manager. As a part of OSAL it also provides porting interface for LCM.

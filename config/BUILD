@@ -137,3 +137,37 @@ config_setting(
     },
     visibility = ["//visibility:public"],
 )
+
+# Watchdog implementation used by the Launch Manager. Integrators can provide their own
+# cc_library that depends on //score/launch_manager/src/daemon/src/watchdog:i_watchdog
+# and defines createWatchdog(), e.g.
+#   bazel build --@score_lifecycle//config:watchdog_impl=//my/pkg:my_watchdog ...
+label_flag(
+    name = "watchdog_impl",
+    build_setting_default = "//score/launch_manager/src/daemon/src/watchdog/default:default_watchdog",
+    visibility = ["//visibility:public"],
+)
+
+# Failure reaction of the default watchdog implementation, when the watchdog is fired:
+#
+# - abort: abort the Launch Manager process
+# - reboot: reboot the machine (sysmgr_reboot() on QNX, reboot() on Linux)
+#
+# Has no effect if //config:watchdog_impl points to a custom implementation.
+string_flag(
+    name = "default_watchdog_reaction",
+    build_setting_default = "abort",
+    values = [
+        "abort",
+        "reboot",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "default_watchdog_reaction_reboot",
+    flag_values = {
+        ":default_watchdog_reaction": "reboot",
+    },
+    visibility = ["//visibility:public"],
+)

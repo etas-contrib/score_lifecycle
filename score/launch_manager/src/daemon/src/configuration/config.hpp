@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "score/mw/launch_manager/configuration/component_config.hpp"
-#include "score/mw/launch_manager/configuration/watchdog_config.hpp"
 
 namespace score::mw::lifecycle::internal::configuration
 {
@@ -79,8 +78,6 @@ struct Config
     [[nodiscard]] const FallbackRunTargetConfig& fallbackRunTarget() const;
     /// @brief Returns the global alive supervision configuration.
     [[nodiscard]] const AliveSupervisionConfig& aliveSupervision() const;
-    /// @brief Returns the watchdog configuration, if present.
-    [[nodiscard]] const std::optional<WatchdogConfig>& watchdog() const;
 
     /// @brief Moves out the component configurations. Source is left in a moved-from state.
     [[nodiscard]] std::vector<ComponentConfig> takeComponents();
@@ -92,8 +89,6 @@ struct Config
     [[nodiscard]] FallbackRunTargetConfig takeFallbackRunTarget();
     /// @brief Moves out the alive supervision configuration. Source is left in a moved-from state.
     [[nodiscard]] AliveSupervisionConfig takeAliveSupervision();
-    /// @brief Moves out the watchdog configuration. Source is left in a moved-from state.
-    [[nodiscard]] std::optional<WatchdogConfig> takeWatchdog();
 
   private:
     friend class ConfigBuilder;
@@ -103,15 +98,13 @@ struct Config
         std::vector<RunTargetConfig> run_targets,
         std::string initial_run_target,
         FallbackRunTargetConfig fallback_run_target,
-        AliveSupervisionConfig alive_supervision,
-        std::optional<WatchdogConfig> watchdog);
+        AliveSupervisionConfig alive_supervision);
 
     std::vector<ComponentConfig> components_;
     std::vector<RunTargetConfig> run_targets_;
     std::string initial_run_target_;
     FallbackRunTargetConfig fallback_run_target_;
     AliveSupervisionConfig alive_supervision_;
-    std::optional<WatchdogConfig> watchdog_;
 };
 
 /// @brief Builder for constructing a @ref Config instance.
@@ -128,8 +121,6 @@ class ConfigBuilder
     ConfigBuilder& setFallbackRunTarget(FallbackRunTargetConfig fallback);
     /// @brief Sets the global alive supervision configuration.
     ConfigBuilder& setAliveSupervision(AliveSupervisionConfig alive_supervision);
-    /// @brief Sets the watchdog configuration.
-    ConfigBuilder& setWatchdog(WatchdogConfig watchdog);
 
     /// @brief Builds and returns the @ref Config object.
     Config build();
@@ -140,7 +131,6 @@ class ConfigBuilder
     std::vector<RunTargetConfig> run_targets_;
     FallbackRunTargetConfig fallback_run_target_;
     AliveSupervisionConfig alive_supervision_;
-    std::optional<WatchdogConfig> watchdog_;
 };
 
 }  // namespace score::mw::lifecycle::internal::configuration

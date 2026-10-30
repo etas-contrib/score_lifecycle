@@ -27,14 +27,12 @@ Config::Config(
     std::vector<RunTargetConfig> run_targets,
     std::string initial_run_target,
     FallbackRunTargetConfig fallback_run_target,
-    AliveSupervisionConfig alive_supervision,
-    std::optional<WatchdogConfig> watchdog)
+    AliveSupervisionConfig alive_supervision)
     : components_{std::move(components)},
       run_targets_{std::move(run_targets)},
       initial_run_target_{std::move(initial_run_target)},
       fallback_run_target_{std::move(fallback_run_target)},
-      alive_supervision_{alive_supervision},
-      watchdog_{std::move(watchdog)}
+      alive_supervision_{alive_supervision}
 {
 }
 
@@ -68,12 +66,6 @@ ConfigBuilder& ConfigBuilder::setAliveSupervision(AliveSupervisionConfig alive_s
     return *this;
 }
 
-ConfigBuilder& ConfigBuilder::setWatchdog(WatchdogConfig watchdog)
-{
-    watchdog_ = std::move(watchdog);
-    return *this;
-}
-
 Config ConfigBuilder::build()
 {
     return Config(
@@ -81,8 +73,7 @@ Config ConfigBuilder::build()
         std::move(run_targets_),
         std::move(initial_run_target_),
         std::move(fallback_run_target_),
-        std::move(alive_supervision_),
-        std::move(watchdog_));
+        std::move(alive_supervision_));
 }
 
 const std::vector<ComponentConfig>& Config::components() const
@@ -110,11 +101,6 @@ const AliveSupervisionConfig& Config::aliveSupervision() const
     return alive_supervision_;
 }
 
-const std::optional<WatchdogConfig>& Config::watchdog() const
-{
-    return watchdog_;
-}
-
 std::vector<ComponentConfig> Config::takeComponents()
 {
     return std::move(components_);
@@ -138,11 +124,6 @@ FallbackRunTargetConfig Config::takeFallbackRunTarget()
 AliveSupervisionConfig Config::takeAliveSupervision()
 {
     return std::move(alive_supervision_);
-}
-
-std::optional<WatchdogConfig> Config::takeWatchdog()
-{
-    return std::move(watchdog_);
 }
 
 }  // namespace score::mw::lifecycle::internal::configuration

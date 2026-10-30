@@ -70,8 +70,7 @@ def test_preprocessing_basic():
         },
         "alive_supervision": {
             "evaluation_cycle_ms": 500
-        },
-        "watchdog": {}
+        }
     }""")
 
     config = json.loads("""{
@@ -121,12 +120,6 @@ def test_preprocessing_basic():
         "run_targets": {},
         "alive_supervision": {
             "evaluation_cycle_ms": 100
-        },
-        "watchdog": {
-            "device_file_path": "/dev/watchdog",
-            "max_timeout_ms": 2000,
-            "deactivate_on_shutdown": true,
-            "require_magic_close": false
         }
     }""")
 
@@ -168,12 +161,6 @@ def test_preprocessing_basic():
         "run_targets": {},
         "alive_supervision": {
             "evaluation_cycle_ms": 100
-        },
-        "watchdog": {
-            "device_file_path": "/dev/watchdog",
-            "max_timeout_ms": 2000,
-            "deactivate_on_shutdown": true,
-            "require_magic_close": false
         }
     }""")
 
@@ -670,7 +657,6 @@ def full_valid_config():
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
 
 
@@ -778,7 +764,6 @@ def test_gen_config_minimal(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test_input.json")
     output_files = list(tmp_path.glob("*.json"))
@@ -825,7 +810,6 @@ def test_gen_config_with_alive_supervision(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test_input.json")
 
@@ -865,7 +849,6 @@ def test_gen_config_without_alive_supervision(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test_input.json")
 
@@ -876,61 +859,6 @@ def test_gen_config_without_alive_supervision(tmp_path):
 
     app_profile = output["components"][0]["component_properties"]["application_profile"]
     assert "alive_supervision" not in app_profile
-
-
-def test_gen_config_with_watchdog(tmp_path):
-    """Watchdog with all required fields should be included in output."""
-    config = {
-        "schema_version": 1,
-        "components": {},
-        "run_targets": {"Startup": {}},
-        "initial_run_target": "Startup",
-        "fallback_run_target": {},
-        "alive_supervision": {},
-        "watchdog": {
-            "device_file_path": "/dev/watchdog0",
-            "max_timeout_ms": 5000,
-            "deactivate_on_shutdown": True,
-            "require_magic_close": True,
-        },
-    }
-    gen_config(str(tmp_path), config, "test_input.json")
-
-    with open(tmp_path / "test_input_gen.json") as f:
-        output = json.load(f)
-
-    assert output["schema_version"] == 1
-
-    assert output["watchdog"]["device_file_path"] == "/dev/watchdog0"
-    assert output["watchdog"]["max_timeout_ms"] == 5000
-    assert output["watchdog"]["deactivate_on_shutdown"] is True
-    assert output["watchdog"]["require_magic_close"] is True
-
-
-def test_gen_config_watchdog_partial_fields_omitted(tmp_path):
-    """
-    When watchdog has missing required fields the entire watchdog key should be omitted.
-    This case will be caught during json schema validation.
-    """
-    config = {
-        "schema_version": 1,
-        "components": {},
-        "run_targets": {"Startup": {}},
-        "initial_run_target": "Startup",
-        "fallback_run_target": {},
-        "alive_supervision": {},
-        "watchdog": {
-            "device_file_path": "/dev/watchdog0"
-        },  # missing max_timeout_ms, deactivate_on_shutdown, require_magic_close
-    }
-    gen_config(str(tmp_path), config, "test_input.json")
-
-    with open(tmp_path / "test_input_gen.json") as f:
-        output = json.load(f)
-
-    assert output["schema_version"] == 1
-
-    assert "watchdog" not in output
 
 
 def test_gen_config_with_sandbox_limits(tmp_path):
@@ -960,7 +888,6 @@ def test_gen_config_with_sandbox_limits(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test_input.json")
 
@@ -999,7 +926,6 @@ def test_gen_config_without_affinity_mask(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test_input.json")
 
@@ -1049,7 +975,6 @@ def test_gen_config_output_filename_matches_spec(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "my_config.json")
     with open(tmp_path / "my_config_gen.json") as f:
@@ -1080,7 +1005,6 @@ def test_gen_config_env_variables_list_format(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test_input.json")
 
@@ -1132,7 +1056,6 @@ def test_gen_config_run_target_with_dependencies(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {"evaluation_cycle_ms": 500},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test_input.json")
 
@@ -1161,7 +1084,6 @@ def test_gen_config_recovery_action_switch_run_target(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test_input.json")
 
@@ -1196,7 +1118,6 @@ def test_gen_config_scheduling_policy_mapping(tmp_path):
             "initial_run_target": "Startup",
             "fallback_run_target": {"transition_timeout_ms": 1},
             "alive_supervision": {},
-            "watchdog": {},
         }
         gen_config(str(tmp_path), config, "test.json")
         with open(tmp_path / "test_gen.json") as f:
@@ -1233,7 +1154,6 @@ def _activation_retry_config(key, defaults_value=None, component_value=None):
         "initial_run_target": "Startup",
         "fallback_run_target": {"transition_timeout_ms": 1},
         "alive_supervision": {},
-        "watchdog": {},
     }
     if defaults_value is not None:
         config["defaults"] = {"deployment_config": {key: defaults_value}}
@@ -1333,7 +1253,6 @@ def test_gen_config_unmapped_scheduling_policy(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {"transition_timeout_ms": 1},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test.json")
 
@@ -1358,7 +1277,6 @@ def test_gen_config_with_empty_components_list_generates_empty_array(tmp_path):
         "initial_run_target": "Startup",
         "fallback_run_target": {},
         "alive_supervision": {},
-        "watchdog": {},
     }
     gen_config(str(tmp_path), config, "test_input.json")
 

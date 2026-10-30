@@ -16,9 +16,11 @@
 #include <gtest/gtest.h>
 #include <cerrno>
 #include <cstdarg>
+#include <memory>
 #include <thread>
+#include <utility>
 
-#include "score/mw/launch_manager/osal/mock_start_process.hpp"
+#include "score/mw/launch_manager/osal/mock_iprocess_starter.hpp"
 #include "score/mw/launch_manager/process_group_manager/details/process_launcher.hpp"
 #include "score/os/mocklib/semaphoremock.h"
 #include "tests/utils/mocks/mock_syscalls.hpp"
@@ -47,7 +49,9 @@ class ProcessLauncherTest : public ::testing::Test
         RecordProperty("DerivationTechnique", "equivalence-classes");
 
         g_syscall_mock = std::make_unique<SyscallMock>();
-        process_launcher = std::make_unique<ProcessLauncher>();
+        auto process_starter = std::make_unique<StrictMock<MockIProcessStarter>>();
+        process_starter_mock_ = process_starter.get();
+        process_launcher = std::make_unique<ProcessLauncher>(std::move(process_starter));
 
         // Used by logging framework
         ON_CALL(*g_syscall_mock, access).WillByDefault(Invoke(__real_access));
@@ -93,6 +97,7 @@ class ProcessLauncherTest : public ::testing::Test
     }
 
     score::os::MockGuard<NiceMock<score::os::SemaphoreMock>, score::os::Semaphore> semaphore_mock_;
+    MockIProcessStarter* process_starter_mock_{nullptr};  // owned by process_launcher
     std::unique_ptr<ProcessLauncher> process_launcher;
 
     alignas(IpcCommsSync) std::array<std::byte, sizeof(IpcCommsSync)> test_buffer;
@@ -239,8 +244,6 @@ class StartProcessTest : public ProcessLauncherTest
     {
         ProcessLauncherTest::SetUp();
 
-        g_start_process_mock = std::make_unique<StrictMock<StartProcessMock>>();
-
         config_.name = "TestComponent";
         config_.component_properties.binary_name = "TestProcess";
         config_.component_properties.application_profile.application_type = configuration::ApplicationType::Native;
@@ -250,7 +253,6 @@ class StartProcessTest : public ProcessLauncherTest
     void TearDown() override
     {
         sync_.reset();
-        g_start_process_mock.reset();
 
         ProcessLauncherTest::TearDown();
     }
@@ -258,7 +260,16 @@ class StartProcessTest : public ProcessLauncherTest
     IpcCommsSync* StubShmObject()
     {
         void* data = static_cast<void*>(test_buffer.data());
-        EXPECT_CALL(*g_syscall_mock, shm_open).WillOnce(Return(kShmFd));
+        // O_CLOEXEC prevents the fd from leaking into processes started in parallel
+        EXPECT_CALL(
+            *g_syscall_mock,
+            shm_open(
+                _,
+                Truly([](int oflag) {
+                    return (oflag & O_CLOEXEC) != 0;
+                }),
+                _))
+            .WillOnce(Return(kShmFd));
         EXPECT_CALL(*g_syscall_mock, shm_unlink).WillOnce(Return(0));
         EXPECT_CALL(*g_syscall_mock, mmap(_, _, _, _, kShmFd, _)).WillOnce(Return(data));
         EXPECT_CALL(*g_syscall_mock, ftruncate(kShmFd, _)).WillOnce(Return(0));
@@ -280,7 +291,7 @@ TEST_F(StartProcessTest, startProcessNoFile)
     RecordProperty("Description", "Test that startProcess returns a failure if the provided path does not exist");
 
     EXPECT_CALL(*g_syscall_mock, access(_, _)).WillOnce(Return(-1));
-    EXPECT_CALL(*g_start_process_mock, startProcess).Times(0);
+    EXPECT_CALL(*process_starter_mock_, startProcess).Times(0);
 
     EXPECT_EQ(process_launcher->startProcess(pid_, sync_, config_), OsalReturnType::kFail);
 }
@@ -291,7 +302,7 @@ TEST_F(StartProcessTest, startProcessNoPath)
 
     config_.component_properties.binary_name = "";
     EXPECT_CALL(*g_syscall_mock, access).Times(0);  // Access should not be called on an empty path
-    EXPECT_CALL(*g_start_process_mock, startProcess).Times(0);
+    EXPECT_CALL(*process_starter_mock_, startProcess).Times(0);
 
     EXPECT_EQ(process_launcher->startProcess(pid_, sync_, config_), OsalReturnType::kFail);
 }
@@ -301,7 +312,7 @@ TEST_F(StartProcessTest, startProcessOsalFailed)
     RecordProperty("Description", "Test that startProcess returns a failure if no process could be created");
 
     EXPECT_CALL(*g_syscall_mock, access(_, _)).WillOnce(Return(0));
-    EXPECT_CALL(*g_start_process_mock, startProcess).WillOnce(Return(OsalReturnType::kFail));
+    EXPECT_CALL(*process_starter_mock_, startProcess).WillOnce(Return(OsalReturnType::kFail));
 
     EXPECT_EQ(process_launcher->startProcess(pid_, sync_, config_), OsalReturnType::kFail);
 }
@@ -314,7 +325,7 @@ TEST_F(StartProcessTest, startProcessNativeHasNoComms)
 
     EXPECT_CALL(*g_syscall_mock, access(_, _)).WillOnce(Return(0));
     EXPECT_CALL(*g_syscall_mock, shm_open).Times(0);
-    EXPECT_CALL(*g_start_process_mock, startProcess(_, Ref(config_), -1, IsNull()))
+    EXPECT_CALL(*process_starter_mock_, startProcess(_, Ref(config_), -1, IsNull()))
         .WillOnce(DoAll(SetArgReferee<0>(started_pid), Return(OsalReturnType::kSuccess)));
 
     EXPECT_EQ(process_launcher->startProcess(pid_, sync_, config_), OsalReturnType::kSuccess);
@@ -334,7 +345,7 @@ TEST_F(StartProcessTest, startProcessReportingPassesComms)
     IpcCommsSync* block = StubShmObject();
     EXPECT_CALL(*g_syscall_mock, access(_, _)).WillOnce(Return(0));
     EXPECT_CALL(*semaphore_mock_, sem_init).Times(2).WillRepeatedly(Return(kSemSuccess));
-    EXPECT_CALL(*g_start_process_mock, startProcess(_, Ref(config_), kShmFd, Property(&IpcCommsP::get, block)))
+    EXPECT_CALL(*process_starter_mock_, startProcess(_, Ref(config_), kShmFd, Property(&IpcCommsP::get, block)))
         .WillOnce(DoAll(SetArgReferee<0>(started_pid), Return(OsalReturnType::kSuccess)));
     EXPECT_CALL(*g_syscall_mock, close(kShmFd)).WillOnce(Return(0));
 
@@ -353,7 +364,7 @@ class SetupCommsTest : public StartProcessTest
         config_.component_properties.application_profile.application_type = configuration::ApplicationType::Reporting;
 
         EXPECT_CALL(*g_syscall_mock, access).WillOnce(Return(0));
-        EXPECT_CALL(*g_start_process_mock, startProcess).Times(0);
+        EXPECT_CALL(*process_starter_mock_, startProcess).Times(0);
     }
 };
 

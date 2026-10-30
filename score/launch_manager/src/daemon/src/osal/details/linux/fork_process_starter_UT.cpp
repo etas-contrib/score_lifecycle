@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-#include "score/mw/launch_manager/osal/start_process.hpp"
+#include "score/mw/launch_manager/osal/details/linux/fork_process_starter.hpp"
 #include "tests/utils/mocks/mock_syscalls.hpp"
 
 using namespace testing;
@@ -139,7 +139,7 @@ class StartProcessTest : public ::testing::Test
 
     OsalReturnType StartProcess()
     {
-        return startProcess(pid_, config_, comms_fd_, comms_);
+        return ForkProcessStarter{}.startProcess(pid_, config_, comms_fd_, comms_);
     }
 
     static constexpr int kShmFd = 123;

@@ -11,19 +11,23 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-#include <fcntl.h>
 #include <sched.h>
 #include <secpol/secpol.h>
 #include <spawn.h>
 #include <sys/resource.h>
-#include <unistd.h>
 #include <signal.h>
 
 #include "score/mw/launch_manager/common/log.hpp"
+#include "score/mw/launch_manager/osal/details/qnx/spawn_process_starter.hpp"
 #include "score/mw/launch_manager/osal/start_process.hpp"
+#include "score/os/qnx/secpol_impl.h"
+#include "score/os/qnx/unistd_impl.h"
+#include "score/os/spawn_impl.h"
 #include <cerrno>
 #include <cstdint>
 #include <limits>
+#include <string_view>
+#include <utility>
 
 namespace score::mw::lifecycle::internal::osal
 {
@@ -31,11 +35,20 @@ namespace score::mw::lifecycle::internal::osal
 namespace
 {
 
+/// @brief Returns the description of @p error for log messages.
+std::string_view errorMessage(const score::os::Error& error) noexcept
+{
+    return errno_message(error.GetOsDependentErrorCode());
+}
+
 /// @brief Owns the posix_spawn attribute and file action objects and the working directory fd.
 class SpawnResources
 {
   public:
-    SpawnResources() = default;
+    SpawnResources(const score::os::Spawn& spawn, const score::os::Unistd& unistd) noexcept
+        : spawn_(spawn), unistd_(unistd)
+    {
+    }
 
     SpawnResources(const SpawnResources&) = delete;
     SpawnResources& operator=(const SpawnResources&) = delete;
@@ -46,35 +59,37 @@ class SpawnResources
     {
         if (cwd_fd_ >= 0)
         {
-            static_cast<void>(::close(cwd_fd_));
+            static_cast<void>(unistd_.close(cwd_fd_));
         }
         if (file_actions_initialized_)
         {
-            static_cast<void>(::posix_spawn_file_actions_destroy(&file_actions_));
+            static_cast<void>(spawn_.posix_spawn_file_actions_destroy(&file_actions_));
         }
         if (attr_initialized_)
         {
-            static_cast<void>(::posix_spawnattr_destroy(&attr_));
+            static_cast<void>(spawn_.posix_spawnattr_destroy(&attr_));
         }
     }
 
-    /// @return 0 on success, an error number otherwise
-    int init()
+    /// @return true on success, false otherwise (the reason is logged)
+    bool init()
     {
-        int rc = ::posix_spawnattr_init(&attr_);
-        if (rc != 0)
+        const auto attr_result = spawn_.posix_spawnattr_init(&attr_);
+        if (!attr_result.has_value())
         {
-            return rc;
+            LM_LOG_ERROR() << "posix_spawnattr_init failed:" << errorMessage(attr_result.error());
+            return false;
         }
         attr_initialized_ = true;
 
-        rc = ::posix_spawn_file_actions_init(&file_actions_);
-        if (rc != 0)
+        const auto file_actions_result = spawn_.posix_spawn_file_actions_init(&file_actions_);
+        if (!file_actions_result.has_value())
         {
-            return rc;
+            LM_LOG_ERROR() << "posix_spawn_file_actions_init failed:" << errorMessage(file_actions_result.error());
+            return false;
         }
         file_actions_initialized_ = true;
-        return 0;
+        return true;
     }
 
     posix_spawnattr_t* attr()
@@ -93,6 +108,8 @@ class SpawnResources
     }
 
   private:
+    const score::os::Spawn& spawn_;
+    const score::os::Unistd& unistd_;
     posix_spawnattr_t attr_{};
     posix_spawn_file_actions_t file_actions_{};
     bool attr_initialized_{false};
@@ -103,6 +120,9 @@ class SpawnResources
 /// @brief Fills the spawn attributes and file actions from the configuration.
 /// @return true on success, false otherwise (the reason is logged)
 bool prepareSpawn(
+    const score::os::Spawn& spawn,
+    const score::os::qnx::Secpol& secpol,
+    const score::os::Fcntl& fcntl,
     SpawnResources& resources,
     const configuration::ComponentConfig& config,
     int comms_fd,
@@ -115,49 +135,49 @@ bool prepareSpawn(
     std::uint32_t flags = POSIX_SPAWN_HOLD;
 
     // Set process group id to be equal to the pid
-    int rc = ::posix_spawnattr_setpgroup(attr, 0);
-    if (rc != 0)
+    const auto pgroup_result = spawn.posix_spawnattr_setpgroup(attr, 0);
+    if (!pgroup_result.has_value())
     {
-        LM_LOG_ERROR() << "posix_spawnattr_setpgroup failed:" << errno_message(rc);
+        LM_LOG_ERROR() << "posix_spawnattr_setpgroup failed:" << errorMessage(pgroup_result.error());
         return false;
     }
     flags |= POSIX_SPAWN_SETPGROUP;
 
     // The priority was clamped to the valid range of the policy when the configuration was loaded
-    rc = ::posix_spawnattr_setschedpolicy(attr, sandbox.scheduling_policy);
-    if (rc != 0)
+    const auto policy_result = spawn.posix_spawnattr_setschedpolicy(attr, sandbox.scheduling_policy);
+    if (!policy_result.has_value())
     {
         LM_LOG_ERROR() << "posix_spawnattr_setschedpolicy(" << sandbox.scheduling_policy
-                       << ") failed:" << errno_message(rc);
+                       << ") failed:" << errorMessage(policy_result.error());
         return false;
     }
     sched_param sch_param{};
     sch_param.sched_priority = sandbox.scheduling_priority;
-    rc = ::posix_spawnattr_setschedparam(attr, &sch_param);
-    if (rc != 0)
+    const auto param_result = spawn.posix_spawnattr_setschedparam(attr, &sch_param);
+    if (!param_result.has_value())
     {
         LM_LOG_ERROR() << "posix_spawnattr_setschedparam(" << sandbox.scheduling_priority
-                       << ") failed:" << errno_message(rc);
+                       << ") failed:" << errorMessage(param_result.error());
         return false;
     }
     flags |= POSIX_SPAWN_SETSCHEDULER | POSIX_SPAWN_SETSCHEDPARAM;
 
     if (sandbox.affinity_mask.has_value())
     {
-        rc = ::pthread_spawnattr_setrunmask_np(attr, sandbox.affinity_mask.value());
-        if (rc != 0)
+        const auto runmask_result = spawn.pthread_spawnattr_setrunmask_np(attr, sandbox.affinity_mask.value());
+        if (!runmask_result.has_value())
         {
-            LM_LOG_ERROR() << "pthread_spawnattr_setrunmask_np failed:" << errno_message(rc);
+            LM_LOG_ERROR() << "pthread_spawnattr_setrunmask_np failed:" << errorMessage(runmask_result.error());
             return false;
         }
         flags |= POSIX_SPAWN_EXPLICIT_CPU;
     }
 
-    rc = ::posix_spawnattr_setcred(attr, sandbox.uid, sandbox.gid);
-    if (rc != 0)
+    const auto cred_result = spawn.posix_spawnattr_setcred(attr, sandbox.uid, sandbox.gid);
+    if (!cred_result.has_value())
     {
         LM_LOG_ERROR() << "posix_spawnattr_setcred(" << sandbox.uid << "," << sandbox.gid
-                       << ") failed:" << errno_message(rc);
+                       << ") failed:" << errorMessage(cred_result.error());
         return false;
     }
     flags |= POSIX_SPAWN_SETCRED;
@@ -169,10 +189,11 @@ bool prepareSpawn(
         if (rlimit_config.resource == RLIMIT_STACK && rlimit_config.limit.rlim_cur != RLIM_INFINITY &&
             rlimit_config.limit.rlim_cur <= std::numeric_limits<std::uint32_t>::max())
         {
-            rc = ::posix_spawnattr_setstackmax(attr, static_cast<std::uint32_t>(rlimit_config.limit.rlim_cur));
-            if (rc != 0)
+            const auto stackmax_result =
+                spawn.posix_spawnattr_setstackmax(attr, static_cast<std::uint32_t>(rlimit_config.limit.rlim_cur));
+            if (!stackmax_result.has_value())
             {
-                LM_LOG_ERROR() << "posix_spawnattr_setstackmax failed:" << errno_message(rc);
+                LM_LOG_ERROR() << "posix_spawnattr_setstackmax failed:" << errorMessage(stackmax_result.error());
                 return false;
             }
             flags |= POSIX_SPAWN_SETSTACKMAX;
@@ -180,18 +201,21 @@ bool prepareSpawn(
     }
 
     // working_dir is set by configuration, so it should always be valid.
-    const int cwd_fd = ::open(config.deployment_config.working_dir.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-    if (cwd_fd < 0)
+    const auto cwd_result = fcntl.open(
+        config.deployment_config.working_dir.c_str(),
+        score::os::Fcntl::Open::kReadOnly | score::os::Fcntl::Open::kDirectory | score::os::Fcntl::Open::kCloseOnExec);
+    if (!cwd_result.has_value())
     {
-        LM_LOG_ERROR() << "open(" << config.deployment_config.working_dir << ") failed:" << errno_message(errno);
+        LM_LOG_ERROR() << "open(" << config.deployment_config.working_dir
+                       << ") failed:" << errorMessage(cwd_result.error());
         return false;
     }
-    resources.setCwdFd(cwd_fd);
-    rc = ::posix_spawnattr_setcwd_np(attr, cwd_fd);
-    if (rc != 0)
+    resources.setCwdFd(cwd_result.value());
+    const auto setcwd_result = spawn.posix_spawnattr_setcwd_np(attr, cwd_result.value());
+    if (!setcwd_result.has_value())
     {
         LM_LOG_ERROR() << "posix_spawnattr_setcwd_np(" << config.deployment_config.working_dir
-                       << ") failed:" << errno_message(rc);
+                       << ") failed:" << errorMessage(setcwd_result.error());
         return false;
     }
     flags |= POSIX_SPAWN_SETCWD;
@@ -199,36 +223,41 @@ bool prepareSpawn(
     if (sandbox.security_policy.has_value() && !sandbox.security_policy.value().empty())
     {
         // The configured name refers directly to a type name
-        if (::secpol_posix_spawnattr_settypeid(
-                nullptr, attr, sandbox.security_policy.value().c_str(), SECPOL_TYPE_NAME) != 0 &&
-            errno != ENOTSUP)
+        const auto typeid_result = secpol.secpol_posix_spawnattr_settypeid(
+            nullptr, attr, sandbox.security_policy.value().c_str(), SECPOL_TYPE_NAME);
+        if (!typeid_result.has_value() && typeid_result.error() != score::os::Error::Code::kOperationNotSupported)
         {
             LM_LOG_ERROR() << "secpol_posix_spawnattr_settypeid(" << sandbox.security_policy.value()
-                           << ") failed:" << errno_message(errno);
+                           << ") failed:" << errorMessage(typeid_result.error());
             return false;
         }
     }
 
     // Get, OR and set the flags, so that flags set by the functions above (e.g. POSIX_SPAWN_SETTYPEID) are kept
     std::uint32_t current_flags = 0U;
-    rc = ::posix_spawnattr_getxflags(attr, &current_flags);
-    if (rc == 0)
+    const auto getxflags_result = spawn.posix_spawnattr_getxflags(attr, &current_flags);
+    if (!getxflags_result.has_value())
     {
-        rc = ::posix_spawnattr_setxflags(attr, current_flags | flags);
+        LM_LOG_ERROR() << "posix_spawnattr_getxflags failed:" << errorMessage(getxflags_result.error());
+        return false;
     }
-    if (rc != 0)
+    const auto setxflags_result = spawn.posix_spawnattr_setxflags(attr, current_flags | flags);
+    if (!setxflags_result.has_value())
     {
-        LM_LOG_ERROR() << "Setting the posix_spawn flags failed:" << errno_message(rc);
+        LM_LOG_ERROR() << "posix_spawnattr_setxflags failed:" << errorMessage(setxflags_result.error());
         return false;
     }
 
     if (comms)
     {
         // The duplicated fd does not have FD_CLOEXEC set, so it remains open in the new process
-        rc = ::posix_spawn_file_actions_adddup2(resources.fileActions(), comms_fd, IpcCommsSync::sync_fd);
-        if (rc != 0)
+        // Note that comms_fd == IpcCommsSync::sync_fd cannot happen as IpcCommsSync::sync_fd is being reserved during
+        // startup
+        const auto dup2_result =
+            spawn.posix_spawn_file_actions_adddup2(resources.fileActions(), comms_fd, IpcCommsSync::sync_fd);
+        if (!dup2_result.has_value())
         {
-            LM_LOG_ERROR() << "posix_spawn_file_actions_adddup2 failed:" << errno_message(rc);
+            LM_LOG_ERROR() << "posix_spawn_file_actions_adddup2 failed:" << errorMessage(dup2_result.error());
             return false;
         }
     }
@@ -239,16 +268,20 @@ bool prepareSpawn(
 // req-Id: comp_req__launch_man__process_rlimit_support
 /// @brief Applies the supplementary groups and resource limits to the held process @p pid.
 /// @return true on success, false otherwise (the reason is logged)
-bool configureHeldProcess(ProcessID pid, const configuration::Sandbox& sandbox)
+bool configureHeldProcess(
+    const score::os::qnx::QnxUnistd& qnx_unistd,
+    ProcessID pid,
+    const configuration::Sandbox& sandbox)
 {
     // Always set the supplementary groups, so the groups of the Launch Manager are not inherited
-    const auto supplementary_gids_number = static_cast<int>(sandbox.supplementary_group_ids.size());
-    if (-1 == ::setgroupspid(
-                  supplementary_gids_number,
-                  supplementary_gids_number != 0 ? sandbox.supplementary_group_ids.data() : nullptr,
-                  pid))
+    const auto supplementary_gids_number = static_cast<std::int32_t>(sandbox.supplementary_group_ids.size());
+    const auto groups_result = qnx_unistd.setgroupspid(
+        supplementary_gids_number,
+        supplementary_gids_number != 0 ? sandbox.supplementary_group_ids.data() : nullptr,
+        pid);
+    if (!groups_result.has_value())
     {
-        LM_LOG_ERROR() << "setgroupspid() failed for pid" << pid << ":" << errno_message(errno);
+        LM_LOG_ERROR() << "setgroupspid() failed for pid" << pid << ":" << errorMessage(groups_result.error());
         return false;
     }
 
@@ -267,20 +300,35 @@ bool configureHeldProcess(ProcessID pid, const configuration::Sandbox& sandbox)
 
 }  // namespace
 
-OsalReturnType
-startProcess(ProcessID& pid, const configuration::ComponentConfig& config, int comms_fd, const IpcCommsP& comms)
+SpawnProcessStarter::SpawnProcessStarter(
+    std::unique_ptr<score::os::Spawn> spawn,
+    std::unique_ptr<score::os::qnx::Secpol> secpol,
+    std::unique_ptr<score::os::qnx::QnxUnistd> qnx_unistd,
+    std::unique_ptr<score::os::Fcntl> fcntl,
+    std::unique_ptr<score::os::Unistd> unistd) noexcept
+    : spawn_(std::move(spawn)),
+      secpol_(std::move(secpol)),
+      qnx_unistd_(std::move(qnx_unistd)),
+      fcntl_(std::move(fcntl)),
+      unistd_(std::move(unistd))
+{
+}
+
+OsalReturnType SpawnProcessStarter::startProcess(
+    ProcessID& pid,
+    const configuration::ComponentConfig& config,
+    int comms_fd,
+    const IpcCommsP& comms) const
 {
     pid = -1;
 
-    SpawnResources resources;
-    const int init_rc = resources.init();
-    if (init_rc != 0)
+    SpawnResources resources{*spawn_, *unistd_};
+    if (!resources.init())
     {
-        LM_LOG_ERROR() << "Initializing the posix_spawn attributes failed:" << errno_message(init_rc);
         return OsalReturnType::kFail;
     }
 
-    if (!prepareSpawn(resources, config, comms_fd, comms))
+    if (!prepareSpawn(*spawn_, *secpol_, *fcntl_, resources, config, comms_fd, comms))
     {
         return OsalReturnType::kFail;
     }
@@ -290,11 +338,12 @@ startProcess(ProcessID& pid, const configuration::ComponentConfig& config, int c
     char* const* envp = config.deployment_config.environmental_variables.envp();
 
     ProcessID child_pid = -1;
-    const int spawn_rc = ::posix_spawn(&child_pid, argv[0], resources.fileActions(), resources.attr(), argv, envp);
-    if (spawn_rc != 0)
+    const auto spawn_result =
+        spawn_->posix_spawn(&child_pid, argv[0], resources.fileActions(), resources.attr(), argv, envp);
+    if (!spawn_result.has_value())
     {
         LM_LOG_ERROR() << "posix_spawn failed for" << config.deployment_config.process_command.executablePath()
-                       << "with error:" << errno_message(spawn_rc);
+                       << "with error:" << errorMessage(spawn_result.error());
         return OsalReturnType::kFail;
     }
     pid = child_pid;
@@ -305,7 +354,7 @@ startProcess(ProcessID& pid, const configuration::ComponentConfig& config, int c
         comms->pid_ = pid;
     }
 
-    if (!configureHeldProcess(pid, config.deployment_config.sandbox))
+    if (!configureHeldProcess(*qnx_unistd_, pid, config.deployment_config.sandbox))
     {
         // The process exists, so report it as started and let it terminate. This way the termination is reported
         // via the normal path, like a forked process that fails to apply its configuration on Linux.
@@ -323,6 +372,16 @@ startProcess(ProcessID& pid, const configuration::ComponentConfig& config, int c
     }
 
     return OsalReturnType::kSuccess;
+}
+
+std::unique_ptr<IProcessStarter> createProcessStarter()
+{
+    return std::make_unique<SpawnProcessStarter>(
+        std::make_unique<score::os::SpawnImpl>(),
+        std::make_unique<score::os::qnx::details::SecpolImpl>(),
+        std::make_unique<score::os::qnx::QnxUnistdImpl>(),
+        score::os::Fcntl::Default(),
+        score::os::Unistd::Default());
 }
 
 }  // namespace score::mw::lifecycle::internal::osal

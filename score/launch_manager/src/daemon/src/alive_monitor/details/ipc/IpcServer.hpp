@@ -103,7 +103,7 @@ class IpcServer final : public IpcBase<Payload, MaxNumberElements, Socket>
     /// @return True if setting access rights was successful, else false
     bool setAccessRights(uid_t f_uid) noexcept(false)
     {
-        int fd = shm_open(Base::getPath().data(), O_RDWR, kOwnerReadWrite);
+        int fd = shm_open(Base::getPath().data(), O_RDWR | O_CLOEXEC, kOwnerReadWrite);
         if (fd < 0)
         {
             return false;

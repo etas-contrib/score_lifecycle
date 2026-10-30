@@ -30,12 +30,19 @@
 #include <iterator>
 #include <optional>
 #include <string_view>
+#include <utility>
 
 constexpr int kPidZero = 0;  // This value is used to check if the process ID (uses pid_t) is valid or not.
 constexpr int kPosixSuccess = 0;
 
 namespace score::mw::lifecycle::internal::osal
 {
+
+ProcessLauncher::ProcessLauncher(std::unique_ptr<IProcessStarter> process_starter)
+    : process_starter_(std::move(process_starter))
+{
+    SCORE_LANGUAGE_FUTURECPP_ASSERT_PRD_MESSAGE(process_starter_ != nullptr, "The process starter must not be null");
+}
 
 OsalReturnType
 ProcessLauncher::startProcess(ProcessID& pid, IpcCommsP& block, const configuration::ComponentConfig& config)
@@ -70,7 +77,7 @@ ProcessLauncher::startProcess(ProcessID& pid, IpcCommsP& block, const configurat
                 LM_LOG_ERROR() << "Failed to flush stdout before starting the process.";
             }
 
-            result = osal::startProcess(pid, config, fd, block);
+            result = process_starter_->startProcess(pid, config, fd, block);
 
             if (result != OsalReturnType::kSuccess)
             {
@@ -120,7 +127,7 @@ bool ProcessLauncher::setupComms(IpcCommsP& block, int& fd, const configuration:
     }
     *conversion.ptr = '\0';
 
-    fd = shm_open(shm_name.data(), O_CREAT | O_EXCL | O_RDWR, 0U);
+    fd = shm_open(shm_name.data(), O_CREAT | O_EXCL | O_RDWR | O_CLOEXEC, 0U);
     if (fd < 0)
     {
         LM_LOG_ERROR() << "shm_open failed:" << config.deployment_config.process_command.executablePath()

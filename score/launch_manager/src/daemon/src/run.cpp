@@ -55,14 +55,12 @@ bool runLCMDaemon(ProcessGroupManager& process_group_manager)
 /// @warning This function can abort if system calls fail.
 void reserveFD(int fd)
 {
-    errno = 0;
-    const int open_fd_flags = ::fcntl(fd, F_GETFD);
-    const bool fd_already_opened = open_fd_flags == 0 && errno == EBADFD;
+    // fcntl returns "-1" if the fd is not known, otherwise returns the nuber specifying the flags of the open fd
+    const bool fd_already_opened = (::fcntl(fd, F_GETFD) != -1);
 
     if (fd_already_opened)
     {
-        std::cerr << "Failed to reserve required file descriptor (" << fd << "), file descriptor already in use. "
-                  << std::strerror(errno);
+        std::cerr << "Failed to reserve required file descriptor (" << fd << "), file descriptor already in use. ";
         std::abort();
     }
 

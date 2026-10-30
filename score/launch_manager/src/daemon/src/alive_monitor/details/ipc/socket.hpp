@@ -268,7 +268,7 @@ class Socket
     static bool exists(const std::string& f_name, mode_t f_mode) noexcept(false)
     {
         // Try opening the shmem without creating it to check if shmem files already exist
-        auto fd = shm_open(f_name.c_str(), O_RDONLY, f_mode);
+        auto fd = shm_open(f_name.c_str(), O_RDONLY | O_CLOEXEC, f_mode);
         if (fd >= 0)
         {
             ::close(fd);

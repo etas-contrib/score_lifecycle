@@ -20,4 +20,5 @@ Component Architecture
 .. toctree::
 
    component_architecture
+   design_decisions
    chklst_arc_inspection

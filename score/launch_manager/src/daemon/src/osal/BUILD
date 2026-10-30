@@ -193,6 +193,7 @@ cc_library(
         "@platforms//os:qnx": [
             "@score_baselibs//score/os:errno",
             "@score_baselibs//score/os:fcntl",
+            "@score_baselibs//score/os:sched",
             "@score_baselibs//score/os:spawn",
             "@score_baselibs//score/os:unistd",
             "@score_baselibs//score/os/qnx:secpol",
@@ -252,6 +253,7 @@ lm_cc_test(
         ":start_process",
         "@googletest//:gtest_main",
         "@score_baselibs//score/os/mocklib:fcntl_mock",
+        "@score_baselibs//score/os/mocklib:sched_mock",
         "@score_baselibs//score/os/mocklib:spawn_mock",
         "@score_baselibs//score/os/mocklib:unistd_mock",
         "@score_baselibs//score/os/mocklib/qnx:secpol_mock",

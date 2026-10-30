@@ -34,6 +34,7 @@
 #include "score/os/mocklib/fcntl_mock.h"
 #include "score/os/mocklib/qnx/mock_secpol.h"
 #include "score/os/mocklib/qnx/mock_unistd.h"
+#include "score/os/mocklib/sched_mock.h"
 #include "score/os/mocklib/spawn_mock.h"
 #include "score/os/mocklib/unistdmock.h"
 
@@ -88,8 +89,6 @@ struct CapturedSpawn
 {
     std::uint32_t xflags{};
     pid_t pgroup{-1};
-    int sched_policy{-1};
-    int sched_priority{-1};
     std::uint64_t runmask{};
     uid_t uid{};
     gid_t gid{};
@@ -106,6 +105,7 @@ struct OsMock
     StrictMock<score::os::qnx::MockUnistd> qnx_unistd{};
     NiceMock<score::os::FcntlMock> fcntl{};
     NiceMock<score::os::UnistdMock> unistd{};
+    StrictMock<score::os::SchedMock> sched{};
 };
 
 }  // namespace
@@ -150,14 +150,6 @@ class QnxStartProcessTest : public ::testing::Test
         ON_CALL(os_.spawn, posix_spawnattr_setpgroup).WillByDefault([this](posix_spawnattr_t* attr, pid_t pgroup) {
             return real_os_.spawn.posix_spawnattr_setpgroup(attr, pgroup);
         });
-        ON_CALL(os_.spawn, posix_spawnattr_setschedpolicy)
-            .WillByDefault([this](posix_spawnattr_t* attr, std::int32_t policy) {
-                return real_os_.spawn.posix_spawnattr_setschedpolicy(attr, policy);
-            });
-        ON_CALL(os_.spawn, posix_spawnattr_setschedparam)
-            .WillByDefault([this](posix_spawnattr_t* attr, const sched_param* param) {
-                return real_os_.spawn.posix_spawnattr_setschedparam(attr, param);
-            });
         ON_CALL(os_.spawn, pthread_spawnattr_setrunmask_np)
             .WillByDefault([this](posix_spawnattr_t* attr, std::uint64_t runmask) {
                 return real_os_.spawn.pthread_spawnattr_setrunmask_np(attr, runmask);
@@ -214,10 +206,6 @@ class QnxStartProcessTest : public ::testing::Test
                           char* const[]) {
                 EXPECT_EQ(posix_spawnattr_getxflags(attrp, &captured_.xflags), 0);
                 EXPECT_EQ(posix_spawnattr_getpgroup(attrp, &captured_.pgroup), 0);
-                EXPECT_EQ(posix_spawnattr_getschedpolicy(attrp, &captured_.sched_policy), 0);
-                sched_param param{};
-                EXPECT_EQ(posix_spawnattr_getschedparam(attrp, &param), 0);
-                captured_.sched_priority = param.sched_priority;
                 EXPECT_EQ(pthread_spawnattr_getrunmask_np(attrp, &captured_.runmask), 0);
                 EXPECT_EQ(posix_spawnattr_getcred(attrp, &captured_.uid, &captured_.gid), 0);
                 EXPECT_EQ(posix_spawnattr_getstackmax(attrp, &captured_.stackmax), 0);
@@ -231,8 +219,14 @@ class QnxStartProcessTest : public ::testing::Test
             });
     }
 
+    void ExpectSchedulingSet()
+    {
+        EXPECT_CALL(os_.sched, sched_setscheduler(kChildPid, _, _)).WillOnce(Return(OsSuccess()));
+    }
+
     void ExpectHeldProcessConfigured()
     {
+        ExpectSchedulingSet();
         EXPECT_CALL(os_.qnx_unistd, setgroupspid(_, _, kChildPid)).WillOnce(Return(OsSuccess()));
         EXPECT_CALL(*g_process_control_mock, prlimit(kChildPid, _, _, nullptr))
             .Times(AnyNumber())
@@ -274,8 +268,8 @@ TEST_F(QnxStartProcessTest, spawnsHeldProcessWithConfiguredAttributes)
 {
     RecordProperty(
         "Description",
-        "Verify that the process is spawned held, with the configured process group, scheduling, "
-        "credentials, working directory and arguments, and then continued");
+        "Verify that the process is spawned held, with the configured process group, credentials, working "
+        "directory and arguments, and then continued");
 
     ExpectSpawnSucceeds();
     ExpectHeldProcessConfigured();
@@ -284,14 +278,15 @@ TEST_F(QnxStartProcessTest, spawnsHeldProcessWithConfiguredAttributes)
     EXPECT_EQ(StartProcess(), OsalReturnType::kSuccess);
     EXPECT_EQ(pid_, kChildPid);
 
-    const std::uint32_t expected_flags = POSIX_SPAWN_HOLD | POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_SETSCHEDULER |
-                                         POSIX_SPAWN_SETSCHEDPARAM | POSIX_SPAWN_SETCRED | POSIX_SPAWN_SETCWD;
+    const std::uint32_t expected_flags =
+        POSIX_SPAWN_HOLD | POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_SETCRED | POSIX_SPAWN_SETCWD;
     EXPECT_EQ(captured_.xflags & expected_flags, expected_flags);
+    // The scheduling is applied to the held process, see schedulingIsAppliedToHeldProcessBeforeContinue
+    const std::uint32_t scheduling_flags = POSIX_SPAWN_SETSCHEDULER | POSIX_SPAWN_SETSCHEDPARAM;
+    EXPECT_EQ(captured_.xflags & scheduling_flags, 0U);
     EXPECT_EQ(captured_.xflags & static_cast<std::uint32_t>(POSIX_SPAWN_EXPLICIT_CPU), 0U);
     EXPECT_EQ(captured_.xflags & static_cast<std::uint32_t>(POSIX_SPAWN_SETSTACKMAX), 0U);
     EXPECT_EQ(captured_.pgroup, 0);
-    EXPECT_EQ(captured_.sched_policy, SCHED_RR);
-    EXPECT_EQ(captured_.sched_priority, 10);
     EXPECT_EQ(captured_.uid, 11U);
     EXPECT_EQ(captured_.gid, 13U);
     EXPECT_EQ(captured_.path, "/bin/TestProcess");
@@ -374,6 +369,7 @@ TEST_F(QnxStartProcessTest, supplementaryGroupsAreCleared)
         "Description", "Verify that the supplementary groups are explicitly cleared when none are configured");
 
     ExpectSpawnSucceeds();
+    ExpectSchedulingSet();
     EXPECT_CALL(os_.qnx_unistd, setgroupspid(0, nullptr, kChildPid)).WillOnce(Return(OsSuccess()));
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).WillOnce(Return(0));
 
@@ -397,6 +393,7 @@ TEST_F(QnxStartProcessTest, groupsAndLimitsAreAppliedBeforeContinue)
     ExpectSpawnSucceeds();
     {
         InSequence seq;
+        ExpectSchedulingSet();
         EXPECT_CALL(os_.qnx_unistd, setgroupspid(3, NotNull(), kChildPid))
             .WillOnce([&sgids](std::int32_t n, const gid_t* groups, pid_t) {
                 EXPECT_TRUE(std::equal(groups, groups + n, sgids.begin()));
@@ -429,6 +426,7 @@ TEST_F(QnxStartProcessTest, prlimitFailureKillsHeldProcess)
     };
 
     ExpectSpawnSucceeds();
+    ExpectSchedulingSet();
     EXPECT_CALL(os_.qnx_unistd, setgroupspid).WillOnce(Return(OsSuccess()));
     EXPECT_CALL(*g_process_control_mock, prlimit).WillOnce(SetErrnoAndReturn(EPERM, -1));
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGKILL)).WillOnce(Return(0));
@@ -445,7 +443,44 @@ TEST_F(QnxStartProcessTest, setgroupspidFailureKillsHeldProcess)
         "Verify that the held process is killed but reported as started if setting the supplementary groups fails");
 
     ExpectSpawnSucceeds();
+    ExpectSchedulingSet();
     EXPECT_CALL(os_.qnx_unistd, setgroupspid).WillOnce(Return(OsError(EPERM)));
+    EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGKILL)).WillOnce(Return(0));
+    EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).Times(0);
+
+    EXPECT_EQ(StartProcess(), OsalReturnType::kSuccess);
+    EXPECT_EQ(pid_, kChildPid);
+}
+
+TEST_F(QnxStartProcessTest, schedulingIsAppliedToHeldProcessBeforeContinue)
+{
+    RecordProperty(
+        "Description",
+        "Verify that the configured scheduling policy and priority are applied to the held process before it is "
+        "continued");
+
+    ExpectSpawnSucceeds();
+    {
+        InSequence seq;
+        EXPECT_CALL(
+            os_.sched, sched_setscheduler(kChildPid, SCHED_RR, Pointee(Field(&sched_param::sched_priority, 10))))
+            .WillOnce(Return(OsSuccess()));
+        EXPECT_CALL(os_.qnx_unistd, setgroupspid(_, _, kChildPid)).WillOnce(Return(OsSuccess()));
+        EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).WillOnce(Return(0));
+    }
+
+    EXPECT_EQ(StartProcess(), OsalReturnType::kSuccess);
+}
+
+TEST_F(QnxStartProcessTest, schedulingFailureKillsHeldProcess)
+{
+    RecordProperty(
+        "Description",
+        "Verify that the held process is killed but reported as started if setting the scheduling fails");
+
+    ExpectSpawnSucceeds();
+    EXPECT_CALL(os_.sched, sched_setscheduler).WillOnce(Return(OsError(EPERM)));
+    EXPECT_CALL(os_.qnx_unistd, setgroupspid).Times(0);
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGKILL)).WillOnce(Return(0));
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).Times(0);
 
@@ -574,16 +609,6 @@ const AttributeFailure kAttributeFailures[] = {
     {"setpgroup",
      [](OsMock& os, configuration::ComponentConfig&) {
          EXPECT_CALL(os.spawn, posix_spawnattr_setpgroup).WillOnce(Return(OsError(EINVAL)));
-     },
-     false},
-    {"setschedpolicy",
-     [](OsMock& os, configuration::ComponentConfig&) {
-         EXPECT_CALL(os.spawn, posix_spawnattr_setschedpolicy).WillOnce(Return(OsError(EINVAL)));
-     },
-     false},
-    {"setschedparam",
-     [](OsMock& os, configuration::ComponentConfig&) {
-         EXPECT_CALL(os.spawn, posix_spawnattr_setschedparam).WillOnce(Return(OsError(EINVAL)));
      },
      false},
     {"setrunmask",

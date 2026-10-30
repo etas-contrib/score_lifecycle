@@ -29,6 +29,7 @@
 #include "score/os/fcntl_impl.h"
 #include "score/os/qnx/secpol_impl.h"
 #include "score/os/qnx/unistd_impl.h"
+#include "score/os/sched_impl.h"
 #include "score/os/spawn_impl.h"
 #include "score/os/unistd.h"
 #include <cerrno>
@@ -48,6 +49,7 @@ struct SpawnOs
     score::os::qnx::QnxUnistdImpl qnx_unistd{};
     score::os::FcntlImpl fcntl{};
     score::os::internal::UnistdImpl unistd{};
+    score::os::SchedImpl sched{};
 };
 
 /// @brief Returns the description of @p error for log messages.
@@ -180,38 +182,6 @@ bool setProcessGroup(
         return false;
     }
     flags |= POSIX_SPAWN_SETPGROUP;
-    return true;
-}
-
-/// @brief Sets the scheduling policy and priority.
-template <class OsT>
-bool setScheduling(
-    const OsT& os,
-    posix_spawnattr_t* attr,
-    const configuration::ComponentConfig& config,
-    std::uint32_t& flags)
-{
-    const auto& sandbox = config.deployment_config.sandbox;
-
-    // The priority was clamped to the valid range of the policy when the configuration was loaded
-    const auto policy_result = os.spawn.posix_spawnattr_setschedpolicy(attr, sandbox.scheduling_policy);
-    if (!policy_result.has_value())
-    {
-        LM_LOG_ERROR() << "posix_spawnattr_setschedpolicy(" << sandbox.scheduling_policy << ") failed for"
-                       << executableOf(config) << "with error:" << errorMessage(policy_result.error());
-        return false;
-    }
-
-    sched_param sch_param{};
-    sch_param.sched_priority = sandbox.scheduling_priority;
-    const auto param_result = os.spawn.posix_spawnattr_setschedparam(attr, &sch_param);
-    if (!param_result.has_value())
-    {
-        LM_LOG_ERROR() << "posix_spawnattr_setschedparam(" << sandbox.scheduling_priority << ") failed for"
-                       << executableOf(config) << "with error:" << errorMessage(param_result.error());
-        return false;
-    }
-    flags |= POSIX_SPAWN_SETSCHEDULER | POSIX_SPAWN_SETSCHEDPARAM;
     return true;
 }
 
@@ -394,12 +364,12 @@ bool prepareSpawn(
 {
     posix_spawnattr_t* attr = resources.attr();
 
-    // Start the process held, so the supplementary groups and resource limits can be applied before it runs
+    // Start the process held, so the scheduling, supplementary groups and resource limits can be applied before it
+    // runs (see configureHeldProcess())
     std::uint32_t flags = POSIX_SPAWN_HOLD;
 
-    const bool attributes_set = setProcessGroup(os, attr, config, flags) && setScheduling(os, attr, config, flags) &&
-                                setAffinity(os, attr, config, flags) && setCredentials(os, attr, config, flags) &&
-                                setStackLimit(os, attr, config, flags) &&
+    const bool attributes_set = setProcessGroup(os, attr, config, flags) && setAffinity(os, attr, config, flags) &&
+                                setCredentials(os, attr, config, flags) && setStackLimit(os, attr, config, flags) &&
                                 setWorkingDirectory(os, resources, config, flags) &&
                                 setSecurityPolicy(os, attr, config);
     if (!attributes_set)
@@ -416,14 +386,48 @@ bool prepareSpawn(
     return addCommsFd(os, resources.fileActions(), config, comms_fd, comms);
 }
 
+/// @brief Sets the scheduling policy and priority of the held process @p pid.
+/// @details The scheduling is not set via the spawn attributes, as posix_spawn() blocks until the main thread of the
+/// new process has completed its initialization, which it performs at the scheduling priority of the new process.
+/// A priority lower than the one of the Launch Manager would cause a priority inversion. Without the spawn
+/// attributes, the new process inherits the scheduling of the calling thread for its initialization instead.
+/// @tparam OsT See startProcessImpl()
+/// @return true on success, false otherwise (the reason is logged)
+template <class OsT>
+bool setScheduling(const OsT& os, ProcessID pid, const configuration::ComponentConfig& config)
+{
+    const auto& sandbox = config.deployment_config.sandbox;
+
+    // The priority was clamped to the valid range of the policy when the configuration was loaded
+    sched_param sch_param{};
+    sch_param.sched_priority = sandbox.scheduling_priority;
+    const auto sched_result = os.sched.sched_setscheduler(pid, sandbox.scheduling_policy, &sch_param);
+    if (!sched_result.has_value())
+    {
+        LM_LOG_ERROR() << "sched_setscheduler(" << sandbox.scheduling_policy << "," << sandbox.scheduling_priority
+                       << ") failed for" << executableOf(config) << "( pid" << pid
+                       << ") with error:" << errorMessage(sched_result.error());
+        return false;
+    }
+    return true;
+}
+
 // req-Id: comp_req__launch_man__process_rlimit_support
-/// @brief Applies the supplementary groups and resource limits to the held process @p pid.
+/// @brief Applies the scheduling, supplementary groups and resource limits to the held process @p pid.
 /// @tparam OsT See startProcessImpl()
 /// @return true on success, false otherwise (the reason is logged)
 template <class OsT>
 bool configureHeldProcess(const OsT& os, ProcessID pid, const configuration::ComponentConfig& config)
 {
     const auto& sandbox = config.deployment_config.sandbox;
+
+    // The scheduling is explicitly set after the process is spawned, to avoid priority inversion during initialization.
+    // Priority inversion could happen if the posix_spawn runs with lower priority and the higher priority Launch
+    // Manager thread is waiting for it.
+    if (!setScheduling(os, pid, config))
+    {
+        return false;
+    }
 
     // Always set the supplementary groups, so the groups of the Launch Manager are not inherited
     const auto supplementary_gids_number = static_cast<std::int32_t>(sandbox.supplementary_group_ids.size());
@@ -455,10 +459,11 @@ bool configureHeldProcess(const OsT& os, ProcessID pid, const configuration::Com
 }
 
 /// @brief Implementation of osal::startProcess() using posix_spawn() and its QNX extensions.
-/// @details The process is spawned held, so the supplementary groups and resource limits can be applied before it
-/// runs. See osal::startProcess() for the parameters and the return value.
+/// @details The process is spawned held, so the scheduling, supplementary groups and resource limits can be applied
+/// before it runs. See osal::startProcess() for the parameters and the return value.
 /// @tparam OsT Provides the OS functions via the members spawn (score::os::Spawn), secpol (score::os::qnx::Secpol),
-/// qnx_unistd (score::os::qnx::QnxUnistd), fcntl (score::os::Fcntl) and unistd (score::os::Unistd).
+/// qnx_unistd (score::os::qnx::QnxUnistd), fcntl (score::os::Fcntl), unistd (score::os::Unistd) and sched
+/// (score::os::Sched).
 template <class OsT = SpawnOs>
 OsalReturnType startProcessImpl(
     const OsT& os,

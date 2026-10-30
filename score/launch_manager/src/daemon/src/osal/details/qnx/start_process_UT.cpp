@@ -23,20 +23,19 @@
 #include <array>
 #include <cerrno>
 #include <cstring>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "score/mw/launch_manager/osal/details/qnx/spawn_process_starter.hpp"
-#include "score/os/fcntl_impl.h"
+#include "score/mw/launch_manager/osal/details/qnx/start_process_internal.hpp"
 #include "score/os/mocklib/fcntl_mock.h"
 #include "score/os/mocklib/qnx/mock_secpol.h"
 #include "score/os/mocklib/qnx/mock_unistd.h"
 #include "score/os/mocklib/spawn_mock.h"
 #include "score/os/mocklib/unistdmock.h"
-#include "score/os/spawn_impl.h"
-#include "score/os/unistd.h"
 
 using namespace testing;
 
@@ -99,9 +98,19 @@ struct CapturedSpawn
     std::vector<std::string> argv;
 };
 
+/// @brief Provides the OS functions to detail::startProcessImpl() via mocks.
+struct OsMock
+{
+    NiceMock<score::os::SpawnMock> spawn{};
+    StrictMock<score::os::qnx::MockSecpol> secpol{};
+    StrictMock<score::os::qnx::MockUnistd> qnx_unistd{};
+    NiceMock<score::os::FcntlMock> fcntl{};
+    NiceMock<score::os::UnistdMock> unistd{};
+};
+
 }  // namespace
 
-class QnxSpawnProcessStarterTest : public ::testing::Test
+class QnxStartProcessTest : public ::testing::Test
 {
   protected:
     void SetUp() override
@@ -111,21 +120,7 @@ class QnxSpawnProcessStarterTest : public ::testing::Test
 
         g_process_control_mock = std::make_unique<StrictMock<ProcessControlMock>>();
 
-        auto spawn = std::make_unique<NiceMock<score::os::SpawnMock>>();
-        auto secpol = std::make_unique<StrictMock<score::os::qnx::MockSecpol>>();
-        auto qnx_unistd = std::make_unique<StrictMock<score::os::qnx::MockUnistd>>();
-        auto fcntl = std::make_unique<NiceMock<score::os::FcntlMock>>();
-        auto unistd = std::make_unique<NiceMock<score::os::UnistdMock>>();
-        spawn_ = spawn.get();
-        secpol_ = secpol.get();
-        qnx_unistd_ = qnx_unistd.get();
-        fcntl_ = fcntl.get();
-        unistd_ = unistd.get();
-
         ForwardToRealImplementations();
-
-        starter_ = std::make_unique<SpawnProcessStarter>(
-            std::move(spawn), std::move(secpol), std::move(qnx_unistd), std::move(fcntl), std::move(unistd));
 
         config_.name = "TestComponent";
         config_.component_properties.binary_name = "TestProcess";
@@ -139,7 +134,6 @@ class QnxSpawnProcessStarterTest : public ::testing::Test
 
     void TearDown() override
     {
-        starter_.reset();
         g_process_control_mock.reset();
     }
 
@@ -147,68 +141,70 @@ class QnxSpawnProcessStarterTest : public ::testing::Test
     /// default, so the resulting spawn attributes can be read back. Spawning itself is never forwarded.
     void ForwardToRealImplementations()
     {
-        ON_CALL(*spawn_, posix_spawnattr_init).WillByDefault([this](posix_spawnattr_t* attr) {
-            return real_spawn_.posix_spawnattr_init(attr);
+        ON_CALL(os_.spawn, posix_spawnattr_init).WillByDefault([this](posix_spawnattr_t* attr) {
+            return real_os_.spawn.posix_spawnattr_init(attr);
         });
-        ON_CALL(*spawn_, posix_spawnattr_destroy).WillByDefault([this](posix_spawnattr_t* attr) {
-            return real_spawn_.posix_spawnattr_destroy(attr);
+        ON_CALL(os_.spawn, posix_spawnattr_destroy).WillByDefault([this](posix_spawnattr_t* attr) {
+            return real_os_.spawn.posix_spawnattr_destroy(attr);
         });
-        ON_CALL(*spawn_, posix_spawnattr_setpgroup).WillByDefault([this](posix_spawnattr_t* attr, pid_t pgroup) {
-            return real_spawn_.posix_spawnattr_setpgroup(attr, pgroup);
+        ON_CALL(os_.spawn, posix_spawnattr_setpgroup).WillByDefault([this](posix_spawnattr_t* attr, pid_t pgroup) {
+            return real_os_.spawn.posix_spawnattr_setpgroup(attr, pgroup);
         });
-        ON_CALL(*spawn_, posix_spawnattr_setschedpolicy)
+        ON_CALL(os_.spawn, posix_spawnattr_setschedpolicy)
             .WillByDefault([this](posix_spawnattr_t* attr, std::int32_t policy) {
-                return real_spawn_.posix_spawnattr_setschedpolicy(attr, policy);
+                return real_os_.spawn.posix_spawnattr_setschedpolicy(attr, policy);
             });
-        ON_CALL(*spawn_, posix_spawnattr_setschedparam)
+        ON_CALL(os_.spawn, posix_spawnattr_setschedparam)
             .WillByDefault([this](posix_spawnattr_t* attr, const sched_param* param) {
-                return real_spawn_.posix_spawnattr_setschedparam(attr, param);
+                return real_os_.spawn.posix_spawnattr_setschedparam(attr, param);
             });
-        ON_CALL(*spawn_, pthread_spawnattr_setrunmask_np)
+        ON_CALL(os_.spawn, pthread_spawnattr_setrunmask_np)
             .WillByDefault([this](posix_spawnattr_t* attr, std::uint64_t runmask) {
-                return real_spawn_.pthread_spawnattr_setrunmask_np(attr, runmask);
+                return real_os_.spawn.pthread_spawnattr_setrunmask_np(attr, runmask);
             });
-        ON_CALL(*spawn_, posix_spawnattr_setcred).WillByDefault([this](posix_spawnattr_t* attr, uid_t uid, gid_t gid) {
-            return real_spawn_.posix_spawnattr_setcred(attr, uid, gid);
-        });
-        ON_CALL(*spawn_, posix_spawnattr_setstackmax)
+        ON_CALL(os_.spawn, posix_spawnattr_setcred)
+            .WillByDefault([this](posix_spawnattr_t* attr, uid_t uid, gid_t gid) {
+                return real_os_.spawn.posix_spawnattr_setcred(attr, uid, gid);
+            });
+        ON_CALL(os_.spawn, posix_spawnattr_setstackmax)
             .WillByDefault([this](posix_spawnattr_t* attr, std::uint32_t size) {
-                return real_spawn_.posix_spawnattr_setstackmax(attr, size);
+                return real_os_.spawn.posix_spawnattr_setstackmax(attr, size);
             });
-        ON_CALL(*spawn_, posix_spawnattr_setcwd_np).WillByDefault([this](posix_spawnattr_t* attr, std::int32_t fd) {
-            return real_spawn_.posix_spawnattr_setcwd_np(attr, fd);
+        ON_CALL(os_.spawn, posix_spawnattr_setcwd_np).WillByDefault([this](posix_spawnattr_t* attr, std::int32_t fd) {
+            return real_os_.spawn.posix_spawnattr_setcwd_np(attr, fd);
         });
-        ON_CALL(*spawn_, posix_spawnattr_getxflags)
+        ON_CALL(os_.spawn, posix_spawnattr_getxflags)
             .WillByDefault([this](const posix_spawnattr_t* attr, std::uint32_t* flags) {
-                return real_spawn_.posix_spawnattr_getxflags(attr, flags);
+                return real_os_.spawn.posix_spawnattr_getxflags(attr, flags);
             });
-        ON_CALL(*spawn_, posix_spawnattr_setxflags).WillByDefault([this](posix_spawnattr_t* attr, std::uint32_t flags) {
-            return real_spawn_.posix_spawnattr_setxflags(attr, flags);
+        ON_CALL(os_.spawn, posix_spawnattr_setxflags)
+            .WillByDefault([this](posix_spawnattr_t* attr, std::uint32_t flags) {
+                return real_os_.spawn.posix_spawnattr_setxflags(attr, flags);
+            });
+        ON_CALL(os_.spawn, posix_spawn_file_actions_init).WillByDefault([this](posix_spawn_file_actions_t* actions) {
+            return real_os_.spawn.posix_spawn_file_actions_init(actions);
         });
-        ON_CALL(*spawn_, posix_spawn_file_actions_init).WillByDefault([this](posix_spawn_file_actions_t* actions) {
-            return real_spawn_.posix_spawn_file_actions_init(actions);
+        ON_CALL(os_.spawn, posix_spawn_file_actions_destroy).WillByDefault([this](posix_spawn_file_actions_t* actions) {
+            return real_os_.spawn.posix_spawn_file_actions_destroy(actions);
         });
-        ON_CALL(*spawn_, posix_spawn_file_actions_destroy).WillByDefault([this](posix_spawn_file_actions_t* actions) {
-            return real_spawn_.posix_spawn_file_actions_destroy(actions);
-        });
-        ON_CALL(*spawn_, posix_spawn_file_actions_adddup2)
+        ON_CALL(os_.spawn, posix_spawn_file_actions_adddup2)
             .WillByDefault([this](posix_spawn_file_actions_t* actions, std::int32_t fd, std::int32_t new_fd) {
-                return real_spawn_.posix_spawn_file_actions_adddup2(actions, fd, new_fd);
+                return real_os_.spawn.posix_spawn_file_actions_adddup2(actions, fd, new_fd);
             });
-        ON_CALL(*spawn_, posix_spawn).WillByDefault(Return(OsError(ENOSYS)));
+        ON_CALL(os_.spawn, posix_spawn).WillByDefault(Return(OsError(ENOSYS)));
 
-        ON_CALL(*fcntl_, open(_, _)).WillByDefault([this](const char* path, score::os::Fcntl::Open flags) {
-            return real_fcntl_.open(path, flags);
+        ON_CALL(os_.fcntl, open(_, _)).WillByDefault([this](const char* path, score::os::Fcntl::Open flags) {
+            return real_os_.fcntl.open(path, flags);
         });
-        ON_CALL(*unistd_, close).WillByDefault([this](std::int32_t fd) {
-            return real_unistd_->close(fd);
+        ON_CALL(os_.unistd, close).WillByDefault([this](std::int32_t fd) {
+            return real_os_.unistd.close(fd);
         });
     }
 
     /// @brief Expects a successful posix_spawn that captures the spawn attributes.
     void ExpectSpawnSucceeds()
     {
-        EXPECT_CALL(*spawn_, posix_spawn)
+        EXPECT_CALL(os_.spawn, posix_spawn)
             .WillOnce([this](
                           pid_t* pid,
                           const char* path,
@@ -237,7 +233,7 @@ class QnxSpawnProcessStarterTest : public ::testing::Test
 
     void ExpectHeldProcessConfigured()
     {
-        EXPECT_CALL(*qnx_unistd_, setgroupspid(_, _, kChildPid)).WillOnce(Return(OsSuccess()));
+        EXPECT_CALL(os_.qnx_unistd, setgroupspid(_, _, kChildPid)).WillOnce(Return(OsSuccess()));
         EXPECT_CALL(*g_process_control_mock, prlimit(kChildPid, _, _, nullptr))
             .Times(AnyNumber())
             .WillRepeatedly(Return(0));
@@ -256,22 +252,14 @@ class QnxSpawnProcessStarterTest : public ::testing::Test
 
     OsalReturnType StartProcess()
     {
-        return starter_->startProcess(pid_, config_, comms_fd_, comms_);
+        return detail::startProcessImpl(os_, pid_, config_, comms_fd_, comms_);
     }
 
     static constexpr pid_t kChildPid = 4711;
     static constexpr int kShmFd = 123;
 
-    score::os::SpawnImpl real_spawn_{};
-    score::os::FcntlImpl real_fcntl_{};
-    std::unique_ptr<score::os::Unistd> real_unistd_{score::os::Unistd::Default()};
-
-    score::os::SpawnMock* spawn_{nullptr};             // owned by starter_
-    score::os::qnx::MockSecpol* secpol_{nullptr};      // owned by starter_
-    score::os::qnx::MockUnistd* qnx_unistd_{nullptr};  // owned by starter_
-    score::os::FcntlMock* fcntl_{nullptr};             // owned by starter_
-    score::os::UnistdMock* unistd_{nullptr};           // owned by starter_
-    std::unique_ptr<SpawnProcessStarter> starter_;
+    detail::SpawnOs real_os_{};
+    OsMock os_{};
 
     configuration::ComponentConfig config_ = {};
     ProcessID pid_{};
@@ -282,7 +270,7 @@ class QnxSpawnProcessStarterTest : public ::testing::Test
     alignas(IpcCommsSync) std::array<std::byte, sizeof(IpcCommsSync)> test_buffer_;
 };
 
-TEST_F(QnxSpawnProcessStarterTest, spawnsHeldProcessWithConfiguredAttributes)
+TEST_F(QnxStartProcessTest, spawnsHeldProcessWithConfiguredAttributes)
 {
     RecordProperty(
         "Description",
@@ -310,7 +298,7 @@ TEST_F(QnxSpawnProcessStarterTest, spawnsHeldProcessWithConfiguredAttributes)
     EXPECT_THAT(captured_.argv, ElementsAre("/bin/TestProcess", "-a", "b"));
 }
 
-TEST_F(QnxSpawnProcessStarterTest, affinityIsAppliedWhenConfigured)
+TEST_F(QnxStartProcessTest, affinityIsAppliedWhenConfigured)
 {
     RecordProperty("Description", "Verify that the runmask is set if an affinity mask is configured");
 
@@ -325,7 +313,7 @@ TEST_F(QnxSpawnProcessStarterTest, affinityIsAppliedWhenConfigured)
     EXPECT_EQ(captured_.runmask, 0x5U);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, workingDirIsOpenedAndClosed)
+TEST_F(QnxStartProcessTest, workingDirIsOpenedAndClosed)
 {
     RecordProperty(
         "Description",
@@ -336,9 +324,9 @@ TEST_F(QnxSpawnProcessStarterTest, workingDirIsOpenedAndClosed)
     const auto expected_flags =
         score::os::Fcntl::Open::kReadOnly | score::os::Fcntl::Open::kDirectory | score::os::Fcntl::Open::kCloseOnExec;
 
-    EXPECT_CALL(*fcntl_, open(StrEq("/"), expected_flags)).WillOnce(Return(OsSuccess(kCwdFd)));
-    EXPECT_CALL(*spawn_, posix_spawnattr_setcwd_np(NotNull(), kCwdFd)).WillOnce(Return(OsSuccess()));
-    EXPECT_CALL(*unistd_, close(kCwdFd)).WillOnce(Return(score::cpp::expected_blank<score::os::Error>{}));
+    EXPECT_CALL(os_.fcntl, open(StrEq("/"), expected_flags)).WillOnce(Return(OsSuccess(kCwdFd)));
+    EXPECT_CALL(os_.spawn, posix_spawnattr_setcwd_np(NotNull(), kCwdFd)).WillOnce(Return(OsSuccess()));
+    EXPECT_CALL(os_.unistd, close(kCwdFd)).WillOnce(Return(score::cpp::expected_blank<score::os::Error>{}));
     ExpectSpawnSucceeds();
     ExpectHeldProcessConfigured();
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).WillOnce(Return(0));
@@ -346,7 +334,7 @@ TEST_F(QnxSpawnProcessStarterTest, workingDirIsOpenedAndClosed)
     EXPECT_EQ(StartProcess(), OsalReturnType::kSuccess);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, commsFdIsDuplicatedAndPidStoredBeforeContinue)
+TEST_F(QnxStartProcessTest, commsFdIsDuplicatedAndPidStoredBeforeContinue)
 {
     RecordProperty(
         "Description",
@@ -355,7 +343,7 @@ TEST_F(QnxSpawnProcessStarterTest, commsFdIsDuplicatedAndPidStoredBeforeContinue
 
     IpcCommsSync* block = StubComms();
 
-    EXPECT_CALL(*spawn_, posix_spawn_file_actions_adddup2(_, kShmFd, IpcCommsSync::sync_fd))
+    EXPECT_CALL(os_.spawn, posix_spawn_file_actions_adddup2(_, kShmFd, IpcCommsSync::sync_fd))
         .WillOnce(Return(OsSuccess()));
     ExpectSpawnSucceeds();
     ExpectHeldProcessConfigured();
@@ -368,11 +356,11 @@ TEST_F(QnxSpawnProcessStarterTest, commsFdIsDuplicatedAndPidStoredBeforeContinue
     EXPECT_EQ(block->pid_, kChildPid);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, noCommsDoesNotDuplicateFd)
+TEST_F(QnxStartProcessTest, noCommsDoesNotDuplicateFd)
 {
     RecordProperty("Description", "Verify that no fd is duplicated for a process without comms");
 
-    EXPECT_CALL(*spawn_, posix_spawn_file_actions_adddup2).Times(0);
+    EXPECT_CALL(os_.spawn, posix_spawn_file_actions_adddup2).Times(0);
     ExpectSpawnSucceeds();
     ExpectHeldProcessConfigured();
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).WillOnce(Return(0));
@@ -380,19 +368,19 @@ TEST_F(QnxSpawnProcessStarterTest, noCommsDoesNotDuplicateFd)
     EXPECT_EQ(StartProcess(), OsalReturnType::kSuccess);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, supplementaryGroupsAreCleared)
+TEST_F(QnxStartProcessTest, supplementaryGroupsAreCleared)
 {
     RecordProperty(
         "Description", "Verify that the supplementary groups are explicitly cleared when none are configured");
 
     ExpectSpawnSucceeds();
-    EXPECT_CALL(*qnx_unistd_, setgroupspid(0, nullptr, kChildPid)).WillOnce(Return(OsSuccess()));
+    EXPECT_CALL(os_.qnx_unistd, setgroupspid(0, nullptr, kChildPid)).WillOnce(Return(OsSuccess()));
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).WillOnce(Return(0));
 
     EXPECT_EQ(StartProcess(), OsalReturnType::kSuccess);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, groupsAndLimitsAreAppliedBeforeContinue)
+TEST_F(QnxStartProcessTest, groupsAndLimitsAreAppliedBeforeContinue)
 {
     RecordProperty(
         "Description",
@@ -409,7 +397,7 @@ TEST_F(QnxSpawnProcessStarterTest, groupsAndLimitsAreAppliedBeforeContinue)
     ExpectSpawnSucceeds();
     {
         InSequence seq;
-        EXPECT_CALL(*qnx_unistd_, setgroupspid(3, NotNull(), kChildPid))
+        EXPECT_CALL(os_.qnx_unistd, setgroupspid(3, NotNull(), kChildPid))
             .WillOnce([&sgids](std::int32_t n, const gid_t* groups, pid_t) {
                 EXPECT_TRUE(std::equal(groups, groups + n, sgids.begin()));
                 return OsSuccess();
@@ -431,7 +419,7 @@ TEST_F(QnxSpawnProcessStarterTest, groupsAndLimitsAreAppliedBeforeContinue)
     EXPECT_EQ(captured_.stackmax, 65536U);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, prlimitFailureKillsHeldProcess)
+TEST_F(QnxStartProcessTest, prlimitFailureKillsHeldProcess)
 {
     RecordProperty(
         "Description", "Verify that the held process is killed but reported as started if applying a limit fails");
@@ -441,7 +429,7 @@ TEST_F(QnxSpawnProcessStarterTest, prlimitFailureKillsHeldProcess)
     };
 
     ExpectSpawnSucceeds();
-    EXPECT_CALL(*qnx_unistd_, setgroupspid).WillOnce(Return(OsSuccess()));
+    EXPECT_CALL(os_.qnx_unistd, setgroupspid).WillOnce(Return(OsSuccess()));
     EXPECT_CALL(*g_process_control_mock, prlimit).WillOnce(SetErrnoAndReturn(EPERM, -1));
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGKILL)).WillOnce(Return(0));
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).Times(0);
@@ -450,14 +438,14 @@ TEST_F(QnxSpawnProcessStarterTest, prlimitFailureKillsHeldProcess)
     EXPECT_EQ(pid_, kChildPid);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, setgroupspidFailureKillsHeldProcess)
+TEST_F(QnxStartProcessTest, setgroupspidFailureKillsHeldProcess)
 {
     RecordProperty(
         "Description",
         "Verify that the held process is killed but reported as started if setting the supplementary groups fails");
 
     ExpectSpawnSucceeds();
-    EXPECT_CALL(*qnx_unistd_, setgroupspid).WillOnce(Return(OsError(EPERM)));
+    EXPECT_CALL(os_.qnx_unistd, setgroupspid).WillOnce(Return(OsError(EPERM)));
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGKILL)).WillOnce(Return(0));
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).Times(0);
 
@@ -465,7 +453,7 @@ TEST_F(QnxSpawnProcessStarterTest, setgroupspidFailureKillsHeldProcess)
     EXPECT_EQ(pid_, kChildPid);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, continueFailureKillsHeldProcess)
+TEST_F(QnxStartProcessTest, continueFailureKillsHeldProcess)
 {
     RecordProperty(
         "Description", "Verify that the held process is killed but reported as started if it cannot be continued");
@@ -479,71 +467,61 @@ TEST_F(QnxSpawnProcessStarterTest, continueFailureKillsHeldProcess)
     EXPECT_EQ(pid_, kChildPid);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, spawnFailureReturnsFail)
+TEST_F(QnxStartProcessTest, spawnFailureReturnsFail)
 {
     RecordProperty("Description", "Verify that startProcess fails if posix_spawn fails");
 
-    EXPECT_CALL(*spawn_, posix_spawn).WillOnce(Return(OsError(ENOENT)));
-    EXPECT_CALL(*qnx_unistd_, setgroupspid).Times(0);
+    EXPECT_CALL(os_.spawn, posix_spawn).WillOnce(Return(OsError(ENOENT)));
+    EXPECT_CALL(os_.qnx_unistd, setgroupspid).Times(0);
     EXPECT_CALL(*g_process_control_mock, kill).Times(0);
 
     EXPECT_EQ(StartProcess(), OsalReturnType::kFail);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, attributeInitFailureReturnsFail)
+TEST_F(QnxStartProcessTest, attributeInitFailureReturnsFail)
 {
     RecordProperty("Description", "Verify that startProcess fails if the spawn attributes cannot be initialized");
 
-    EXPECT_CALL(*spawn_, posix_spawnattr_init).WillOnce(Return(OsError(ENOMEM)));
-    EXPECT_CALL(*spawn_, posix_spawnattr_destroy).Times(0);
-    EXPECT_CALL(*spawn_, posix_spawn).Times(0);
+    EXPECT_CALL(os_.spawn, posix_spawnattr_init).WillOnce(Return(OsError(ENOMEM)));
+    EXPECT_CALL(os_.spawn, posix_spawnattr_destroy).Times(0);
+    EXPECT_CALL(os_.spawn, posix_spawn).Times(0);
 
     EXPECT_EQ(StartProcess(), OsalReturnType::kFail);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, fileActionsInitFailureReturnsFail)
+TEST_F(QnxStartProcessTest, fileActionsInitFailureReturnsFail)
 {
     RecordProperty(
         "Description",
         "Verify that startProcess fails if the file actions cannot be initialized and that the already initialized "
         "spawn attributes are destroyed");
 
-    EXPECT_CALL(*spawn_, posix_spawn_file_actions_init).WillOnce(Return(OsError(ENOMEM)));
-    EXPECT_CALL(*spawn_, posix_spawn_file_actions_destroy).Times(0);
-    EXPECT_CALL(*spawn_, posix_spawnattr_destroy).Times(1);
-    EXPECT_CALL(*spawn_, posix_spawn).Times(0);
+    EXPECT_CALL(os_.spawn, posix_spawn_file_actions_init).WillOnce(Return(OsError(ENOMEM)));
+    EXPECT_CALL(os_.spawn, posix_spawn_file_actions_destroy).Times(0);
+    EXPECT_CALL(os_.spawn, posix_spawnattr_destroy).Times(1);
+    EXPECT_CALL(os_.spawn, posix_spawn).Times(0);
 
     EXPECT_EQ(StartProcess(), OsalReturnType::kFail);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, credentialsFailureReturnsFail)
-{
-    RecordProperty("Description", "Verify that startProcess fails if the credentials cannot be set");
-
-    EXPECT_CALL(*spawn_, posix_spawnattr_setcred(_, 11U, 13U)).WillOnce(Return(OsError(EINVAL)));
-    EXPECT_CALL(*spawn_, posix_spawn).Times(0);
-
-    EXPECT_EQ(StartProcess(), OsalReturnType::kFail);
-}
-
-TEST_F(QnxSpawnProcessStarterTest, invalidWorkingDirReturnsFail)
+TEST_F(QnxStartProcessTest, invalidWorkingDirReturnsFail)
 {
     RecordProperty("Description", "Verify that startProcess fails if the working directory cannot be opened");
 
-    EXPECT_CALL(*fcntl_, open(_, _)).WillOnce(Return(OsError(ENOENT)));
-    EXPECT_CALL(*unistd_, close).Times(0);
-    EXPECT_CALL(*spawn_, posix_spawn).Times(0);
+    EXPECT_CALL(os_.fcntl, open(_, _)).WillOnce(Return(OsError(ENOENT)));
+    EXPECT_CALL(os_.unistd, close).Times(0);
+    EXPECT_CALL(os_.spawn, posix_spawn).Times(0);
 
     EXPECT_EQ(StartProcess(), OsalReturnType::kFail);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, securityPolicyIsApplied)
+TEST_F(QnxStartProcessTest, securityPolicyIsApplied)
 {
     RecordProperty("Description", "Verify that the configured security policy is set as type in the spawn attributes");
 
     config_.deployment_config.sandbox.security_policy = "app_t";
 
-    EXPECT_CALL(*secpol_, secpol_posix_spawnattr_settypeid(nullptr, NotNull(), StrEq("app_t"), SECPOL_TYPE_NAME))
+    EXPECT_CALL(os_.secpol, secpol_posix_spawnattr_settypeid(nullptr, NotNull(), StrEq("app_t"), SECPOL_TYPE_NAME))
         .WillOnce(Return(OsSuccess()));
     ExpectSpawnSucceeds();
     ExpectHeldProcessConfigured();
@@ -552,13 +530,13 @@ TEST_F(QnxSpawnProcessStarterTest, securityPolicyIsApplied)
     EXPECT_EQ(StartProcess(), OsalReturnType::kSuccess);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, securityPolicyNotSupportedIsIgnored)
+TEST_F(QnxStartProcessTest, securityPolicyNotSupportedIsIgnored)
 {
     RecordProperty("Description", "Verify that a missing security policy support (ENOTSUP) is ignored");
 
     config_.deployment_config.sandbox.security_policy = "app_t";
 
-    EXPECT_CALL(*secpol_, secpol_posix_spawnattr_settypeid).WillOnce(Return(OsError(ENOTSUP)));
+    EXPECT_CALL(os_.secpol, secpol_posix_spawnattr_settypeid).WillOnce(Return(OsError(ENOTSUP)));
     ExpectSpawnSucceeds();
     ExpectHeldProcessConfigured();
     EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).WillOnce(Return(0));
@@ -566,14 +544,180 @@ TEST_F(QnxSpawnProcessStarterTest, securityPolicyNotSupportedIsIgnored)
     EXPECT_EQ(StartProcess(), OsalReturnType::kSuccess);
 }
 
-TEST_F(QnxSpawnProcessStarterTest, securityPolicyFailureReturnsFail)
+TEST_F(QnxStartProcessTest, securityPolicyFailureReturnsFail)
 {
     RecordProperty("Description", "Verify that startProcess fails if the security policy type cannot be set");
 
     config_.deployment_config.sandbox.security_policy = "unknown_t";
 
-    EXPECT_CALL(*secpol_, secpol_posix_spawnattr_settypeid).WillOnce(Return(OsError(EINVAL)));
-    EXPECT_CALL(*spawn_, posix_spawn).Times(0);
+    EXPECT_CALL(os_.secpol, secpol_posix_spawnattr_settypeid).WillOnce(Return(OsError(EINVAL)));
+    EXPECT_CALL(os_.spawn, posix_spawn).Times(0);
 
     EXPECT_EQ(StartProcess(), OsalReturnType::kFail);
+}
+
+namespace
+{
+
+/// @brief An attribute or file action call that is made to fail.
+struct AttributeFailure
+{
+    /// Name of the failing call, used as test name
+    const char* name;
+    /// Configures the call to fail and adapts the configuration so the call is made
+    void (*setUp)(OsMock& os, configuration::ComponentConfig& config);
+    /// Whether the process communicates, which is required for the file action
+    bool with_comms;
+};
+
+const AttributeFailure kAttributeFailures[] = {
+    {"setpgroup",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawnattr_setpgroup).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"setschedpolicy",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawnattr_setschedpolicy).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"setschedparam",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawnattr_setschedparam).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"setrunmask",
+     [](OsMock& os, configuration::ComponentConfig& config) {
+         config.deployment_config.sandbox.affinity_mask = 0x1U;
+         EXPECT_CALL(os.spawn, pthread_spawnattr_setrunmask_np).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"setcred",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawnattr_setcred(_, 11U, 13U)).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"setstackmax",
+     [](OsMock& os, configuration::ComponentConfig& config) {
+         config.deployment_config.sandbox.rlimits = {{RLIMIT_STACK, {65536U, RLIM_INFINITY}}};
+         EXPECT_CALL(os.spawn, posix_spawnattr_setstackmax).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"setcwd",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawnattr_setcwd_np).WillOnce(Return(OsError(EBADF)));
+     },
+     false},
+    {"getxflags",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawnattr_getxflags).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"setxflags",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawnattr_setxflags).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"adddup2",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawn_file_actions_adddup2).WillOnce(Return(OsError(EBADF)));
+     },
+     true},
+};
+
+}  // namespace
+
+class QnxStartProcessAttributeFailureTest : public QnxStartProcessTest,
+                                            public ::testing::WithParamInterface<AttributeFailure>
+{
+};
+
+TEST_P(QnxStartProcessAttributeFailureTest, attributeFailureReturnsFailWithoutSpawning)
+{
+    RecordProperty(
+        "Description",
+        "Verify that startProcess fails without spawning a process if setting up a spawn attribute or file action "
+        "fails");
+
+    if (GetParam().with_comms)
+    {
+        static_cast<void>(StubComms());
+    }
+    GetParam().setUp(os_, config_);
+    EXPECT_CALL(os_.spawn, posix_spawn).Times(0);
+    EXPECT_CALL(os_.qnx_unistd, setgroupspid).Times(0);
+
+    EXPECT_EQ(StartProcess(), OsalReturnType::kFail);
+    EXPECT_EQ(pid_, -1);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllAttributeCalls,
+    QnxStartProcessAttributeFailureTest,
+    ::testing::ValuesIn(kAttributeFailures),
+    [](const ::testing::TestParamInfo<AttributeFailure>& param_info) {
+        return std::string{param_info.param.name};
+    });
+
+class QnxSpawnStackLimitTest : public ::testing::Test
+{
+  protected:
+    void SetUp() override
+    {
+        RecordProperty("TestType", "interface-test");
+        RecordProperty("DerivationTechnique", "boundary-values");
+    }
+
+    configuration::Sandbox sandbox_{};
+};
+
+TEST_F(QnxSpawnStackLimitTest, noStackLimitConfigured)
+{
+    RecordProperty("Description", "Verify that no maximum stack size is set if no stack limit is configured");
+
+    sandbox_.rlimits = {{RLIMIT_NOFILE, {64U, 128U}}};
+
+    EXPECT_EQ(detail::spawnStackLimit(sandbox_), std::nullopt);
+}
+
+TEST_F(QnxSpawnStackLimitTest, unlimitedStackLimit)
+{
+    RecordProperty("Description", "Verify that no maximum stack size is set for an unlimited stack limit");
+
+    sandbox_.rlimits = {{RLIMIT_STACK, {RLIM_INFINITY, RLIM_INFINITY}}};
+
+    EXPECT_EQ(detail::spawnStackLimit(sandbox_), std::nullopt);
+}
+
+TEST_F(QnxSpawnStackLimitTest, largestRepresentableStackLimit)
+{
+    RecordProperty("Description", "Verify that the largest stack limit fitting into 32 bit is used as is");
+
+    const rlim_t limit = std::numeric_limits<std::uint32_t>::max();
+    sandbox_.rlimits = {{RLIMIT_STACK, {limit, RLIM_INFINITY}}};
+
+    EXPECT_EQ(detail::spawnStackLimit(sandbox_), std::numeric_limits<std::uint32_t>::max());
+}
+
+TEST_F(QnxSpawnStackLimitTest, tooLargeStackLimit)
+{
+    RecordProperty("Description", "Verify that no maximum stack size is set for a stack limit exceeding 32 bit");
+
+    if (sizeof(rlim_t) <= sizeof(std::uint32_t))
+    {
+        GTEST_SKIP() << "rlim_t cannot exceed 32 bit on this platform";
+    }
+    const rlim_t limit = static_cast<rlim_t>(std::numeric_limits<std::uint32_t>::max()) + 1U;
+    sandbox_.rlimits = {{RLIMIT_STACK, {limit, RLIM_INFINITY}}};
+
+    EXPECT_EQ(detail::spawnStackLimit(sandbox_), std::nullopt);
+}
+
+TEST_F(QnxSpawnStackLimitTest, softStackLimitIsUsed)
+{
+    RecordProperty("Description", "Verify that the soft stack limit is used as maximum stack size");
+
+    sandbox_.rlimits = {{RLIMIT_NOFILE, {64U, 128U}}, {RLIMIT_STACK, {65536U, 131072U}}};
+
+    EXPECT_EQ(detail::spawnStackLimit(sandbox_), 65536U);
 }

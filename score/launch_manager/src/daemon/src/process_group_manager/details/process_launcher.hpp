@@ -14,23 +14,16 @@
 #ifndef PROCESS_LAUNCHER_HPP_INCLUDED
 #define PROCESS_LAUNCHER_HPP_INCLUDED
 
-#include "score/mw/launch_manager/osal/iprocess_starter.hpp"
-#include "score/mw/launch_manager/osal/start_process.hpp"
 #include "score/mw/launch_manager/process_group_manager/iprocess.hpp"
 #include <atomic>
-#include <memory>
 
 namespace score::mw::lifecycle::internal::osal
 {
 
-/// @brief POSIX implementation of IProcess, managing child processes started via an IProcessStarter.
+/// @brief POSIX implementation of IProcess, managing child processes started via osal::startProcess().
 class ProcessLauncher final : public IProcess
 {
   public:
-    /// @param process_starter Used to create the processes, must not be null. Defaults to the starter of the
-    /// current platform.
-    explicit ProcessLauncher(std::unique_ptr<IProcessStarter> process_starter = createProcessStarter());
-
     /// @see IProcess::startProcess() for details
     OsalReturnType startProcess(
         ProcessID& pid,
@@ -59,9 +52,6 @@ class ProcessLauncher final : public IProcess
     /// @return True if shared memory creation and initialization are successful, false otherwise.
     bool
     setupComms(IpcCommsP& sync, int& fd, const score::mw::lifecycle::internal::configuration::ComponentConfig& config);
-
-    ///@brief Creates the processes
-    std::unique_ptr<IProcessStarter> process_starter_;
 
     ///@brief Atomic counter for shared memory names
     std::atomic_uint32_t shm_name_counter = {0};

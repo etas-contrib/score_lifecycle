@@ -20,7 +20,6 @@
 
 #include "score/mw/launch_manager/common/log.hpp"
 #include "score/mw/launch_manager/common/signal_safe_log.hpp"
-#include "score/mw/launch_manager/osal/details/linux/fork_process_starter.hpp"
 #include "score/mw/launch_manager/osal/set_affinity.hpp"
 #include "score/mw/launch_manager/osal/set_groups.hpp"
 #include "score/mw/launch_manager/osal/start_process.hpp"
@@ -28,7 +27,6 @@
 #include <cassert>
 #include <cerrno>
 #include <cstdlib>
-#include <memory>
 
 namespace score::mw::lifecycle::internal::osal
 {
@@ -231,11 +229,8 @@ void handleChildProcess(ChildProcessConfig& param)
 
 }  // namespace
 
-OsalReturnType ForkProcessStarter::startProcess(
-    ProcessID& pid,
-    const configuration::ComponentConfig& config,
-    int comms_fd,
-    const IpcCommsP& comms) const
+OsalReturnType
+startProcess(ProcessID& pid, const configuration::ComponentConfig& config, int comms_fd, const IpcCommsP& comms)
 {
     const auto& security_policy = config.deployment_config.sandbox.security_policy;
     if (security_policy.has_value() && !security_policy.value().empty())
@@ -261,11 +256,6 @@ OsalReturnType ForkProcessStarter::startProcess(
     }
 
     return pid > 0 ? OsalReturnType::kSuccess : OsalReturnType::kFail;
-}
-
-std::unique_ptr<IProcessStarter> createProcessStarter()
-{
-    return std::make_unique<ForkProcessStarter>();
 }
 
 }  // namespace score::mw::lifecycle::internal::osal

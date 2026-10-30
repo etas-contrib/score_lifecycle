@@ -11,25 +11,16 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-#ifndef OSAL_MOCK_IPROCESS_STARTER_HPP_INCLUDED
-#define OSAL_MOCK_IPROCESS_STARTER_HPP_INCLUDED
-
-#include "score/mw/launch_manager/osal/iprocess_starter.hpp"
-#include <gmock/gmock.h>
+#include "score/mw/launch_manager/osal/start_process.hpp"
+#include "score/mw/launch_manager/osal/details/qnx/start_process_internal.hpp"
 
 namespace score::mw::lifecycle::internal::osal
 {
 
-class MockIProcessStarter : public IProcessStarter
+OsalReturnType
+startProcess(ProcessID& pid, const configuration::ComponentConfig& config, int comms_fd, const IpcCommsP& comms)
 {
-  public:
-    MOCK_METHOD(
-        OsalReturnType,
-        startProcess,
-        (ProcessID & pid, const configuration::ComponentConfig& config, int comms_fd, const IpcCommsP& comms),
-        (const, override));
-};
+    return detail::startProcessImpl(detail::SpawnOs{}, pid, config, comms_fd, comms);
+}
 
 }  // namespace score::mw::lifecycle::internal::osal
-
-#endif  // OSAL_MOCK_IPROCESS_STARTER_HPP_INCLUDED

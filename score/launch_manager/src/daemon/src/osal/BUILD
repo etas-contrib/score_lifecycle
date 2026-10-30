@@ -162,40 +162,14 @@ cc_library(
 )
 
 cc_library(
-    name = "iprocess_starter",
-    hdrs = ["iprocess_starter.hpp"],
-    include_prefix = "score/mw/launch_manager/osal",
-    strip_include_prefix = "/score/launch_manager/src/daemon/src/osal",
-    visibility = ["//score:__subpackages__"],
-    deps = [
-        ":ipc_comms",
-        ":return_types",
-        "//score/launch_manager/src/daemon/src/configuration:component_config",
-    ],
-)
-
-cc_library(
-    name = "mock_iprocess_starter",
-    testonly = True,
-    hdrs = ["mock_iprocess_starter.hpp"],
-    include_prefix = "score/mw/launch_manager/osal",
-    strip_include_prefix = "/score/launch_manager/src/daemon/src/osal",
-    visibility = ["//score:__subpackages__"],
-    deps = [
-        ":iprocess_starter",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_library(
     name = "start_process",
     srcs = select({
-        "@platforms//os:linux": ["details/linux/fork_process_starter.cpp"],
-        "@platforms//os:qnx": ["details/qnx/spawn_process_starter.cpp"],
+        "@platforms//os:linux": ["details/linux/start_process.cpp"],
+        "@platforms//os:qnx": ["details/qnx/start_process.cpp"],
     }),
     hdrs = ["start_process.hpp"] + select({
-        "@platforms//os:linux": ["details/linux/fork_process_starter.hpp"],
-        "@platforms//os:qnx": ["details/qnx/spawn_process_starter.hpp"],
+        "@platforms//os:qnx": ["details/qnx/start_process_internal.hpp"],
+        "//conditions:default": [],
     }),
     include_prefix = "score/mw/launch_manager/osal",
     linkopts = select({
@@ -208,7 +182,6 @@ cc_library(
     visibility = ["//score:__subpackages__"],
     deps = [
         ":ipc_comms",
-        ":iprocess_starter",
         ":return_types",
         ":set_affinity",
         ":set_groups",
@@ -218,6 +191,7 @@ cc_library(
         "//score/launch_manager/src/daemon/src/configuration:component_config",
     ] + select({
         "@platforms//os:qnx": [
+            "@score_baselibs//score/os:errno",
             "@score_baselibs//score/os:fcntl",
             "@score_baselibs//score/os:spawn",
             "@score_baselibs//score/os:unistd",
@@ -230,7 +204,7 @@ cc_library(
 
 lm_cc_test(
     name = "start_process_linux_UT",
-    srcs = ["details/linux/fork_process_starter_UT.cpp"],
+    srcs = ["details/linux/start_process_UT.cpp"],
     linkopts = [
         "-Wl,--wrap=fork",
         "-Wl,--wrap=execve",
@@ -266,7 +240,7 @@ lm_cc_test(
 
 lm_cc_test(
     name = "start_process_qnx_UT",
-    srcs = ["details/qnx/spawn_process_starter_UT.cpp"],
+    srcs = ["details/qnx/start_process_UT.cpp"],
     # baselibs provides no abstraction for prlimit() and kill()
     linkopts = [
         "-Wl,--wrap=prlimit",
@@ -286,11 +260,23 @@ lm_cc_test(
 )
 
 cc_library(
+    name = "mock_start_process",
+    testonly = True,
+    hdrs = ["mock_start_process.hpp"],
+    include_prefix = "score/mw/launch_manager/osal",
+    strip_include_prefix = "/score/launch_manager/src/daemon/src/osal",
+    visibility = ["//score:__subpackages__"],
+    deps = [
+        ":start_process",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "osal",
     visibility = ["//score:__subpackages__"],
     deps = [
         ":ipc_comms",
-        ":iprocess_starter",
         ":num_cores",
         ":return_types",
         ":semaphore",

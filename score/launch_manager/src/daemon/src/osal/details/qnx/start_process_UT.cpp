@@ -93,6 +93,8 @@ struct CapturedSpawn
     uid_t uid{};
     gid_t gid{};
     std::uint32_t stackmax{};
+    sigset_t sigdefault{};
+    sigset_t sigmask{};
     std::string path;
     std::vector<std::string> argv;
 };
@@ -150,6 +152,14 @@ class QnxStartProcessTest : public ::testing::Test
         ON_CALL(os_.spawn, posix_spawnattr_setpgroup).WillByDefault([this](posix_spawnattr_t* attr, pid_t pgroup) {
             return real_os_.spawn.posix_spawnattr_setpgroup(attr, pgroup);
         });
+        ON_CALL(os_.spawn, posix_spawnattr_setsigdefault)
+            .WillByDefault([this](posix_spawnattr_t* attr, const sigset_t* sigset) {
+                return real_os_.spawn.posix_spawnattr_setsigdefault(attr, sigset);
+            });
+        ON_CALL(os_.spawn, posix_spawnattr_setsigmask)
+            .WillByDefault([this](posix_spawnattr_t* attr, const sigset_t* sigset) {
+                return real_os_.spawn.posix_spawnattr_setsigmask(attr, sigset);
+            });
         ON_CALL(os_.spawn, pthread_spawnattr_setrunmask_np)
             .WillByDefault([this](posix_spawnattr_t* attr, std::uint64_t runmask) {
                 return real_os_.spawn.pthread_spawnattr_setrunmask_np(attr, runmask);
@@ -209,6 +219,8 @@ class QnxStartProcessTest : public ::testing::Test
                 EXPECT_EQ(pthread_spawnattr_getrunmask_np(attrp, &captured_.runmask), 0);
                 EXPECT_EQ(posix_spawnattr_getcred(attrp, &captured_.uid, &captured_.gid), 0);
                 EXPECT_EQ(posix_spawnattr_getstackmax(attrp, &captured_.stackmax), 0);
+                EXPECT_EQ(posix_spawnattr_getsigdefault(attrp, &captured_.sigdefault), 0);
+                EXPECT_EQ(posix_spawnattr_getsigmask(attrp, &captured_.sigmask), 0);
                 captured_.path = path;
                 for (std::size_t i = 0U; argv[i] != nullptr; ++i)
                 {
@@ -291,6 +303,28 @@ TEST_F(QnxStartProcessTest, spawnsHeldProcessWithConfiguredAttributes)
     EXPECT_EQ(captured_.gid, 13U);
     EXPECT_EQ(captured_.path, "/bin/TestProcess");
     EXPECT_THAT(captured_.argv, ElementsAre("/bin/TestProcess", "-a", "b"));
+}
+
+TEST_F(QnxStartProcessTest, signalsAreResetToDefaultAndUnblocked)
+{
+    RecordProperty(
+        "Description",
+        "Verify that all signals are reset to their default action and unblocked in the new process, so it does not "
+        "inherit the signal dispositions and the signal mask of the Launch Manager");
+
+    ExpectSpawnSucceeds();
+    ExpectHeldProcessConfigured();
+    EXPECT_CALL(*g_process_control_mock, kill(kChildPid, SIGCONT)).WillOnce(Return(0));
+
+    EXPECT_EQ(StartProcess(), OsalReturnType::kSuccess);
+
+    const std::uint32_t signal_flags = POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK;
+    EXPECT_EQ(captured_.xflags & signal_flags, signal_flags);
+    for (const int signal_number : {SIGHUP, SIGINT, SIGPIPE, SIGTERM, SIGUSR1, SIGCHLD})
+    {
+        EXPECT_EQ(sigismember(&captured_.sigdefault, signal_number), 1) << "signal " << signal_number;
+        EXPECT_EQ(sigismember(&captured_.sigmask, signal_number), 0) << "signal " << signal_number;
+    }
 }
 
 TEST_F(QnxStartProcessTest, affinityIsAppliedWhenConfigured)
@@ -609,6 +643,16 @@ const AttributeFailure kAttributeFailures[] = {
     {"setpgroup",
      [](OsMock& os, configuration::ComponentConfig&) {
          EXPECT_CALL(os.spawn, posix_spawnattr_setpgroup).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"setsigdefault",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawnattr_setsigdefault).WillOnce(Return(OsError(EINVAL)));
+     },
+     false},
+    {"setsigmask",
+     [](OsMock& os, configuration::ComponentConfig&) {
+         EXPECT_CALL(os.spawn, posix_spawnattr_setsigmask).WillOnce(Return(OsError(EINVAL)));
      },
      false},
     {"setrunmask",

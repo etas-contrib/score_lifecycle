@@ -185,6 +185,38 @@ bool setProcessGroup(
     return true;
 }
 
+/// @brief Resets all signals to their default action and unblocks them, so the new process does not depend on the
+/// signal dispositions and the signal mask of the Launch Manager.
+/// @details Caught signals are reset by exec anyway, but ignored signals and the signal mask of the calling thread
+/// would otherwise be inherited.
+template <class OsT>
+bool setSignals(
+    const OsT& os,
+    posix_spawnattr_t* attr,
+    const configuration::ComponentConfig& config,
+    std::uint32_t& flags)
+{
+    sigset_t all_signals{};
+    static_cast<void>(sigfillset(&all_signals));
+    if (!succeeded(
+            os.spawn.posix_spawnattr_setsigdefault(attr, &all_signals),
+            "posix_spawnattr_setsigdefault",
+            executableOf(config)))
+    {
+        return false;
+    }
+
+    sigset_t no_signals{};
+    static_cast<void>(sigemptyset(&no_signals));
+    if (!succeeded(
+            os.spawn.posix_spawnattr_setsigmask(attr, &no_signals), "posix_spawnattr_setsigmask", executableOf(config)))
+    {
+        return false;
+    }
+    flags |= POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK;
+    return true;
+}
+
 /// @brief Sets the CPU affinity, if configured.
 template <class OsT>
 bool setAffinity(
@@ -368,8 +400,9 @@ bool prepareSpawn(
     // runs (see configureHeldProcess())
     std::uint32_t flags = POSIX_SPAWN_HOLD;
 
-    const bool attributes_set = setProcessGroup(os, attr, config, flags) && setAffinity(os, attr, config, flags) &&
-                                setCredentials(os, attr, config, flags) && setStackLimit(os, attr, config, flags) &&
+    const bool attributes_set = setProcessGroup(os, attr, config, flags) && setSignals(os, attr, config, flags) &&
+                                setAffinity(os, attr, config, flags) && setCredentials(os, attr, config, flags) &&
+                                setStackLimit(os, attr, config, flags) &&
                                 setWorkingDirectory(os, resources, config, flags) &&
                                 setSecurityPolicy(os, attr, config);
     if (!attributes_set)

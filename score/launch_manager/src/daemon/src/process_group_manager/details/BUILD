@@ -471,6 +471,7 @@ cc_library(
         "//score/launch_manager/src/daemon/src/common:log",
         "//score/launch_manager/src/daemon/src/common:signal_safe_log",
         "//score/launch_manager/src/daemon/src/osal:ipc_comms",
+        "//score/launch_manager/src/daemon/src/osal:shm_open_anon",
         "//score/launch_manager/src/daemon/src/osal:start_process",
         "//score/launch_manager/src/daemon/src/process_group_manager:iprocess",
     ],

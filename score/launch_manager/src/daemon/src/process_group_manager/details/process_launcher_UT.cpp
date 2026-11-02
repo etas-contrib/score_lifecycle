@@ -258,17 +258,7 @@ class StartProcessTest : public ProcessLauncherTest
     IpcCommsSync* StubShmObject()
     {
         void* data = static_cast<void*>(test_buffer.data());
-        // O_CLOEXEC prevents the fd from leaking into processes started in parallel
-        EXPECT_CALL(
-            *g_syscall_mock,
-            shm_open(
-                _,
-                Truly([](int oflag) {
-                    return (oflag & O_CLOEXEC) != 0;
-                }),
-                _))
-            .WillOnce(Return(kShmFd));
-        EXPECT_CALL(*g_syscall_mock, shm_unlink).WillOnce(Return(0));
+        EXPECT_CALL(*g_syscall_mock, shm_open_anon).WillOnce(Return(kShmFd));
         EXPECT_CALL(*g_syscall_mock, mmap(_, _, _, _, kShmFd, _)).WillOnce(Return(data));
         EXPECT_CALL(*g_syscall_mock, ftruncate(kShmFd, _)).WillOnce(Return(0));
         EXPECT_CALL(*g_syscall_mock, munmap(data, sizeof(IpcCommsSync))).WillOnce(Return(0));
@@ -370,7 +360,7 @@ TEST_F(SetupCommsTest, shmOpenFails)
 {
     RecordProperty("Description", "Verify that if opening shared memory fails, startProcess fails");
 
-    EXPECT_CALL(*g_syscall_mock, shm_open).WillOnce(Return(-1));
+    EXPECT_CALL(*g_syscall_mock, shm_open_anon).WillOnce(Return(-1));
 
     EXPECT_EQ(process_launcher->startProcess(pid_, sync_, config_), OsalReturnType::kFail);
 }
@@ -379,8 +369,7 @@ TEST_F(SetupCommsTest, ftruncateFails)
 {
     RecordProperty("Description", "Verify that if truncating shared memory fails, startProcess fails");
 
-    EXPECT_CALL(*g_syscall_mock, shm_open).WillOnce(Return(kShmFd));
-    EXPECT_CALL(*g_syscall_mock, shm_unlink).WillOnce(Return(0));
+    EXPECT_CALL(*g_syscall_mock, shm_open_anon).WillOnce(Return(kShmFd));
     EXPECT_CALL(*g_syscall_mock, ftruncate).WillOnce(Return(-1));
 
     EXPECT_EQ(process_launcher->startProcess(pid_, sync_, config_), OsalReturnType::kFail);
@@ -390,8 +379,7 @@ TEST_F(SetupCommsTest, getCommsFails)
 {
     RecordProperty("Description", "Verify that if truncating shared memory fails, startProcess fails");
 
-    EXPECT_CALL(*g_syscall_mock, shm_open).WillOnce(Return(kShmFd));
-    EXPECT_CALL(*g_syscall_mock, shm_unlink).WillOnce(Return(0));
+    EXPECT_CALL(*g_syscall_mock, shm_open_anon).WillOnce(Return(kShmFd));
     EXPECT_CALL(*g_syscall_mock, ftruncate).WillOnce(Return(0));
     EXPECT_CALL(*g_syscall_mock, mmap).WillOnce(Return(MAP_FAILED));
 

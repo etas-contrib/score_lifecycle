@@ -93,6 +93,7 @@ std::vector<uint8_t> finishBuffer(
         work_dir,
         0 /*activation_retry_attempts*/,
         0 /*activation_retry_delay_ms*/,
+        fb::RecoveryAction::NONE /*recovery_action_type*/,
         0 /*recovery_action*/,
         sandbox);
 }
@@ -237,6 +238,7 @@ TEST_F(FlatbufferConfigLoaderTest, LoadSingleComponent)
         work_dir,
         0 /*activation_retry_attempts*/,
         0 /*activation_retry_delay_ms*/,
+        fb::RecoveryAction::NONE /*recovery_action_type*/,
         0 /*recovery_action*/,
         sandbox);
 
@@ -301,6 +303,7 @@ TEST_F(FlatbufferConfigLoaderTest, LoadSingleComponentWithFileState)
         work_dir,
         0 /*activation_retry_attempts*/,
         0 /*activation_retry_delay_ms*/,
+        fb::RecoveryAction::NONE /*recovery_action_type*/,
         0 /*recovery_action*/,
         sandbox);
 
@@ -472,6 +475,7 @@ TEST_F(FlatbufferConfigLoaderTest, LoadActivationRetryAttempts)
         work_dir,
         3 /*activation_retry_attempts*/,
         0 /*activation_retry_delay_ms*/,
+        fb::RecoveryAction::NONE /*recovery_action_type*/,
         0 /*recovery_action*/,
         sandbox);
 
@@ -538,6 +542,7 @@ TEST_F(FlatbufferConfigLoaderTest, LoadSandbox)
         work_dir,
         0 /*activation_retry_attempts*/,
         0 /*activation_retry_delay_ms*/,
+        fb::RecoveryAction::NONE /*recovery_action_type*/,
         0 /*recovery_action*/,
         sandbox);
 
@@ -587,6 +592,7 @@ TEST_F(FlatbufferConfigLoaderTest, LoadSandboxWithoutAffinityMaskHasNoValue)
         work_dir,
         0 /*activation_retry_attempts*/,
         0 /*activation_retry_delay_ms*/,
+        fb::RecoveryAction::NONE /*recovery_action_type*/,
         0 /*recovery_action*/,
         sandbox);
 
@@ -659,6 +665,7 @@ TEST_F(FlatbufferConfigLoaderTest, LoadEnvironmentalVariables)
         work_dir,
         0 /*activation_retry_attempts*/,
         0 /*activation_retry_delay_ms*/,
+        fb::RecoveryAction::NONE /*recovery_action_type*/,
         0 /*recovery_action*/,
         sandbox);
 
@@ -865,6 +872,7 @@ TEST_P(
         work_dir,
         NUMBER_OF_ATTEMPTS /*activation_retry_attempts*/,
         0 /*activation_retry_delay_ms*/,
+        fb::RecoveryAction::NONE /*recovery_action_type*/,
         0 /*recovery_action*/,
         sandbox);
 

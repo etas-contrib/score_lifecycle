@@ -825,20 +825,6 @@ Recovery Actions
     The :term:`Launch Manager` shall cancel all pending and ongoing :term:`Run Target`
     activations before running any :term:`Run Target` recovery action.
 
-.. comp_req:: Component failure
-    :id: comp_req__launch_man__comp_failure
-    :reqtype: Functional
-    :security: NO
-    :safety: ASIL_B
-    :derived_from: feat_req__lifecycle__recovery_action_support[version==1]
-    :status: valid
-    :version: 1
-    :satisfied_by: comp__lifecycle_launch_manager
-
-    The :term:`Launch Manager` shall be able to detect :term:`Component
-    failure` during runtime of the :term:`Component`. I.e. after reaching its
-    :term:`Ready State`.
-
 .. comp_req:: Report process liveliness
     :id: comp_req__launch_man__report_liveliness
     :reqtype: Functional

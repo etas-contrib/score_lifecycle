@@ -31,24 +31,38 @@ TEST(FileReadyConditionTest, WaitCallsWaitForFile)
 {
     StrictMock<osal::MockIFileWaiter> file_waiter;
     const FileReadyCondition file_ready_condition(
-        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 10ms, 5ms);
+        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 5ms);
 
     EXPECT_CALL(
         file_waiter, waitForFile(Eq(kFilePath), Eq(configuration::FileExistenceState::Exists), Eq(10ms), Eq(5ms), _))
         .WillOnce(Return(osal::OsalReturnType::kSuccess));
 
-    static_cast<void>(file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{}));
+    static_cast<void>(file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{}, 10ms));
+}
+
+TEST(FileReadyConditionTest, WaitPassesZeroTimeoutToWaitForFile)
+{
+    StrictMock<osal::MockIFileWaiter> file_waiter;
+    const FileReadyCondition file_ready_condition(
+        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 5ms);
+
+    // A zero timeout still checks the file once, so it is passed on as it is.
+    EXPECT_CALL(
+        file_waiter, waitForFile(Eq(kFilePath), Eq(configuration::FileExistenceState::Exists), Eq(0ms), Eq(5ms), _))
+        .WillOnce(Return(osal::OsalReturnType::kSuccess));
+
+    EXPECT_TRUE(file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{}, 0ms).has_value());
 }
 
 TEST(FileReadyConditionTest, WaitSucceedsReturnsSuccess)
 {
     NiceMock<osal::MockIFileWaiter> file_waiter;
     const FileReadyCondition file_ready_condition(
-        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 10ms, 5ms);
+        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 5ms);
 
     ON_CALL(file_waiter, waitForFile(_, _, _, _, _)).WillByDefault(Return(osal::OsalReturnType::kSuccess));
 
-    const Result<void> result = file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{});
+    const Result<void> result = file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{}, 10ms);
 
     EXPECT_TRUE(result.has_value());
 }
@@ -57,11 +71,11 @@ TEST(FileReadyConditionTest, WaitFailsReturnsError)
 {
     NiceMock<osal::MockIFileWaiter> file_waiter;
     const FileReadyCondition file_ready_condition(
-        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 10ms, 5ms);
+        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 5ms);
 
     ON_CALL(file_waiter, waitForFile(_, _, _, _, _)).WillByDefault(Return(osal::OsalReturnType::kFail));
 
-    const Result<void> result = file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{});
+    const Result<void> result = file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{}, 10ms);
 
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), ExecErrc::kGeneralError);
@@ -71,11 +85,11 @@ TEST(FileReadyConditionTest, WaitTimesOutReturnsError)
 {
     NiceMock<osal::MockIFileWaiter> file_waiter;
     const FileReadyCondition file_ready_condition(
-        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 10ms, 5ms);
+        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 5ms);
 
     ON_CALL(file_waiter, waitForFile(_, _, _, _, _)).WillByDefault(Return(osal::OsalReturnType::kTimeout));
 
-    const Result<void> result = file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{});
+    const Result<void> result = file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{}, 10ms);
 
     EXPECT_FALSE(result.has_value());
     EXPECT_EQ(result.error(), ExecErrc::kGeneralError);
@@ -85,14 +99,14 @@ TEST(FileReadyConditionTest, WaitAcceptsVariousHandles)
 {
     NiceMock<osal::MockIFileWaiter> file_waiter;
     const FileReadyCondition file_ready_condition(
-        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 10ms, 5ms);
+        file_waiter, kFilePath, configuration::FileExistenceState::Exists, 5ms);
 
     ON_CALL(file_waiter, waitForFile(_, _, _, _, _)).WillByDefault(Return(osal::OsalReturnType::kSuccess));
 
-    const Result<void> result_empty = file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{});
+    const Result<void> result_empty = file_ready_condition.wait(cpp::stop_token{}, EmptyHandle{}, 10ms);
     EXPECT_TRUE(result_empty.has_value());
 
-    const Result<void> result_process = file_ready_condition.wait(cpp::stop_token{}, ProcessHandle{});
+    const Result<void> result_process = file_ready_condition.wait(cpp::stop_token{}, ProcessHandle{}, 10ms);
     EXPECT_TRUE(result_process.has_value());
 }
 

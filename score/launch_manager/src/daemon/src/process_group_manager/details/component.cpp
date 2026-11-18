@@ -13,6 +13,7 @@
 
 #include "score/mw/launch_manager/process_group_manager/details/component.hpp"
 #include "score/mw/launch_manager/common/log.hpp"
+#include <chrono>
 
 namespace score::mw::lifecycle::internal
 {
@@ -111,7 +112,12 @@ IComponent::RequestResult Component::activate(cpp::stop_token stop_token)
     // The state is deliberately not locked while waiting for the ready condition: the wait may take
     // up to the ready timeout, and `deactivate` or `tryHandleTermination` must be able to interrupt
     // it in the meantime. Some ready conditions can only be woken up by `tryHandleTermination`.
-    if (!ready_condition_->wait(stop_activation.get_token(), handle.value()).has_value())
+    if (!ready_condition_
+             ->wait(
+                 stop_activation.get_token(),
+                 handle.value(),
+                 std::chrono::milliseconds{config_->deployment_config.ready_timeout_ms})
+             .has_value())
     {
         return RequestResult::kFailure;
     }

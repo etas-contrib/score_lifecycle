@@ -30,14 +30,15 @@ class ReportRunningReadyCondition final : public IReadyCondition
   public:
     /// @brief Creates a new report running ready condition.
     /// @param launcher The process launcher used to wait for the process.
-    /// @param timeout The maximum duration to wait for the process to report running.
-    explicit ReportRunningReadyCondition(osal::IProcess& launcher, std::chrono::milliseconds timeout);
+    explicit ReportRunningReadyCondition(osal::IProcess& launcher);
 
     /// @brief Wait until the resource represented by the given handle is ready.
     /// @param stop_token Token which can be used to interrupt the wait.
     /// @param handle The resource to wait on.
+    /// @param timeout The maximum duration to wait for the process to report running.
     /// @return Whether the wait was successful, or failed with an error.
-    Result<void> wait(cpp::stop_token stop_token, const Handle& handle) const override;
+    Result<void> wait(cpp::stop_token stop_token, const Handle& handle, std::chrono::milliseconds timeout)
+        const override;
 
     /// @brief Notify the ready condition that a POSIX process has terminated.
     /// @param handle The process that terminated.
@@ -48,9 +49,6 @@ class ReportRunningReadyCondition final : public IReadyCondition
   private:
     /// @brief The process launcher used to wait for the process.
     osal::IProcess& launcher_;
-
-    /// @brief The maximum duration to wait for the process to report running.
-    const std::chrono::milliseconds timeout_;
 };
 
 }  // namespace score::mw::lifecycle::internal

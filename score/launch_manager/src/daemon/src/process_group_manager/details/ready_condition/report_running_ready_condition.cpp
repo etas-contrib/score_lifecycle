@@ -18,12 +18,14 @@
 namespace score::mw::lifecycle::internal
 {
 
-ReportRunningReadyCondition::ReportRunningReadyCondition(osal::IProcess& launcher, std::chrono::milliseconds timeout)
-    : launcher_(launcher), timeout_(timeout)
+ReportRunningReadyCondition::ReportRunningReadyCondition(osal::IProcess& launcher) : launcher_(launcher)
 {
 }
 
-Result<void> ReportRunningReadyCondition::wait(cpp::stop_token /*stop_token*/, const Handle& handle) const
+Result<void> ReportRunningReadyCondition::wait(
+    cpp::stop_token /*stop_token*/,
+    const Handle& handle,
+    std::chrono::milliseconds timeout) const
 {
     const ProcessHandle* const process = std::get_if<ProcessHandle>(&handle);
     SCORE_LANGUAGE_FUTURECPP_ASSERT_MESSAGE(
@@ -32,7 +34,7 @@ Result<void> ReportRunningReadyCondition::wait(cpp::stop_token /*stop_token*/, c
         process->sync != nullptr,
         "ReportRunningReadyCondition should only be called with a ProcessHandle containing IPCCommsSync");
 
-    const osal::OsalReturnType result = launcher_.waitForkRunning(process->sync, timeout_);
+    const osal::OsalReturnType result = launcher_.waitForkRunning(process->sync, timeout);
 
     // If the PID is invalid, the process died and the notification was sent
     // from tryHandleTermination rather than the process itself.

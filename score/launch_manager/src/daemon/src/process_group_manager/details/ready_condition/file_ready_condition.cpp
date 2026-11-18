@@ -22,15 +22,17 @@ FileReadyCondition::FileReadyCondition(
     const osal::IFileWaiter& file_waiter,
     score::safecpp::zstring_view file_path,
     configuration::FileExistenceState state,
-    std::chrono::milliseconds timeout,
     std::chrono::milliseconds interval)
-    : file_waiter_(file_waiter), file_path_(file_path), state_(state), timeout_(timeout), interval_(interval)
+    : file_waiter_(file_waiter), file_path_(file_path), state_(state), interval_(interval)
 {
 }
 
-Result<void> FileReadyCondition::wait(cpp::stop_token stop_token, [[maybe_unused]] const Handle&) const
+Result<void> FileReadyCondition::wait(
+    cpp::stop_token stop_token,
+    [[maybe_unused]] const Handle&,
+    std::chrono::milliseconds timeout) const
 {
-    const osal::OsalReturnType result = file_waiter_.waitForFile(file_path_, state_, timeout_, interval_, stop_token);
+    const osal::OsalReturnType result = file_waiter_.waitForFile(file_path_, state_, timeout, interval_, stop_token);
 
     if (result == osal::OsalReturnType::kSuccess)
     {

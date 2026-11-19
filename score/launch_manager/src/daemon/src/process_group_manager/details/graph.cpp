@@ -506,6 +506,13 @@ void Graph::forceKillProcesses()
 {
     for (const auto [id, component] : nodes_)
     {
+#ifdef LC_USE_COMPONENT
+        if (const auto* const process_component = std::get_if<std::unique_ptr<internal::Component>>(&component))
+        {
+            (*process_component)->forceStop();
+        }
+#else
+        // Remove together with ProcessInfoNode.
         if (const ProcessInfoNode* process = std::get_if<ProcessInfoNode>(&component))
         {
             osal::ProcessID pid = process->getPid();
@@ -515,10 +522,7 @@ void Graph::forceKillProcesses()
                 static_cast<void>(process_handling_.process_interface_->forceTermination(pid));
             }
         }
-        else if (const auto* const process_component = std::get_if<std::unique_ptr<internal::Component>>(&component))
-        {
-            (*process_component)->forceStop();
-        }
+#endif
     }
 }
 

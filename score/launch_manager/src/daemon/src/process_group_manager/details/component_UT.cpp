@@ -125,51 +125,7 @@ auto reportTerminationLater(
 
 const auto kStartsProcess = Return(Result<StartedResource>{StartedResource{mock_handle}});
 
-TEST(ComponentTest, StartSucceeds)
-{
-    RecordProperty(
-        "Description",
-        "Given an inactive component whose actions and ready condition succeed. "
-        "When it is activated. "
-        "Then activation succeeds.");
 
-    NiceMock<MockSupervisionFactory> factory;
-    Component component(
-        std::make_unique<MockStartAction>(),
-        std::make_unique<MockStopAction>(),
-        std::make_unique<MockForceStopAction>(),
-        std::make_unique<MockReadyCondition>(),
-        factory,
-        std::make_shared<configuration::ComponentConfig>());
-
-    const auto result = component.activate(cpp::stop_token{});
-
-    EXPECT_EQ(result, IComponent::RequestResult::kSuccess);
-}
-
-TEST(ComponentTest, StartActionCalled)
-{
-    RecordProperty(
-        "Description",
-        "Given an inactive component. "
-        "When it is activated. "
-        "Then the start action is called once.");
-
-    NiceMock<MockSupervisionFactory> factory;
-
-    auto start_action = std::make_unique<MockStartAction>();
-    EXPECT_CALL(*start_action, start(_, _)).WillOnce(Return(Result<StartedResource>{StartedResource{mock_handle}}));
-
-    Component component(
-        std::move(start_action),
-        std::make_unique<MockStopAction>(),
-        std::make_unique<MockForceStopAction>(),
-        std::make_unique<MockReadyCondition>(),
-        factory,
-        std::make_shared<configuration::ComponentConfig>());
-
-    static_cast<void>(component.activate(mock_stop_token));
-}
 
 TEST(ComponentTest, StopActionCalled)
 {
@@ -281,10 +237,10 @@ TEST(ComponentTest, ReadyConditionWaitsWithConfiguredReadyTimeout)
     NiceMock<MockSupervisionFactory> factory;
 
     auto start_action = std::make_unique<MockStartAction>();
-    ON_CALL(*start_action, start(_, _)).WillByDefault(kStartsProcess);
+    auto* const start_action_ptr = start_action.get();
 
     auto ready_condition = std::make_unique<NiceMock<MockReadyCondition>>();
-    EXPECT_CALL(*ready_condition, wait(_, _, std::chrono::milliseconds{1234})).WillOnce(Return(Result<void>{}));
+    auto* const ready_condition_ptr = ready_condition.get();
 
     auto config = std::make_shared<configuration::ComponentConfig>();
     config->deployment_config.ready_timeout_ms = 1234U;
@@ -296,6 +252,12 @@ TEST(ComponentTest, ReadyConditionWaitsWithConfiguredReadyTimeout)
         std::move(ready_condition),
         factory,
         std::move(config));
+
+    InSequence sequence;
+    EXPECT_CALL(*ready_condition_ptr, prepare());
+    EXPECT_CALL(*start_action_ptr, start(_, _)).WillOnce(Return(Result<StartedResource>{StartedResource{mock_handle}}));
+    EXPECT_CALL(*ready_condition_ptr, wait(_, _, std::chrono::milliseconds{1234})).WillOnce(Return(Result<void>{}));
+
 
     EXPECT_EQ(component.activate(mock_stop_token), IComponent::RequestResult::kSuccess);
 }

@@ -32,7 +32,10 @@ cc_library(
     hdrs = ["environment_config.hpp"],
     include_prefix = "score/mw/launch_manager/configuration",
     strip_include_prefix = "/score/launch_manager/src/daemon/src/configuration",
-    visibility = ["//score:__subpackages__"],
+    visibility = [
+        "//score:__subpackages__",
+        "//tests:__subpackages__",
+    ],
     deps = [
         "@score_baselibs//score/language/futurecpp",
     ],
@@ -44,7 +47,10 @@ cc_library(
     hdrs = ["process_command.hpp"],
     include_prefix = "score/mw/launch_manager/configuration",
     strip_include_prefix = "/score/launch_manager/src/daemon/src/configuration",
-    visibility = ["//score:__subpackages__"],
+    visibility = [
+        "//score:__subpackages__",
+        "//tests:__subpackages__",
+    ],
 )
 
 lm_cc_test(
@@ -77,7 +83,10 @@ cc_library(
     hdrs = ["component_config.hpp"],
     include_prefix = "score/mw/launch_manager/configuration",
     strip_include_prefix = "/score/launch_manager/src/daemon/src/configuration",
-    visibility = ["//score:__subpackages__"],
+    visibility = [
+        "//score:__subpackages__",
+        "//tests:__subpackages__",
+    ],
     deps = [
         ":environment_config",
         ":process_command",

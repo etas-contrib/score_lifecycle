@@ -18,7 +18,10 @@ cc_library(
     hdrs = ["return_types.hpp"],
     include_prefix = "score/mw/launch_manager/osal",
     strip_include_prefix = "/score/launch_manager/src/daemon/src/osal",
-    visibility = ["//score:__subpackages__"],
+    visibility = [
+        "//score:__subpackages__",
+        "//tests:__subpackages__",
+    ],
 )
 
 cc_library(
@@ -202,7 +205,10 @@ cc_library(
     linkopts = ["-lsecpol"],
     strip_include_prefix = "/score/launch_manager/src/daemon/src/osal",
     target_compatible_with = ["@platforms//os:qnx"],
-    visibility = ["//score:__subpackages__"],
+    visibility = [
+        "//score:__subpackages__",
+        "//tests:__subpackages__",
+    ],
     deps = [
         ":ipc_comms",
         ":return_types",

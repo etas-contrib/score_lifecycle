@@ -11,37 +11,48 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 /*
- * ./cpu_load_process --
- *
  * This process will act as a CPU load. This is useful for performance testing, where a realistic CPU load is required
  * to represent a real world calculation.
  *
- * Algorithms:
- * - Exit code 0: all `expected_count` posts were observed
- *   (or --succeed-on-timeout was set, and we timed out).
- * - Exit code 1: usage error.
- * - Exit code 2: timed out before `expected_count` posts were observed; the
- *   number of posts actually observed so far is printed to stderr.
+ * An optional parameter can be passed to configure the maximum prime to calculate (--max-prime).
+ * The process will continuously calculate primes until the timeout is reached (--timeout).
+ * Primes are calculated using a memory-constrained sieve algorithm.
  */
 
-#include <charconv>
-#include <fcntl.h>
-#include <getopt.h>
-#include <semaphore.h>
-#include <sys/stat.h>
-#include <time.h>
-#include <cerrno>
+#include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <optional>
-#include <string>
-#include <system_error>
+#include <iostream>
+#include <thread>
+#include <vector>
+
+#include <score/stop_token.hpp>
+
+#include "tests/utils/test_helper/arg_parser.hpp"
 
 using HelpType = bool;
 using PrimeType = std::uint64_t;
-static constexpr PrimeType DEFAULT_MAX_PRIME = 10000;
+using TimeoutType = std::uint32_t;
+static constexpr PrimeType DEFAULT_MAX_PRIME = 1'000'000;
+static constexpr TimeoutType DEFAULT_TIMEOUT_SECONDS = 10;
+static constexpr std::size_t MEMORY_LIMIT = 1024 * 1024;
+
+namespace score::mw::lifecycle::test
+{
+template <>
+inline std::uint64_t ConvertArg<std::uint64_t>(const char* raw_value)
+{
+    return std::strtoull(raw_value, nullptr, 10);
+}
+
+template <>
+inline std::uint32_t ConvertArg<std::uint32_t>(const char* raw_value)
+{
+    return static_cast<std::uint32_t>(std::strtoul(raw_value, nullptr, 10));
+}
+}  // namespace score::mw::lifecycle::test
 
 namespace
 {
@@ -50,7 +61,6 @@ struct HelpArg
 {
     static constexpr std::string_view name = "--help";
     using type = HelpType;
-    static constexpr type default_value = false;
 };
 
 /// @brief Program argument for maximum limit of prime calculation
@@ -58,39 +68,28 @@ struct PrimeCalcMaxLimit
 {
     static constexpr std::string_view name = "--prime-max";
     using type = PrimeType;
-    static constexpr type default_value = 0U;
+    static constexpr type default_value = DEFAULT_MAX_PRIME;
+};
+
+/// @brief Program argument for timeout in seconds
+struct TimeoutArg
+{
+    static constexpr std::string_view name = "--timeout";
+    using type = TimeoutType;
+    static constexpr type default_value = DEFAULT_TIMEOUT_SECONDS;
 };
 }  // namespace
 
-int main(int argc, char** argv)
+// Standard Sieve of Eratosthenes to find primes up to limit
+void simpleSieve(int limit, std::vector<int>& primes, const score::cpp::stop_token& stop_token)
 {
-    HelpType help = false;
-    PrimeType max_prime = DEFAULT_MAX_PRIME;
-    auto [help, max_prime] = score::mw::lifecycle::test::ParseArgs<HelpArg, PrimeType>(argc, argv);
-
-    if (help)
+    std::vector<bool> isPrime(limit + 1, true);
+    for (int p = 2; p * p <= limit; p++)
     {
-        std::printf("Usage: ./pcu_load_process [--help] [--max-prime] <max_prime>\n");
-        return 0;
-    }
-
-    calcPrime(max_prime)
-
-        return 0;
-}
-
-#include <algorithm>
-#include <cmath>
-#include <iostream>
-#include <vector>
-
-// Standard Sieve of Eratosthenes to find primes up to sqrt(limit)
-template <std::size_t MemoryLimit>
-void simpleSieve(int limit, std::vector<int>& primes)
-{
-    std::vector<bool> isPrime(MemoryLimit + 1, true);
-    for (int p = 2; p * p <= MemoryLimit; p++)
-    {
+        if (stop_token.stop_requested())
+        {
+            return;
+        }
         if (isPrime[p])
         {
             for (int i = p * p; i <= limit; i += p)
@@ -99,7 +98,7 @@ void simpleSieve(int limit, std::vector<int>& primes)
             }
         }
     }
-    for (int p = 2; p <= MemoryLimit; p++)
+    for (int p = 2; p <= limit; p++)
     {
         if (isPrime[p])
         {
@@ -108,28 +107,41 @@ void simpleSieve(int limit, std::vector<int>& primes)
     }
 }
 
-template <std::size_t MemoryLimit>
-void calcPrime(long long n)
+std::uint64_t calcPrimes(PrimeType n, const score::cpp::stop_token& stop_token)
 {
-    std::vector<int> primes;
-    primes.reserve(MemoryLimit);
-    simpleSieve(MemoryLimit, primes);
+    std::uint64_t number_of_primes = 0U;
 
-    long long low = MemoryLimit;
-    long long high = 2 * MemoryLimit;
-
-    // Output primes found in the initial simple sieve
-    std::cout << "Primes in initial segment [2, " << limit - 1 << "]:\n";
-    for (int p : primes)
+    int limit = static_cast<int>(std::sqrt(n)) + 1;
+    if (limit > static_cast<int>(MEMORY_LIMIT))
     {
-        std::cout << p << " ";
+        limit = MEMORY_LIMIT;
     }
-    std::cout << "\n\n";
+
+    std::vector<int> primes;
+    primes.reserve(limit);
+
+    simpleSieve(limit, primes, stop_token);
+
+    if (stop_token.stop_requested())
+    {
+        return 0;
+    }
+
+    long long low = limit + 1;
+    long long high = 2 * limit;
+
+    // Count primes found in the initial simple sieve
+    number_of_primes += primes.size();
 
     // Process one segment of size 'limit' at a time
-    while (low < n)
+    while (low <= static_cast<long long>(n))
     {
-        if (high >= n)
+        if (stop_token.stop_requested())
+        {
+            return 0;
+        }
+
+        if (high >= static_cast<long long>(n))
         {
             high = n;
         }
@@ -141,6 +153,11 @@ void calcPrime(long long n)
         // Mark multiples of primes found in simpleSieve
         for (size_t i = 0; i < primes.size(); i++)
         {
+            if (stop_token.stop_requested())
+            {
+                return 0;
+            }
+
             int p = primes[i];
 
             // Find the minimum number in [low, high] that is a multiple of p
@@ -150,7 +167,8 @@ void calcPrime(long long n)
                 base += p;
             }
             if (base == p)
-            {  // If the multiple is the prime itself, jump to the next multiple
+            {
+                // If the multiple is the prime itself, jump to the next multiple
                 base += p;
             }
 
@@ -161,27 +179,68 @@ void calcPrime(long long n)
             }
         }
 
-        // Output primes found in the current segment
-        std::cout << "Primes in segment [" << low << ", " << high << "]:\n";
+        // Count primes found in the current segment
         for (long long i = low; i <= high; i++)
         {
             if (isPrime[i - low])
             {
-                std::cout << i << " ";
+                number_of_primes++;
             }
         }
-        std::cout << "\n\n";
 
         // Slide the window to the next segment
         low = low + limit;
         high = high + limit;
     }
+
+    return number_of_primes;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    long long n = 100;  // Find and print primes up to 100
-    std::cout << "--- Segmented Sieve of Eratosthenes (Limit = " << n << ") ---\n\n";
-    segmentedSieve(n);
+    auto [help, max_prime, timeout_seconds] =
+        score::mw::lifecycle::test::ParseArgs<HelpArg, PrimeCalcMaxLimit, TimeoutArg>(argc, argv);
+
+    if (help)
+    {
+        std::printf("Usage: ./cpu_load_process [--help] [--prime-max <max_prime>] [--timeout <seconds>]\n");
+        std::printf("  --help         Show this help message\n");
+        std::printf(
+            "  --prime-max    Maximum prime number to calculate (default: %llu)\n",
+            static_cast<unsigned long long>(DEFAULT_MAX_PRIME));
+        std::printf("  --timeout      Timeout in seconds (default: %u)\n", DEFAULT_TIMEOUT_SECONDS);
+        return 0;
+    }
+
+    std::cout << "Segmented Sieve of Eratosthenes (Max Prime = " << max_prime << ", Timeout = " << timeout_seconds
+              << "s)\n";
+
+    score::cpp::stop_source stop_source;
+    score::cpp::stop_token stop_token = stop_source.get_token();
+
+    // Start a thread that will request stop after the timeout
+    std::thread timeout_thread([&stop_source, timeout_seconds]() {
+        std::this_thread::sleep_for(std::chrono::seconds(timeout_seconds));
+        stop_source.request_stop();
+    });
+
+    std::uint64_t last_successful_result = 0U;
+    std::uint64_t iteration_count = 0U;
+
+    // Continuously calculate primes until timeout
+    while (!stop_token.stop_requested())
+    {
+        std::uint64_t result = calcPrimes(max_prime, stop_token);
+        if (result > 0)
+        {
+            last_successful_result = result;
+            iteration_count++;
+        }
+    }
+
+    timeout_thread.join();
+
+    std::cout << "Done! Completed " << iteration_count << " iterations. Last result: " << last_successful_result
+              << " primes\n";
     return 0;
 }

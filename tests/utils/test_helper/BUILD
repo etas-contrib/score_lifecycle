@@ -189,3 +189,13 @@ cc_library(
         "//score:__subpackages__",
     ],
 )
+
+cc_binary(
+    name = "cpu_load_process",
+    srcs = ["cpu_load_process.cpp"],
+    visibility = ["//tests:__subpackages__"],
+    deps = [
+        ":arg_parser",
+        ":test_helper",
+    ],
+)

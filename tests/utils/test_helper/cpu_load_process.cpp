@@ -32,11 +32,16 @@
 
 #include "tests/utils/test_helper/arg_parser.hpp"
 
+// Define types for configurable parameters
 using HelpType = bool;
 using PrimeType = std::uint64_t;
 using TimeoutType = std::uint32_t;
+using IterationsType = std::uint64_t;
+
+// Define default values
 static constexpr PrimeType DEFAULT_MAX_PRIME = 1'000'000;
-static constexpr TimeoutType DEFAULT_TIMEOUT_SECONDS = 10;
+static constexpr TimeoutType DEFAULT_TIMEOUT_SECONDS = 0;
+static constexpr TimeoutType DEFAULT_ITERATIONS = 0;
 static constexpr std::size_t MEMORY_LIMIT = 1024 * 1024;
 
 namespace score::mw::lifecycle::test
@@ -64,7 +69,7 @@ struct HelpArg
 };
 
 /// @brief Program argument for maximum limit of prime calculation
-struct PrimeCalcMaxLimit
+struct MaxPrimeArg
 {
     static constexpr std::string_view name = "--prime-max";
     using type = PrimeType;
@@ -77,6 +82,14 @@ struct TimeoutArg
     static constexpr std::string_view name = "--timeout";
     using type = TimeoutType;
     static constexpr type default_value = DEFAULT_TIMEOUT_SECONDS;
+};
+
+/// @brief Program argument for number of iterations
+struct IterationsArg
+{
+    static constexpr std::string_view name = "--iterations";
+    using type = IterationsType;
+    static constexpr type default_value = DEFAULT_ITERATIONS;
 };
 }  // namespace
 
@@ -198,36 +211,68 @@ std::uint64_t calcPrimes(PrimeType n, const score::cpp::stop_token& stop_token)
 
 int main(int argc, char** argv)
 {
-    auto [help, max_prime, timeout_seconds] =
-        score::mw::lifecycle::test::ParseArgs<HelpArg, PrimeCalcMaxLimit, TimeoutArg>(argc, argv);
+    auto [help, max_prime, timeout_seconds, iterations] =
+        score::mw::lifecycle::test::ParseArgs<HelpArg, MaxPrimeArg, TimeoutArg, IterationsArg>(argc, argv);
 
     if (help)
     {
-        std::printf("Usage: ./cpu_load_process [--help] [--prime-max <max_prime>] [--timeout <seconds>]\n");
+        std::printf(
+            "Usage: ./cpu_load_process [--help] [--prime-max <max_prime>] [--timeout <seconds> | "
+            "--iterations <count>]\n");
         std::printf("  --help         Show this help message\n");
         std::printf(
             "  --prime-max    Maximum prime number to calculate (default: %llu)\n",
             static_cast<unsigned long long>(DEFAULT_MAX_PRIME));
-        std::printf("  --timeout      Timeout in seconds (default: %u)\n", DEFAULT_TIMEOUT_SECONDS);
+        std::printf(
+            "  --timeout      Timeout in seconds (default: %u if no iterations specified)\n", DEFAULT_TIMEOUT_SECONDS);
+        std::printf("  --iterations   Number of iterations to run\n");
+        std::printf("\nNote: Only one of --timeout or --iterations can be specified.\n");
         return 0;
     }
 
-    std::cout << "Segmented Sieve of Eratosthenes (Max Prime = " << max_prime << ", Timeout = " << timeout_seconds
-              << "s)\n";
+    // Validate that only one of timeout or iterations is specified
+    const bool timeout_specified = timeout_seconds > 0;
+    const bool iterations_specified = iterations > 0;
+
+    if (timeout_specified && iterations_specified)
+    {
+        std::fprintf(stderr, "Error: Cannot specify both --timeout and --iterations\n");
+        return 1;
+    }
+
+    // Default to timeout mode if neither specified
+    if (!timeout_specified && !iterations_specified)
+    {
+        timeout_seconds = DEFAULT_TIMEOUT_SECONDS;
+    }
 
     score::cpp::stop_source stop_source;
     score::cpp::stop_token stop_token = stop_source.get_token();
 
-    // Start a thread that will request stop after the timeout
-    std::thread timeout_thread([&stop_source, timeout_seconds]() {
-        std::this_thread::sleep_for(std::chrono::seconds(timeout_seconds));
-        stop_source.request_stop();
-    });
+    std::thread timeout_thread;
+    const bool use_timeout_mode = timeout_seconds > 0;
+
+    if (use_timeout_mode)
+    {
+        std::cout << "Segmented Sieve of Eratosthenes (Max Prime = " << max_prime << ", Timeout = " << timeout_seconds
+                  << "s)\n";
+
+        // Start a thread that will request stop after the timeout
+        timeout_thread = std::thread([&stop_source, timeout_seconds]() {
+            std::this_thread::sleep_for(std::chrono::seconds(timeout_seconds));
+            stop_source.request_stop();
+        });
+    }
+    else
+    {
+        std::cout << "Segmented Sieve of Eratosthenes (Max Prime = " << max_prime << ", Iterations = " << iterations
+                  << ")\n";
+    }
 
     std::uint64_t last_successful_result = 0U;
     std::uint64_t iteration_count = 0U;
 
-    // Continuously calculate primes until timeout
+    // Continuously calculate primes until timeout or iteration limit
     while (!stop_token.stop_requested())
     {
         std::uint64_t result = calcPrimes(max_prime, stop_token);
@@ -235,10 +280,19 @@ int main(int argc, char** argv)
         {
             last_successful_result = result;
             iteration_count++;
+
+            // Check if we've reached the iteration limit (iterations mode only)
+            if (!use_timeout_mode && iteration_count >= iterations)
+            {
+                break;
+            }
         }
     }
 
-    timeout_thread.join();
+    if (timeout_thread.joinable())
+    {
+        timeout_thread.join();
+    }
 
     std::cout << "Done! Completed " << iteration_count << " iterations. Last result: " << last_successful_result
               << " primes\n";

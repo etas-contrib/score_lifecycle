@@ -20,6 +20,7 @@ test_suite(
         "//tests/integration/component_order",
         "//tests/integration/crash_ignores_dependents",
         "//tests/integration/crash_on_startup",
+        "//tests/integration/cwd_access",
         "//tests/integration/explicit_fallback_request",
         "//tests/integration/fallback_to_same_target_restarts",
         "//tests/integration/incorrect_config_non_reporting",

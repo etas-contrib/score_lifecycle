@@ -22,7 +22,7 @@ from attribute_plugin import add_test_properties
         "feat_req__lifecycle__sandbox_options",
     ],
     test_type="requirements-based",
-    derivation_technique="requirements-analysis",
+    derivation_technique="explorative-testing",
 )
 def test_cwd_access(target, setup_test, assert_test_results, remote_test_dir):
     """
